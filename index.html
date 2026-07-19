@@ -108,6 +108,7 @@
 
 <div id="page-top" class="screen-container">
     <div class="top-header shadow-md">
+        <!-- シェア兼インストール促進ボタン -->
         <button onclick="shareApp()" class="absolute top-4 right-4 text-white p-2 rounded-full bg-white/20 active:bg-white/30 backdrop-blur-sm transition">
             <span class="material-icons">add_to_home_screen</span>
         </button>
@@ -211,7 +212,7 @@
                 <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150">
                     <span class="material-icons text-sm mr-1">favorite</span>保存
                 </button>
-                <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-indigo-500 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150">
+                <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-indigo-50 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150">
                     <span class="material-icons text-sm mr-1">history</span>履歴
                 </button>
             </div>
@@ -398,6 +399,7 @@
     let currentGenre = 'all'; 
     let observer;
     let deferredPrompt; 
+    let isLiffInit = false; // LIFF初期化完了フラグ
 
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
@@ -415,8 +417,14 @@
         
         document.getElementById('audio-player').addEventListener('ended', stopAudio);
         
+        // LIFFの初期化（指定のLIFF ID）
         if (typeof liff !== 'undefined') {
-            liff.init({ liffId: '2010749970-n0PwMioA' }).then(() => console.log("LIFF Initialized")).catch(err => {});
+            liff.init({ liffId: '2010749970-n0PwMioA' }).then(() => {
+                isLiffInit = true;
+                console.log("LIFF Initialized successfully.");
+            }).catch(err => {
+                console.error("LIFF Initialization failed", err);
+            });
         }
 
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -424,7 +432,7 @@
             if (voiceBtn) voiceBtn.style.display = 'none';
         }
 
-        // 初期状態でジャンルタブの非アクティブクラスをセットしておく
+        // 初期状態でジャンルタブの非アクティブクラスをセット
         document.querySelectorAll('.genre-tab:not(.active)').forEach(el => {
             el.className = 'genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold bg-white/15 text-indigo-100 border-2 border-transparent transition-colors';
         });
@@ -499,20 +507,27 @@
         const text = "メロ出〜た\nカラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。";
         const url = window.location.origin + window.location.pathname;
 
+        // LINEミニアプリ環境（LIFFクライアント）の場合
         if (typeof liff !== 'undefined' && liff.isInClient()) {
+            if (!isLiffInit) {
+                showToast("LINE共有機能を準備中です。少し待ってから再度お試しください。");
+                return;
+            }
             liff.shareTargetPicker([
                 {
                     type: "text",
                     text: text + "\n\n" + url
                 }
             ]).then((res) => {
-                if (res) showToast("LINEで共有しました");
+                if (res) showToast("LINEの友だちに共有しました");
             }).catch((error) => {
-                console.error("LIFF Share Error:", error);
+                console.error("LIFF shareTargetPicker Error:", error);
+                fallbackShare(text + "\n" + url);
             });
             return;
         }
 
+        // PWAインストール促進処理
         if (deferredPrompt) {
             deferredPrompt.prompt();
             deferredPrompt.userChoice.then((choiceResult) => { deferredPrompt = null; });
@@ -523,9 +538,92 @@
 
     function shareSong() {
         if (!currentTrackData) return;
-        const text = `${currentTrackData.trackName} / ${currentTrackData.artistName}\n#メロ出〜た`;
-        // ディープリンク等が必要な場合はURLにパラメータを付与して共有する
+        const cleanTitle = getCleanTitle(currentTrackData.trackName);
+        const artistName = currentTrackData.artistName;
+        const text = `${cleanTitle} / ${artistName}\n#メロ出〜た`;
         const url = window.location.origin + window.location.pathname + `?trackId=${currentTrackData.trackId}`;
+        const artworkUrl = (currentTrackData.artworkUrl100 || '').replace('100x100bb', '400x400bb');
+
+        // LINEミニアプリ環境（LIFFクライアント内）での「LINE友だちへの直接共有」
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
+            if (!isLiffInit) {
+                showToast("LINE共有機能を準備中です。");
+                return;
+            }
+
+            // Flex Message のオブジェクト定義：ジャケット画像を埋め込む
+            const flexMessage = {
+                type: "flex",
+                altText: `カラオケで歌いたい曲: ${cleanTitle}`,
+                contents: {
+                    type: "bubble",
+                    hero: {
+                        type: "image",
+                        url: artworkUrl || "https://placehold.co/400x400/5a5ce6/ffffff?text=MeloData",
+                        size: "full",
+                        aspectRatio: "1:1",
+                        aspectMode: "cover",
+                        action: {
+                            type: "uri",
+                            uri: url
+                        }
+                    },
+                    body: {
+                        type: "box",
+                        layout: "vertical",
+                        contents: [
+                            {
+                                type: "text",
+                                text: cleanTitle,
+                                weight: "bold",
+                                size: "xl",
+                                wrap: true
+                            },
+                            {
+                                type: "text",
+                                text: artistName,
+                                size: "sm",
+                                color: "#666666",
+                                wrap: true,
+                                margin: "md"
+                            }
+                        ]
+                    },
+                    footer: {
+                        type: "box",
+                        layout: "vertical",
+                        spacing: "sm",
+                        contents: [
+                            {
+                                type: "button",
+                                style: "primary",
+                                color: "#5a5ce6",
+                                height: "sm",
+                                action: {
+                                    type: "uri",
+                                    label: "メロ出〜た で聴く",
+                                    uri: url
+                                }
+                            }
+                        ],
+                        flex: 0
+                    }
+                }
+            };
+
+            // LINEのターゲットピッカーを起動して直接共有
+            liff.shareTargetPicker([flexMessage]).then((res) => {
+                if (res) {
+                    showToast("LINEの友だちに曲情報を共有しました！");
+                }
+            }).catch((error) => {
+                console.error("LIFF Flex Share Error:", error);
+                fallbackShare(text + "\n" + url);
+            });
+            return;
+        }
+
+        // 通常ブラウザ等ではWeb Share APIまたはクリップボードコピー
         customShare('曲の共有', text, url);
     }
 
@@ -1101,14 +1199,14 @@
         let history = getViewHistory();
         history = history.filter(h => h.trackId !== item.trackId); 
         history.unshift(item); 
-        if (history.length > 50) history.pop(); 
+        if (history.length > 10) history.pop(); 
         localStorage.setItem('merodata_history', JSON.stringify(history));
     }
 
     function showSavedList() {
         currentMemoTab = 'saved';
         document.getElementById('btn-toggle-saved').className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
-        document.getElementById('btn-toggle-history').className = 'bg-indigo-500 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
+        document.getElementById('btn-toggle-history').className = 'bg-indigo-50 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
         
         allFetchedResults = getMemoList();
         displayResults = [...allFetchedResults];
@@ -1126,7 +1224,7 @@
 
     function showHistoryList() {
         currentMemoTab = 'history';
-        document.getElementById('btn-toggle-saved').className = 'bg-indigo-500 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
+        document.getElementById('btn-toggle-saved').className = 'bg-indigo-50 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
         document.getElementById('btn-toggle-history').className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
         
         allFetchedResults = getViewHistory();
@@ -1143,17 +1241,24 @@
         }
     }
 
+    function getSearchHistoriesKey(mode) {
+        if (mode === 'artist-songs' || mode === 'album-tracks') return 'merodata_search_history_song';
+        return `merodata_search_history_${mode}`;
+    }
+
     function getSearchHistories() {
-        try { return JSON.parse(localStorage.getItem('merodata_search_history')) || []; } catch(e) { return []; }
+        const key = getSearchHistoriesKey(currentMode);
+        try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e) { return []; }
     }
 
     function saveSearchHistory(query) {
         if(!query) return;
+        const key = getSearchHistoriesKey(currentMode);
         let history = getSearchHistories();
         history = history.filter(h => h !== query);
         history.unshift(query);
-        if(history.length > 10) history.pop();
-        localStorage.setItem('merodata_search_history', JSON.stringify(history));
+        if(history.length > 5) history.pop();
+        localStorage.setItem(key, JSON.stringify(history));
     }
 
     function loadSearchHistory() {
