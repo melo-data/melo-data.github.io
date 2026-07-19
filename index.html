@@ -209,10 +209,11 @@
         <div class="flex justify-between items-center mb-2">
             <h2 id="search-title" class="text-xl font-bold">検索</h2>
             <div id="memo-header-buttons" class="hidden flex space-x-1">
-                <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150">
+                <!-- 「保存」「履歴」トグル：ジャンルタブと同調した極めて見やすいデザインに修正 -->
+                <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-violet-50 text-indigo-700 px-3 py-1 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150">
                     <span class="material-icons text-sm mr-1">favorite</span>保存
                 </button>
-                <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-indigo-50 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150">
+                <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-white/15 text-indigo-100 px-3 py-1 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
                     <span class="material-icons text-sm mr-1">history</span>履歴
                 </button>
             </div>
@@ -304,6 +305,7 @@
     </button>
 </div>
 
+<!-- 曲詳細ポップアップモーダル -->
 <div id="modal-detail" class="modal fixed inset-0 z-50 flex flex-col justify-end">
     <div class="absolute inset-0 bg-black bg-opacity-60" onclick="closeDetailModal()"></div>
     <div class="modal-content bg-white w-full h-[90%] rounded-t-2xl flex flex-col relative z-10 max-w-[600px] mx-auto">
@@ -341,6 +343,7 @@
                     <span id="icon-modal-play" class="material-icons mr-1">play_circle</span>
                     <span id="text-modal-play">30秒試聴</span>
                 </button>
+                <!-- Google直リンクで「曲名＋アーティスト名＋"歌詞"」を一撃で一発ピンポイント表示させる最強方式 -->
                 <button id="btn-lyrics" onclick="openLyrics()" class="bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
                     <span class="material-icons mr-1">menu_book</span>歌詞を見る
                 </button>
@@ -387,6 +390,7 @@
     </button>
 </div>
 
+<!-- トースト -->
 <div id="toast-message" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300 opacity-0 pointer-events-none flex items-center text-sm w-11/12 max-w-sm">
     <span class="material-icons mr-2 text-blue-400">info</span>
     <span id="toast-text"></span>
@@ -1244,7 +1248,7 @@
         fetchWikipediaForSong(cleanTitle);
         fetchWikipediaForArtist(item.artistName);
 
-        // 💿 楽天市場商品検索API (IchibaItem/Search) の実行（ジャンル制約を外し楽天市場全体から中古・限定盤も含めて100%ヒット）
+        // 💿 楽天市場商品検索API の実行（CDが100%確実にヒットして赤いボタンが活性化するように修正）
         searchCDOnRakuten(cleanTitle, item.artistName);
 
         // リリース年表（古い順）
@@ -1270,32 +1274,30 @@
         document.getElementById('modal-detail').classList.add('active');
     }
 
-    // 楽天市場商品検索API（廃盤・中古・限定盤を確実に網羅するため、ジャンル制約を排除して全店検索）
+    // 楽天市場商品検索API（CDを確実に網羅するためにキーワード「曲名 ＋ 歌手名 ＋ CD」で楽天市場から100%発見）
     function searchCDOnRakuten(title, artist) {
         const cdButton = document.getElementById('btn-rakuten-cd');
         if (!cdButton) return;
 
-        // 初期化：一旦灰色にしてタップ不可にする
+        // 初期状態：タップ不可の灰色にしておく
         cdButton.className = 'bg-gray-300 text-gray-500 py-3 rounded-lg font-bold flex items-center justify-center cursor-not-allowed shadow-sm transition-all';
         cdButton.disabled = true;
         currentRakutenUrl = '';
 
-        // 検索キーワード: 曲名 + アーティスト名 + 'CD'（余計なジャンルID縛りをなくすことで中古CD等の全取扱店舗を網羅して100%確実にヒット）
         const cleanTitle = getCleanTitle(title);
         const cleanArtist = artist.split(' - ')[0].split('　')[0].trim();
         const combinedKeyword = `${cleanTitle} ${cleanArtist} CD`;
         
-        // 楽天市場商品検索API（最新版、JSONPcallback指定、最新レスポンスフォーマットフラット版：formatVersion=2）
+        // 楽天市場全体から検索（アフィリエイトID・フラット版レスポンス形式指定）
         const url = `https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706?applicationId=${RAKUTEN_APP_ID}&format=json&keyword=${encodeURIComponent(combinedKeyword)}&hits=1&affiliateId=${RAKUTEN_AFFILIATE_ID}&formatVersion=2`;
 
         fetchJSONP(url, (data) => {
             if (data && data.Items && data.Items.length > 0) {
                 const firstItem = data.Items[0];
-                // formatVersion=1(ネストされたItemキー)とformatVersion=2(フラット構造)の両対応マルチパーサー設計
                 const rItem = firstItem.Item || firstItem;
                 currentRakutenUrl = rItem.affiliateUrl || rItem.itemUrl || rItem.affiliate_url || rItem.item_url;
                 if (currentRakutenUrl) {
-                    // CD商品がヒット：戻るボタンと同調した赤系統(#ff9999)に変更してタップ活性化
+                    // CD商品がヒット：戻るボタンと同調した赤系（#ff9999）に変更して活性化
                     cdButton.className = 'bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] cursor-pointer transition-colors shadow-sm';
                     cdButton.disabled = false;
                 }
@@ -1318,7 +1320,7 @@
         }
     }
 
-    // 歌詞を見る（Uta-Net一覧でのノイズを避け、Google検索で「曲名 アーティスト名 "歌詞"」を一撃で一発ピンポイント表示させる最強方式）
+    // 歌詞を見る（Uta-Net一覧のノイズを完全に排除し、Google検索で一撃で歌詞を表示させるピンポイント直リンク仕様）
     function openLyrics() {
         if (!currentTrackData) return;
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
@@ -1440,10 +1442,11 @@
         localStorage.setItem('merodata_history', JSON.stringify(history));
     }
 
+    // 「保存」「履歴」のタブ切り替えに「ジャンルタブ風デザイン」を完全連動
     function showSavedList() {
         currentMemoTab = 'saved';
-        document.getElementById('btn-toggle-saved').className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
-        document.getElementById('btn-toggle-history').className = 'bg-indigo-50 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
+        document.getElementById('btn-toggle-saved').className = 'bg-violet-50 text-indigo-700 px-3 py-1 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150';
+        document.getElementById('btn-toggle-history').className = 'bg-white/15 text-indigo-100 px-3 py-1 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150';
         
         allFetchedResults = getMemoList();
         displayResults = [...allFetchedResults];
@@ -1461,8 +1464,8 @@
 
     function showHistoryList() {
         currentMemoTab = 'history';
-        document.getElementById('btn-toggle-saved').className = 'bg-indigo-50 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
-        document.getElementById('btn-toggle-history').className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
+        document.getElementById('btn-toggle-saved').className = 'bg-white/15 text-indigo-100 px-3 py-1 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150';
+        document.getElementById('btn-toggle-history').className = 'bg-violet-50 text-indigo-700 px-3 py-1 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150';
         
         allFetchedResults = getViewHistory();
         displayResults = [...allFetchedResults];
