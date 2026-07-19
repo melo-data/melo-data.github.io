@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- フルスクリーン表示（PWA）用のメタタグ・マニフェスト -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="mobile-web-app-capable" content="yes">
@@ -12,22 +11,20 @@
     
     <title>メロ出〜た</title>
 
-    <!-- OGP (Open Graph Protocol) 設定 -->
     <meta property="og:title" content="メロ出〜た">
     <meta property="og:description" content="カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。">
     <meta property="og:image" content="./img/melodata_opg.png">
     <meta property="og:type" content="website">
 
-    <!-- ファビコン設定 -->
     <link rel="icon" href="melodata_fav.ico" type="image/x-icon">
 
     <!-- Google Analytics (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-WZH3HSF9XH"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FY401ERBMD"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-WZH3HSF9XH');
+      gtag('config', 'G-FY401ERBMD');
     </script>
 
     <!-- Google AdSense -->
@@ -36,7 +33,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
-    <!-- LINEミニアプリ化を想定したLIFF SDKの先読み込み -->
+    <!-- LINEミニアプリ化を想定したLIFF SDK -->
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     
     <style>
@@ -57,7 +54,7 @@
             right: 20px; 
             width: 60px; 
             height: 60px; 
-            background-color: #ff9999; /* ルビー Ruby */
+            background-color: #ff9999;
             color: white; 
             border-radius: 50%; 
             display: flex; 
@@ -69,16 +66,39 @@
         .top-header { background-color: #5a5ce6; color: white; padding: 2rem 1.5rem 2.5rem 1.5rem; text-align: center; border-bottom-left-radius: 1.5rem; border-bottom-right-radius: 1.5rem; margin-bottom: 1.5rem; position: relative; }
         .play-btn-wrapper { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; }
         
-        /* スワイプUI用のスクロールバー非表示 */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* 行数制限（アコーディオン用） */
         .line-clamp-5 {
             display: -webkit-box;
             -webkit-line-clamp: 5;
             -webkit-box-orient: vertical;
             overflow: hidden;
+        }
+        
+        #search-options-accordion {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+
+        /* ブラウザタブ風UI用 CSS */
+        .genre-tab-container {
+            border-bottom: 2px solid #a5b4fc; /* indigo-300 */
+        }
+        .genre-tab {
+            border: 2px solid transparent;
+        }
+        .genre-tab.active {
+            background-color: #f5f3ff; /* violet-50 */
+            color: #4338ca; /* indigo-700 */
+            border-color: #a5b4fc; /* indigo-300 */
+            border-bottom-color: #f5f3ff;
+            margin-bottom: -2px; /* 下ボーダーに重ねる */
+            z-index: 10;
+        }
+        .genre-tab:not(.active) {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #e0e7ff; /* indigo-100 */
+            margin-bottom: 0;
         }
     </style>
 </head>
@@ -92,7 +112,6 @@
         <h1 class="text-3xl font-bold tracking-wider flex items-center justify-center mb-1 mt-4">
             <span class="material-icons text-3xl mr-2">mic</span> メロ出〜た
         </h1>
-        <!-- 作者クレジットの配置 -->
         <div class="text-[11px] text-indigo-100 text-right opacity-80 mb-4 pr-1 tracking-wider">produced by M.Tsuda</div>
         
         <p class="text-[15px] leading-relaxed text-indigo-100 opacity-90 text-left">
@@ -173,7 +192,7 @@
                     </div>
                     <div class="text-left">
                         <div class="text-xl font-bold text-white">メモ帳</div>
-                        <div class="text-xs text-gray-300 mt-1">保存した曲を見る</div>
+                        <div class="text-xs text-gray-300 mt-1">保存・閲覧履歴を見る</div>
                     </div>
                 </div>
                 <span class="material-icons text-gray-400">chevron_right</span>
@@ -183,13 +202,12 @@
 </div>
 
 <div id="page-search" class="screen-container screen-container-white" style="display: none;">
-    <div class="bg-[#5a5ce6] text-white p-3 shadow-md flex flex-col z-10">
+    <div class="bg-[#5a5ce6] text-white p-3 shadow-md flex flex-col z-10 shrink-0">
         <div class="flex justify-between items-center mb-2">
             <h2 id="search-title" class="text-xl font-bold">検索</h2>
-            <!-- メモ帳・履歴用の切り替えトグルスイッチ -->
             <div id="memo-header-buttons" class="hidden flex space-x-1">
                 <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150">
-                    <span class="material-icons text-sm mr-1">assignment</span>メモ
+                    <span class="material-icons text-sm mr-1">favorite</span>保存
                 </button>
                 <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-indigo-500 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150">
                     <span class="material-icons text-sm mr-1">history</span>履歴
@@ -197,8 +215,8 @@
             </div>
         </div>
         
-        <div class="flex items-center bg-white rounded-lg p-1 shadow-inner border border-gray-200">
-            <input type="text" id="search-input" placeholder="ここに入力..." class="flex-1 p-2 text-black text-lg outline-none rounded-l-lg bg-transparent w-full" onkeypress="if(event.key === 'Enter') executeSearch(true)">
+        <div id="search-input-container" class="flex items-center bg-white rounded-lg p-1 shadow-inner border border-gray-200 relative z-20">
+            <input type="text" id="search-input" placeholder="ここに入力..." class="flex-1 p-2 text-black text-lg outline-none rounded-l-lg bg-transparent w-full" onkeypress="if(event.key === 'Enter') executeSearch(true)" onfocus="openSearchOptions()">
             
             <div class="flex space-x-1 pl-1">
                 <button id="btn-voice-input" onclick="startVoiceInput()" class="flex items-center justify-center bg-pink-50 text-pink-600 px-3 py-2 rounded-md font-bold text-sm active:bg-pink-100 transition-colors border border-pink-200 whitespace-nowrap">
@@ -210,16 +228,63 @@
             </div>
         </div>
 
-        <!-- 検索履歴表示エリア -->
-        <div id="search-history-container" class="flex flex-wrap gap-2 mt-2 px-1 hidden"></div>
+        <div id="search-history-container" class="flex flex-wrap gap-2 mt-2 px-1 hidden max-h-24 overflow-y-auto"></div>
 
-        <div class="flex justify-between items-center mt-2 text-sm">
-            <select id="sort-select" class="bg-indigo-500 text-white border border-indigo-400 rounded p-1 outline-none" onchange="executeSearch(true)">
-                <option value="default">ヒット順</option>
-                <option value="recent">発売日が新しい順</option>
-                <option value="aiueo">五十音順（取得分）</option>
+        <!-- 歌手名・アルバム名用のシンプルソート -->
+        <div id="simple-options-container" class="flex justify-between items-center mt-2 text-sm px-1" style="display: none;">
+            <select id="sort-select-simple" class="bg-indigo-500 text-white border border-indigo-400 rounded p-1.5 outline-none font-medium" onchange="applyFiltersAndRender()">
+                <option value="default">表示順：ヒット順</option>
+                <option value="recent">表示順：新しい順</option>
+                <option value="aiueo">表示順：五十音順</option>
             </select>
-            <span id="result-count" class="text-indigo-200"></span>
+            <span id="result-count-simple" class="text-indigo-200 text-xs font-bold tracking-wider"></span>
+        </div>
+
+        <!-- 曲名・歌詞ワード用のアコーディオン検索オプション -->
+        <div id="accordion-options-container" style="display: none;">
+            <div id="search-options-accordion" class="overflow-hidden max-h-0 opacity-0 relative z-10 transition-all duration-300">
+                <div class="flex space-x-2 mt-2 text-sm px-1">
+                    <select id="sort-select-accordion" class="flex-1 bg-indigo-500 text-white border border-indigo-400 rounded p-1.5 outline-none font-medium" onchange="applyFiltersAndRender()">
+                        <option value="default">表示順：ヒット順</option>
+                        <option value="recent">表示順：新しい順</option>
+                        <option value="aiueo">表示順：五十音順</option>
+                    </select>
+                    <select id="decade-select" class="flex-1 bg-indigo-500 text-white border border-indigo-400 rounded p-1.5 outline-none font-medium" onchange="applyFiltersAndRender()">
+                        <option value="all">全ての年代</option>
+                        <option value="2020">2020年代</option>
+                        <option value="2010">2010年代</option>
+                        <option value="2000">2000年代</option>
+                        <option value="1990">1990年代</option>
+                        <option value="1980">1980年代</option>
+                        <option value="1970">1970年代</option>
+                        <option value="1960">1960年代</option>
+                    </select>
+                </div>
+                
+                <!-- ブラウザタブ風ジャンル選択 -->
+                <div class="mt-3 px-1">
+                    <div class="flex overflow-x-auto hide-scrollbar space-x-1 genre-tab-container relative pt-1 px-1" id="genre-tabs">
+                        <button onclick="selectGenre('all', this)" class="genre-tab active shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold relative transition-colors">すべて</button>
+                        <button onclick="selectGenre('enka', this)" class="genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors">演歌・民謡</button>
+                        <button onclick="selectGenre('kayo', this)" class="genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors">歌謡曲</button>
+                        <button onclick="selectGenre('folk', this)" class="genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors">フォーク</button>
+                        <button onclick="selectGenre('rockpop', this)" class="genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors">ロック・ポップ</button>
+                        <button onclick="selectGenre('duet', this)" class="genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors">デュエット</button>
+                        <button onclick="selectGenre('anime', this)" class="genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors">アニソン</button>
+                        <button onclick="selectGenre('jazz', this)" class="genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors">ジャズ等</button>
+                        <button onclick="selectGenre('other', this)" class="genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors">その他</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- オプション開閉ボタン ＆ ヒット数 -->
+            <div class="flex justify-between items-center mt-1 pt-1 border-t border-indigo-400/30 px-1">
+                <span id="result-count-accordion" class="text-indigo-200 text-xs font-bold tracking-wider"></span>
+                <button id="accordion-toggle-btn" onclick="toggleSearchOptions()" class="text-white flex items-center justify-center px-3 py-1 rounded-full active:bg-indigo-600 outline-none transition-colors bg-indigo-500/50">
+                    <span class="text-xs mr-1">検索オプション</span>
+                    <span id="accordion-icon" class="material-icons text-sm">expand_more</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -249,7 +314,6 @@
                     <span class="material-icons text-2xl">share</span>
                     <span class="text-[10px] mt-1">共有</span>
                 </button>
-                <!-- DAM公式サイト連携ボタン -->
                 <button onclick="searchDAM()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
                     <span class="material-icons text-2xl">mic</span>
                     <span class="text-[10px] mt-1">DAM</span>
@@ -264,7 +328,6 @@
             <div class="flex flex-col items-center text-center">
                 <img id="detail-img" src="" alt="ジャケット" class="w-48 h-48 object-cover rounded-lg shadow-lg mb-4 bg-gray-200">
                 <h2 id="detail-title" class="text-2xl font-bold text-gray-900 leading-tight"></h2>
-                <!-- アーティスト名をボタン化 -->
                 <button id="detail-artist-btn" onclick="searchArtistFromDetail()" class="text-lg text-indigo-600 mt-2 font-bold cursor-pointer active:text-indigo-800 underline decoration-indigo-300 underline-offset-4 outline-none"></button>
             </div>
 
@@ -278,9 +341,7 @@
                 </button>
             </div>
 
-            <div id="wiki-container" class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-sm">
-                
-                <!-- 曲の解説 (Wikipedia) -->
+            <div id="wiki-container" class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-sm hidden">
                 <div id="wiki-song-area" class="mb-5 hidden">
                     <h3 class="font-bold text-yellow-800 flex items-center mb-2">
                         <span class="material-icons text-yellow-600 mr-1 text-base">music_note</span> 曲の解説
@@ -288,16 +349,12 @@
                     <p id="wiki-song-text" class="text-gray-700 leading-relaxed text-sm line-clamp-5"></p>
                     <button id="wiki-song-more-btn" class="text-indigo-600 font-bold text-xs mt-2 hidden outline-none"></button>
                 </div>
-
-                <!-- リリース年表 -->
-                <div id="wiki-timeline-area" class="mb-5 border-t border-yellow-200 pt-4">
+                <div id="wiki-timeline-area" class="mb-5 border-t border-yellow-200 pt-4 hidden">
                     <h3 class="font-bold text-yellow-800 flex items-center mb-3">
                         <span class="material-icons text-yellow-600 mr-1 text-base">history</span> リリース年表
                     </h3>
                     <div id="timeline-list" class="space-y-1 text-gray-700 text-xs"></div>
                 </div>
-                
-                <!-- アーティストの解説 (Wikipedia) -->
                 <div id="wiki-artist-area" class="border-t border-yellow-200 pt-4 hidden">
                     <h3 class="font-bold text-yellow-800 flex items-center mb-2">
                         <span class="material-icons text-yellow-600 mr-1 text-base">person</span> 豆知識 (アーティスト)
@@ -312,7 +369,6 @@
         </div>
     </div>
     
-    <!-- 曲詳細ウィンドウ用の戻るボタン (FAB) -->
     <button onclick="closeDetailModal()" class="fab-back">
         <span class="material-icons text-3xl">arrow_back</span>
     </button>
@@ -327,19 +383,20 @@
 
 <script>
     let currentMode = ''; 
-    let currentMemoTab = 'saved'; // 'saved' または 'history'
+    let currentMemoTab = 'saved'; 
     let currentQuery = '';
     const MAX_FETCH_LIMIT = 200; 
     let isFetching = false;
     let allFetchedResults = []; 
+    let displayResults = [];    
     let displayLimit = 0; 
     const CHUNK_SIZE = 20; 
     let currentTrackData = null; 
     let currentPlayingUrl = null;
+    let currentGenre = 'all'; 
     let observer;
-    let deferredPrompt; // PWAインストールプロンプト用
+    let deferredPrompt; 
 
-    // PWA: インストールダイアログのイベントを捕捉
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
@@ -348,7 +405,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const sentinel = document.getElementById('scroll-sentinel');
         observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && displayLimit < allFetchedResults.length) {
+            if (entries[0].isIntersecting && displayLimit < displayResults.length) {
                 loadMoreRender(); 
             }
         }, { root: document.getElementById('search-results'), threshold: 0.1 });
@@ -356,29 +413,26 @@
         
         document.getElementById('audio-player').addEventListener('ended', stopAudio);
         
-        // LINE SDK LIFF初期化（LINEミニアプリ化への備え）
         if (typeof liff !== 'undefined') {
-            liff.init({ liffId: "YOUR_LIFF_ID_HERE" }).then(() => {
-                console.log("LIFF Initialized");
-            }).catch(err => {
-                console.log("LIFF Initialization failed", err);
-            });
+            liff.init({ liffId: "YOUR_LIFF_ID_HERE" }).then(() => console.log("LIFF Initialized")).catch(err => {});
         }
 
-        // 音声入力非対応ブラウザの場合はボタンを非表示
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
             const voiceBtn = document.getElementById('btn-voice-input');
             if (voiceBtn) voiceBtn.style.display = 'none';
         }
+
+        // 初期状態でジャンルタブの非アクティブクラスをセットしておく
+        document.querySelectorAll('.genre-tab:not(.active)').forEach(el => {
+            el.className = 'genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold bg-white/15 text-indigo-100 border-2 border-transparent transition-colors';
+        });
     });
 
     function tryFullScreen() {
         const docEl = document.documentElement;
         const requestFS = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            if (requestFS) {
-                requestFS.call(docEl).catch(err => { console.log("Full-screen API error", err); });
-            }
+            if (requestFS) requestFS.call(docEl).catch(err => { console.log("FS error", err); });
         }
     }
 
@@ -387,28 +441,43 @@
         document.getElementById('toast-text').textContent = message;
         toast.classList.remove('opacity-0');
         toast.classList.add('opacity-100');
-        setTimeout(() => {
-            toast.classList.remove('opacity-100');
-            toast.classList.add('opacity-0');
-        }, 3000);
+        setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0'); }, 3000);
     }
 
     function shareApp() {
         if (deferredPrompt) {
-            // Android / Chrome等: 保存しておいたインストールプロンプトを表示
             deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                deferredPrompt = null;
-            });
+            deferredPrompt.userChoice.then((choiceResult) => { deferredPrompt = null; });
         } else {
-            // iOS Safariなど自動プロンプトが非対応の場合の案内
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            if (isIOS) {
-                showToast("ブラウザ下部の共有メニュー[↑]から「ホーム画面に追加」を行ってください");
-            } else {
-                showToast("ブラウザのメニュー(⋮)から「ホーム画面に追加」を行ってください");
-            }
+            if (isIOS) { showToast("ブラウザ下部の共有メニュー[↑]から「ホーム画面に追加」を行ってください"); } 
+            else { showToast("ブラウザのメニュー(⋮)から「ホーム画面に追加」を行ってください"); }
         }
+    }
+
+    function openSearchOptions() {
+        if (currentMode === 'memo' || currentMode === 'artist' || currentMode === 'album' || currentMode === 'artist-songs' || currentMode === 'album-tracks') return;
+        const acc = document.getElementById('search-options-accordion');
+        const icon = document.getElementById('accordion-icon');
+        if (!acc) return;
+        acc.style.maxHeight = "350px";
+        acc.style.opacity = "1";
+        icon.textContent = "expand_less";
+    }
+
+    function closeSearchOptions() {
+        const acc = document.getElementById('search-options-accordion');
+        const icon = document.getElementById('accordion-icon');
+        if (!acc) return;
+        acc.style.maxHeight = "0px";
+        acc.style.opacity = "0";
+        if(icon) icon.textContent = "expand_more";
+    }
+
+    function toggleSearchOptions() {
+        const acc = document.getElementById('search-options-accordion');
+        if (acc.style.maxHeight === "0px" || acc.style.maxHeight === "") openSearchOptions();
+        else closeSearchOptions();
     }
 
     function goToSearch(mode) {
@@ -416,25 +485,37 @@
         currentMode = mode;
         document.getElementById('page-top').style.display = 'none';
         document.getElementById('page-search').style.display = 'flex';
-        document.getElementById('memo-header-buttons').classList.add('hidden'); // メモ切り替えは隠す
         
         const titleEl = document.getElementById('search-title');
         const inputEl = document.getElementById('search-input');
         inputEl.value = '';
         clearResults();
         
+        document.getElementById('search-input-container').style.display = 'flex';
+        document.getElementById('memo-header-buttons').classList.add('hidden');
+        
+        // モードに応じてオプション領域を切り替え
+        if (mode === 'song' || mode === 'lyrics') {
+            document.getElementById('simple-options-container').style.display = 'none';
+            document.getElementById('accordion-options-container').style.display = 'block';
+            openSearchOptions();
+        } else {
+            document.getElementById('simple-options-container').style.display = 'flex';
+            document.getElementById('accordion-options-container').style.display = 'none';
+            closeSearchOptions();
+        }
+        
+        document.getElementById('sort-select-accordion').value = 'default';
+        document.getElementById('sort-select-simple').value = 'default';
+        document.getElementById('decade-select').value = 'all';
+        selectGenre('all', document.querySelector('.genre-tab'));
+
         if (mode === 'artist') { titleEl.textContent = '歌手名で探す'; inputEl.placeholder = '歌手名を入力'; } 
         else if (mode === 'song') { titleEl.textContent = '曲名で探す'; inputEl.placeholder = '曲名を入力'; } 
         else if (mode === 'album') { titleEl.textContent = 'アルバム名で探す'; inputEl.placeholder = 'アルバム名を入力'; } 
         else if (mode === 'lyrics') { titleEl.textContent = '歌詞ワードで探す'; inputEl.placeholder = '歌詞の一部を入力'; }
-
-        // 検索履歴の描画
-        renderSearchHistory(mode);
-
-        // 画面切り替え後に確実にフォーカスを当ててキーボードを起動させる
-        setTimeout(() => {
-            inputEl.focus();
-        }, 150);
+        
+        loadSearchHistory();
     }
 
     function goToMemo() {
@@ -443,66 +524,37 @@
         currentMemoTab = 'saved';
         document.getElementById('page-top').style.display = 'none';
         document.getElementById('page-search').style.display = 'flex';
-        document.getElementById('search-title').textContent = 'メモ帳 (保存した曲)';
-        document.getElementById('search-input').parentElement.style.display = 'none';
-        document.getElementById('sort-select').parentElement.style.display = 'none';
+        document.getElementById('search-title').textContent = 'メモ帳';
         
-        // メモ帳・履歴の切り替えボタン群を表示
+        document.getElementById('search-input-container').style.display = 'none';
+        document.getElementById('search-history-container').classList.add('hidden');
         document.getElementById('memo-header-buttons').classList.remove('hidden');
-        updateMemoTabUI();
+        
+        document.getElementById('simple-options-container').style.display = 'none';
+        document.getElementById('accordion-options-container').style.display = 'none';
         
         clearResults();
-        loadMemoList();
-    }
-
-    function showSavedList() {
-        currentMemoTab = 'saved';
-        document.getElementById('search-title').textContent = 'メモ帳 (保存した曲)';
-        updateMemoTabUI();
-        clearResults();
-        loadMemoList();
-    }
-
-    function showHistoryList() {
-        currentMemoTab = 'history';
-        document.getElementById('search-title').textContent = '閲覧履歴 (最大10件)';
-        updateMemoTabUI();
-        clearResults();
-        loadHistoryList();
-    }
-
-    function updateMemoTabUI() {
-        const btnSaved = document.getElementById('btn-toggle-saved');
-        const btnHistory = document.getElementById('btn-toggle-history');
-        if (currentMemoTab === 'saved') {
-            btnSaved.className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
-            btnHistory.className = 'bg-indigo-500 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
-        } else {
-            btnSaved.className = 'bg-indigo-500 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
-            btnHistory.className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
-        }
+        showSavedList();
     }
 
     function goBackToTop() {
         stopAudio();
-        document.getElementById('search-input').parentElement.style.display = 'flex';
-        document.getElementById('sort-select').parentElement.style.display = 'flex';
-        document.getElementById('memo-header-buttons').classList.add('hidden');
+        closeSearchOptions();
         document.getElementById('page-search').style.display = 'none';
         document.getElementById('page-top').style.display = 'flex';
     }
 
-    function executeSearch(isNewSearch = false) {
+    function executeSearch(isNewSearch = false, overrideQuery = null) {
         if (isNewSearch) {
-            currentQuery = document.getElementById('search-input').value.trim();
+            currentQuery = overrideQuery || document.getElementById('search-input').value.trim();
             if (!currentQuery) return;
+            document.getElementById('search-input').value = currentQuery;
+            
             allFetchedResults = [];
             clearResults();
-            if (typeof saveSearchQuery === 'function') {
-                saveSearchQuery(currentQuery, currentMode);
-            }
-            // 検索実行後にテキスト欄をクリア
-            document.getElementById('search-input').value = '';
+            saveSearchHistory(currentQuery);
+            loadSearchHistory();
+            closeSearchOptions(); 
         }
         if (isFetching) return;
         isFetching = true;
@@ -518,79 +570,95 @@
             isFetching = false;
             document.getElementById('loading-indicator').style.display = 'none';
             if (data && data.results) {
-                if (currentMode === 'artist') {
-                    allFetchedResults = groupToArtists(data.results);
-                } else if (currentMode === 'album') {
-                    allFetchedResults = data.results;
-                } else {
-                    allFetchedResults = groupConsolidatedSongs(data.results);
+                if (currentMode === 'artist') allFetchedResults = groupToArtists(data.results);
+                else allFetchedResults = data.results;
+                applyFiltersAndRender();
+            }
+        });
+    }
+
+    function selectGenre(genre, btn) {
+        currentGenre = genre;
+        document.querySelectorAll('.genre-tab').forEach(el => {
+            el.className = 'genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold bg-white/15 text-indigo-100 border-2 border-transparent transition-colors';
+        });
+        if (btn) {
+            btn.className = 'genre-tab active shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold bg-violet-50 text-indigo-700 border-2 border-indigo-300 transition-colors relative z-10';
+        }
+        if (allFetchedResults.length > 0) applyFiltersAndRender();
+    }
+
+    function applyFiltersAndRender() {
+        let filtered = [...allFetchedResults];
+        
+        const isAccordionActive = (currentMode === 'song' || currentMode === 'lyrics');
+        const sortSelectId = isAccordionActive ? 'sort-select-accordion' : 'sort-select-simple';
+        const sortType = document.getElementById(sortSelectId) ? document.getElementById(sortSelectId).value : 'default';
+
+        // 曲名・歌詞検索のときのみ年代・ジャンルフィルタリングを適用する
+        if (isAccordionActive) {
+            const decade = document.getElementById('decade-select').value;
+            if (decade !== 'all') {
+                const startYear = parseInt(decade);
+                const endYear = startYear + 9;
+                filtered = filtered.filter(item => {
+                    const dateStr = item.releaseDate;
+                    if (!dateStr) return false;
+                    const year = new Date(dateStr).getFullYear();
+                    return year >= startYear && year <= endYear;
+                });
+            }
+
+            if (currentGenre !== 'all') {
+                filtered = filtered.filter(item => {
+                    const genre = (item.primaryGenreName || '').toLowerCase();
+                    switch (currentGenre) {
+                        case 'enka': return genre.includes('演歌') || genre.includes('民謡') || genre.includes('enka');
+                        case 'kayo': return genre.includes('歌謡曲') || genre.includes('kayokyoku');
+                        case 'folk': return genre.includes('フォーク') || genre.includes('folk');
+                        case 'rockpop': return genre.includes('ポップ') || genre.includes('pop') || genre.includes('ロック') || genre.includes('rock') || genre.includes('j-pop');
+                        case 'duet': return genre.includes('デュエット') || genre.includes('duet');
+                        case 'anime': return genre.includes('アニメ') || genre.includes('anime');
+                        case 'jazz': return genre.includes('ジャズ') || genre.includes('jazz') || genre.includes('クラシック') || genre.includes('classic');
+                        case 'other': return true; 
+                        default: return true;
+                    }
+                });
+
+                if (currentGenre === 'other') {
+                    const known = ['演歌', '民謡', 'enka', '歌謡曲', 'kayokyoku', 'フォーク', 'folk', 'ポップ', 'pop', 'ロック', 'rock', 'j-pop', 'デュエット', 'duet', 'アニメ', 'anime', 'ジャズ', 'jazz', 'クラシック', 'classic'];
+                    filtered = filtered.filter(item => {
+                        const genre = (item.primaryGenreName || '').toLowerCase();
+                        return !known.some(k => genre.includes(k));
+                    });
                 }
-                applySortAndRender();
             }
-        });
-    }
-
-    function calculateSingleScore(track) {
-        let score = 0;
-        const collName = (track.collectionName || '').toLowerCase();
-        const trkName = (track.trackName || '').toLowerCase();
-
-        const cleanCollName = collName.replace(/\[.*?\]|\(.*?\)/g, '').replace(/-\s*single|-\s*ep/g, '').trim();
-        const cleanTrkName = trkName.replace(/\[.*?\]|\(.*?\)/g, '').trim();
-        if (cleanCollName === cleanTrkName && cleanTrkName.length > 0) {
-            score += 100;
         }
 
-        if (collName.includes('single') || collName.includes('シングル')) {
-            score += 50;
+        // 共通ソート処理
+        if (sortType === 'recent') {
+            filtered.sort((a, b) => new Date(b.releaseDate || 0) - new Date(a.releaseDate || 0));
+        } else if (sortType === 'aiueo') {
+            filtered.sort((a, b) => (a.trackName || a.collectionName || a.artistName || '').localeCompare((b.trackName || b.collectionName || b.artistName || ''), 'ja'));
         }
 
-        if (/ベスト|全曲集|名曲|決定盤|究極|コレクション|best|collection|特盛|パック/i.test(collName)) {
-            score -= 80;
+        displayResults = filtered;
+        
+        // ヒット数表示
+        if (isAccordionActive) {
+            document.getElementById('result-count-accordion').textContent = `ヒット: ${displayResults.length}件`;
+        } else {
+            document.getElementById('result-count-simple').textContent = `ヒット: ${displayResults.length}件`;
         }
         
-        return score;
-    }
-
-    function groupConsolidatedSongs(results) {
-        const map = {};
-        const normalizeTitle = (t) => t.replace(/\[.*?\]|\(.*?\)/g, '').trim().toLowerCase();
+        displayLimit = 0;
+        document.getElementById('results-container').innerHTML = ''; 
         
-        results.forEach(song => {
-            if(song.wrapperType !== 'track') return;
-            const baseName = normalizeTitle(song.trackName);
-            const key = `${song.artistName}_${baseName}`;
-            
-            if (!map[key]) {
-                map[key] = { ...song, versions: [song] };
-            } else {
-                map[key].versions.push(song);
-            }
-        });
-
-        Object.keys(map).forEach(key => {
-            const group = map[key];
-            
-            group.versions.forEach(v => {
-                v.displayYear = extractDisplayYear(v);
-                v.singleScore = calculateSingleScore(v);
-            });
-
-            group.versions.sort((a, b) => {
-                const yearA = a.displayYear === '不明' ? 9999 : parseInt(a.displayYear);
-                const yearB = b.displayYear === '不明' ? 9999 : parseInt(b.displayYear);
-                if (yearA !== yearB) return yearA - yearB;
-                
-                if (b.singleScore !== a.singleScore) return b.singleScore - a.singleScore;
-                
-                return new Date(a.releaseDate || 0) - new Date(b.releaseDate || 0);
-            });
-
-            const bestVersion = group.versions[0];
-            map[key] = { ...bestVersion, versions: group.versions };
-        });
-
-        return Object.values(map);
+        if(displayResults.length === 0) {
+            document.getElementById('results-container').innerHTML = '<div class="text-center p-8 text-gray-500">条件に合う項目が見つかりませんでした。</div>';
+        } else {
+            loadMoreRender(); 
+        }
     }
 
     function groupToArtists(songResults) {
@@ -606,46 +674,15 @@
         return Object.values(artistMap);
     }
 
-    function extractDisplayYear(track) {
-        const title = (track.collectionName || track.trackName || '');
-        const yearMatch = title.match(/(?:19|20)\d{2}/);
-        if (yearMatch) return yearMatch[0];
-        
-        const isBestAlbum = /ベスト|全曲集|名曲|決定盤|究極|コレクション|best|collection|特盛|パック/i.test(title);
-        if (isBestAlbum) return '不明';
-        
-        if (track.releaseDate) return new Date(track.releaseDate).getFullYear().toString();
-        return '不明';
-    }
-
-    function applySortAndRender() {
-        const sortType = document.getElementById('sort-select').value;
-        if (sortType === 'recent') allFetchedResults.sort((a, b) => new Date(b.releaseDate || 0) - new Date(a.releaseDate || 0));
-        else if (sortType === 'aiueo') allFetchedResults.sort((a, b) => (a.trackName || a.collectionName || a.artistName || '').localeCompare((b.trackName || b.collectionName || b.artistName || ''), 'ja'));
-        
-        document.getElementById('result-count').textContent = `ヒット: ${allFetchedResults.length}件`;
-        displayLimit = 0;
-        document.getElementById('results-container').innerHTML = ''; 
-        
-        if(allFetchedResults.length === 0) {
-            document.getElementById('results-container').innerHTML = '<div class="text-center p-8 text-gray-500">見つかりませんでした。</div>';
-        } else {
-            loadMoreRender(); 
-        }
-    }
-
     function loadMoreRender() {
         const container = document.getElementById('results-container');
-        const end = Math.min(displayLimit + CHUNK_SIZE, allFetchedResults.length);
+        const end = Math.min(displayLimit + CHUNK_SIZE, displayResults.length);
         
         for (let i = displayLimit; i < end; i++) {
-            const item = allFetchedResults[i];
+            const item = displayResults[i];
             const isArtist = item.isArtistGroup;
             const isAlbum = item.wrapperType === 'collection' || currentMode === 'album';
-            
-            const year = extractDisplayYear(item);
-            const yearStr = year !== '不明' ? ` (${year})` : '';
-            const title = (isArtist ? item.artistName : (isAlbum ? item.collectionName : item.trackName)) + (isArtist ? '' : yearStr);
+            const title = isArtist ? item.artistName : (isAlbum ? item.collectionName : item.trackName);
             
             let subText = '';
             if(isArtist) subText = `${item.primaryGenreName || 'ジャンル不明'} | 取得: ${item.trackCount}曲`;
@@ -661,7 +698,7 @@
             }
 
             const innerContent = `
-                <div class="flex-1 flex items-center min-w-0 py-2 px-2 cursor-pointer w-full" onclick="handleItemClick(${isArtist}, ${isAlbum}, ${i})">
+                <div class="flex-1 flex items-center min-w-0 py-2 px-2 cursor-pointer w-full" onclick="handleItemClick(${isArtist ? 'true':'false'}, ${isAlbum ? 'true':'false'}, ${i})">
                     <img src="${imgUrl}" class="${isArtist ? 'w-16 h-16 object-cover rounded-full' : 'w-16 h-16 object-cover rounded'} mr-3 border border-gray-200" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2280%22 height=%2280%22 bg=%22%23eee%22%3E%3C/svg%3E'">
                     <div class="flex-1 min-w-0 pr-2">
                         <div class="text-base font-bold text-gray-900 truncate leading-tight">${title}</div>
@@ -671,21 +708,15 @@
                 ${rightHtml}
             `;
 
-            if (currentMode === 'memo') {
-                let deleteAction = '';
-                if (currentMemoTab === 'saved') {
-                    deleteAction = `onclick="removeMemo(${item.trackId})"`;
-                } else {
-                    deleteAction = `onclick="removeHistory(${item.trackId})"`;
-                }
-
+            // メモ帳の「保存(saved)」タブの時のみ、スワイプ削除用のUIにする
+            if (currentMode === 'memo' && currentMemoTab === 'saved') {
                 el.className = 'rounded-lg mb-2 mt-1 overflow-hidden shadow-sm border border-gray-200 bg-white'; 
                 el.innerHTML = `
                     <div class="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full" style="scroll-snap-type: x mandatory;">
                         <div class="w-full shrink-0 snap-start flex items-center bg-white active:bg-gray-50">
                             ${innerContent}
                         </div>
-                        <button ${deleteAction} class="w-20 shrink-0 snap-start bg-red-500 text-white flex flex-col items-center justify-center active:bg-red-600 transition-colors outline-none">
+                        <button onclick="removeMemo(${item.trackId})" class="w-20 shrink-0 snap-start bg-red-500 text-white flex flex-col items-center justify-center active:bg-red-600 transition-colors outline-none">
                             <span class="material-icons text-2xl pointer-events-none">delete</span>
                             <span class="text-[10px] mt-1 pointer-events-none">削除</span>
                         </button>
@@ -695,13 +726,14 @@
                 el.className = 'bg-white rounded-lg shadow-sm flex items-center mb-2 mt-1 active:bg-gray-50 border border-gray-200 pr-2';
                 el.innerHTML = innerContent;
             }
+            
             container.appendChild(el);
         }
         displayLimit = end;
     }
 
     function handleItemClick(isArtist, isAlbum, index) {
-        const item = allFetchedResults[index];
+        const item = displayResults[index];
         if (isArtist) fetchArtistSongs(item.artistId, item.artistName);
         else if (isAlbum) fetchAlbumTracks(item.collectionId, item.collectionName);
         else openDetailModal(item);
@@ -711,12 +743,14 @@
         currentMode = 'artist-songs';
         document.getElementById('search-title').textContent = artistName;
         clearResults();
+        closeSearchOptions();
+        document.getElementById('simple-options-container').style.display = 'flex';
         document.getElementById('loading-indicator').style.display = 'block';
         fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
             document.getElementById('loading-indicator').style.display = 'none';
             if (data && data.results) { 
-                allFetchedResults = groupConsolidatedSongs(data.results.filter(i => i.wrapperType === 'track')); 
-                applySortAndRender(); 
+                allFetchedResults = data.results.filter(item => item.wrapperType === 'track'); 
+                applyFiltersAndRender(); 
             }
         });
     }
@@ -725,211 +759,30 @@
         currentMode = 'album-tracks';
         document.getElementById('search-title').textContent = collectionName;
         clearResults();
+        closeSearchOptions();
+        document.getElementById('simple-options-container').style.display = 'flex';
         document.getElementById('loading-indicator').style.display = 'block';
         fetchJSONP(`https://itunes.apple.com/lookup?id=${collectionId}&entity=song&country=jp&lang=ja_jp`, (data) => {
             document.getElementById('loading-indicator').style.display = 'none';
             if (data && data.results) { 
-                allFetchedResults = groupConsolidatedSongs(data.results.filter(i => i.wrapperType === 'track')); 
-                applySortAndRender(); 
+                allFetchedResults = data.results.filter(item => item.wrapperType === 'track').sort((a,b)=>a.trackNumber - b.trackNumber); 
+                applyFiltersAndRender(); 
             }
         });
-    }
-
-    function openDetailModal(item) {
-        currentTrackData = item;
-        stopAudio();
-        
-        // 閲覧履歴に追加
-        addHistoryItem(item);
-
-        document.getElementById('detail-img').src = (item.artworkUrl100 || '').replace('100x100bb', '400x400bb');
-        document.getElementById('detail-title').textContent = item.trackName;
-        document.getElementById('detail-artist-btn').textContent = item.artistName;
-        
-        const lyricsBtn = document.getElementById('btn-lyrics');
-        const titleForLyrics = (item.trackName || '').toLowerCase();
-        
-        // 歌詞の有無の簡易判定（インストゥルメンタル等を弾く）
-        const hasNoLyricsWords = ['instrumental', 'カラオケ', 'off vocal', 'インスト', 'backing track', 'less vocal'].some(word => titleForLyrics.includes(word));
-        
-        if (hasNoLyricsWords) {
-            lyricsBtn.className = 'bg-gray-200 text-gray-400 border border-gray-300 py-3 rounded-lg font-bold flex items-center justify-center';
-            lyricsBtn.onclick = () => { showToast('インストゥルメンタル音源等のため歌詞検索を無効にしています'); };
-        } else {
-            lyricsBtn.className = 'bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors';
-            lyricsBtn.onclick = openLyrics;
-        }
-
-        updateMemoIcon(item.trackId);
-        
-        // リリース年表の作成（古い順）
-        const timelineList = document.getElementById('timeline-list');
-        timelineList.innerHTML = '';
-        if (item.versions && item.versions.length > 0) {
-            item.versions.forEach(v => {
-                v.displayYear = extractDisplayYear(v);
-                v.sortYear = v.displayYear === '不明' ? 9999 : parseInt(v.displayYear);
-            });
-            
-            const sortedVersions = [...item.versions].sort((a,b) => {
-                if (a.sortYear !== b.sortYear) return a.sortYear - b.sortYear;
-                return b.singleScore - a.singleScore;
-            });
-            
-            sortedVersions.forEach((v, idx) => {
-                const div = document.createElement('div');
-                div.className = idx >= 3 ? 'hidden accordion-timeline' : ''; 
-                const yearStr = v.displayYear === '不明' ? '不明' : `${v.displayYear}年`;
-                div.innerHTML = `<span class="font-bold mr-2 inline-block w-12">${yearStr}</span> <span>${v.collectionName || v.trackName}</span>`;
-                timelineList.appendChild(div);
-            });
-
-            if (sortedVersions.length > 3) {
-                const toggleBtn = document.createElement('button');
-                toggleBtn.className = 'text-indigo-600 font-bold text-xs mt-2 outline-none w-full text-left';
-                toggleBtn.textContent = '▼ すべて表示';
-                toggleBtn.onclick = function() {
-                    const isHidden = toggleBtn.textContent.includes('すべて');
-                    document.querySelectorAll('.accordion-timeline').forEach(el => el.classList.toggle('hidden', !isHidden));
-                    toggleBtn.textContent = isHidden ? '▲ 閉じる' : '▼ すべて表示';
-                };
-                timelineList.appendChild(toggleBtn);
-            }
-        }
-
-        fetchWikipediaInfo(item);
-        document.getElementById('modal-detail').classList.add('active');
-    }
-
-    function searchArtistFromDetail() {
-        if(!currentTrackData) return;
-        const artistId = currentTrackData.artistId;
-        const artistName = currentTrackData.artistName;
-        closeDetailModal();
-        fetchArtistSongs(artistId, artistName);
-    }
-
-    function closeDetailModal() { 
-        document.getElementById('modal-detail').classList.remove('active'); 
-        stopAudio(); 
-        if (currentMode === 'memo') {
-            if (currentMemoTab === 'saved') loadMemoList();
-            else loadHistoryList();
-        }
-    }
-
-    function openLyrics() {
-        if (!currentTrackData) return;
-        const cleanTitle = currentTrackData.trackName.replace(/\[.*?\]|\(.*?\)/g, '').trim();
-        const queryParam = encodeURIComponent(cleanTitle).replace(/%20/g, '+').replace(/\s+/g, '+');
-        const url = `https://www.uta-net.com/search/?Keyword=${queryParam}&target=title&type=in`;
-        window.open(url, '_blank');
-    }
-
-    function searchDAM() {
-        if (!currentTrackData) return;
-        const cleanTitle = currentTrackData.trackName.replace(/\[.*?\]|\(.*?\)/g, '').trim();
-        const queryParam = encodeURIComponent(cleanTitle).replace(/%20/g, '+').replace(/\s+/g, '+');
-        const url = `https://www.clubdam.com/karaokesearch/?keyword=${queryParam}`;
-        window.open(url, '_blank');
-    }
-
-    function fetchWikipediaInfo(item) {
-        const artistName = item.artistName;
-        const cleanTitle = item.trackName.replace(/\[.*?\]|\(.*?\)/g, '').trim();
-
-        // 1. 曲のWiki
-        const songArea = document.getElementById('wiki-song-area');
-        songArea.classList.remove('hidden');
-        document.getElementById('wiki-song-text').textContent = '読み込み中...';
-        document.getElementById('wiki-song-more-btn').classList.add('hidden');
-        
-        fetchWikiData(cleanTitle, (text) => {
-            if (text && !text.includes("曖昧さ回避")) {
-                setupAccordion('wiki-song-text', 'wiki-song-more-btn', text);
-            } else {
-                fetchWikiData(cleanTitle + ' (' + artistName + 'の曲)', (text2) => {
-                    if (text2) setupAccordion('wiki-song-text', 'wiki-song-more-btn', text2);
-                    else songArea.classList.add('hidden'); 
-                });
-            }
-        });
-
-        // 2. アーティストのWiki
-        const artistArea = document.getElementById('wiki-artist-area');
-        artistArea.classList.remove('hidden');
-        document.getElementById('wiki-text').textContent = '読み込み中...';
-        document.getElementById('wiki-more-btn').classList.add('hidden');
-        document.getElementById('wiki-link').href = '#';
-
-        fetchWikiData(artistName, (text) => {
-            if (text) {
-                setupAccordion('wiki-text', 'wiki-more-btn', text);
-                document.getElementById('wiki-link').href = `https://ja.wikipedia.org/wiki/${encodeURIComponent(artistName)}`;
-            } else {
-                document.getElementById('wiki-text').textContent = '情報が見つかりませんでした。';
-            }
-        });
-    }
-
-    function fetchWikiData(query, callback) {
-        fetch(`https://ja.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&explaintext&redirects=1&titles=${encodeURIComponent(query)}&origin=*&exchars=800`)
-            .then(res => res.json())
-            .then(data => {
-                const pages = data.query.pages;
-                const pageId = Object.keys(pages)[0];
-                if (pageId !== "-1" && pages[pageId].extract) callback(pages[pageId].extract);
-                else callback(null);
-            }).catch(() => callback(null));
-    }
-
-    function setupAccordion(textId, btnId, fullText) {
-        const textEl = document.getElementById(textId);
-        const btnEl = document.getElementById(btnId);
-        
-        textEl.textContent = fullText;
-        textEl.classList.add('line-clamp-5');
-        
-        setTimeout(() => {
-            if (textEl.scrollHeight > textEl.clientHeight) {
-                btnEl.classList.remove('hidden');
-                btnEl.textContent = '▼ 続きを読む';
-                btnEl.onclick = () => {
-                    const isExpanded = !textEl.classList.contains('line-clamp-5');
-                    if (isExpanded) {
-                        textEl.classList.add('line-clamp-5');
-                        btnEl.textContent = '▼ 続きを読む';
-                    } else {
-                        textEl.classList.remove('line-clamp-5');
-                        btnEl.textContent = '▲ 閉じる';
-                    }
-                };
-            }
-        }, 50);
     }
 
     function toggleInlineAudio(url, btnElement, event) {
         event.stopPropagation();
         const audio = document.getElementById('audio-player');
-        if (currentPlayingUrl === url && !audio.paused) { stopAudio(); return; }
+        if (currentPlayingUrl === url && !audio.paused) { 
+            stopAudio(); 
+            return; 
+        }
         stopAudio();
         audio.src = url;
         audio.play().catch(e => console.log(e));
         currentPlayingUrl = url;
         btnElement.querySelector('.material-icons').textContent = 'stop';
-    }
-
-    function playPreviewInModal() {
-        if (!currentTrackData || !currentTrackData.previewUrl) return;
-        const audio = document.getElementById('audio-player');
-        if (currentPlayingUrl === currentTrackData.previewUrl && !audio.paused) stopAudio();
-        else { 
-            stopAudio(); 
-            audio.src = currentTrackData.previewUrl; 
-            audio.play(); 
-            currentPlayingUrl = currentTrackData.previewUrl; 
-            updateModalPlayButton(true); 
-        }
     }
 
     function stopAudio() {
@@ -940,79 +793,189 @@
         updateModalPlayButton(false);
     }
 
-    // 検索結果と表示状態をクリアする関数
+    function updateModalPlayButton(isPlaying) {
+        const btn = document.getElementById('btn-modal-play');
+        const icon = document.getElementById('icon-modal-play');
+        const text = document.getElementById('text-modal-play');
+        if (!btn || !icon || !text) return;
+        
+        if (isPlaying) {
+            btn.className = 'bg-red-100 text-red-700 border border-red-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-red-200 transition-colors';
+            icon.textContent = 'stop';
+            text.textContent = '停止';
+        } else {
+            btn.className = 'bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors';
+            icon.textContent = 'play_circle';
+            text.textContent = '30秒試聴';
+        }
+    }
+
     function clearResults() { 
         document.getElementById('results-container').innerHTML = ''; 
         displayLimit = 0; 
         stopAudio(); 
     }
 
-    // 検索履歴の保存（最大5件）
-    function saveSearchQuery(query, mode) {
-        if (!query || mode === 'memo' || mode.includes('-')) return;
-        const key = `search_history_${mode}`;
-        let history = JSON.parse(localStorage.getItem(key)) || [];
-        history = history.filter(q => q !== query); // 重複削除
-        history.unshift(query); // 先頭に追加
-        if (history.length > 5) history = history.slice(0, 5); // 最大5件に制限
-        localStorage.setItem(key, JSON.stringify(history));
-        renderSearchHistory(mode);
+    function getCleanTitle(title) {
+        if (!title) return '';
+        let clean = title.split(/[+\〜\~\(\（\[\【]/)[0];
+        if (clean.includes(' - ')) clean = clean.split(' - ')[0];
+        return clean.trim();
     }
 
-    // 検索履歴のチップ（ボタン）を描画
-    function renderSearchHistory(mode) {
-        const container = document.getElementById('search-history-container');
-        if (!container) return;
-        if (mode === 'memo' || mode.includes('-')) {
-            container.classList.add('hidden');
-            return;
-        }
+    function openDetailModal(item) {
+        currentTrackData = item;
+        saveViewHistory(item); // 閲覧履歴として保存
 
-        const key = `search_history_${mode}`;
-        let history = JSON.parse(localStorage.getItem(key)) || [];
+        stopAudio();
+        document.getElementById('detail-img').src = (item.artworkUrl100 || '').replace('100x100bb', '400x400bb');
+        document.getElementById('detail-title').textContent = item.trackName;
+        document.getElementById('detail-artist-btn').textContent = item.artistName;
         
-        if (history.length === 0) {
-            container.classList.add('hidden');
-            container.innerHTML = '';
-            return;
-        }
-        
-        container.classList.remove('hidden');
-        container.innerHTML = '';
-        history.forEach(query => {
-            const btn = document.createElement('button');
-            btn.className = 'bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-bold border border-indigo-200 active:bg-indigo-200 truncate max-w-[120px] shadow-sm outline-none';
-            btn.textContent = query;
-            btn.onclick = () => {
-                document.getElementById('search-input').value = query;
-                executeSearch(true);
-            };
-            container.appendChild(btn);
-        });
-    }
-
-    function updateModalPlayButton(isPlaying) {
-        const btn = document.getElementById('btn-modal-play');
-        const icon = document.getElementById('icon-modal-play');
-        const text = document.getElementById('text-modal-play');
-        if (!btn || !icon || !text) return;
-        if (isPlaying) {
-            btn.className = 'bg-red-100 text-red-700 border border-red-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-red-200 transition-colors';
-            icon.textContent = 'stop'; text.textContent = '停止';
+        const lyricsBtn = document.getElementById('btn-lyrics');
+        const title = (item.trackName || '').toLowerCase();
+        if (title.includes('instrumental') || title.includes('カラオケ') || title.includes('off vocal')) {
+            lyricsBtn.className = 'bg-gray-200 text-gray-400 border border-gray-300 py-3 rounded-lg font-bold flex items-center justify-center';
+            lyricsBtn.onclick = () => {};
         } else {
-            btn.className = 'bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors';
-            icon.textContent = 'play_circle'; text.textContent = '30秒試聴';
+            lyricsBtn.className = 'bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center transition-colors';
+            lyricsBtn.onclick = openLyrics;
+        }
+
+        updateMemoIcon(item.trackId);
+        
+        document.getElementById('wiki-container').style.display = 'block';
+        document.getElementById('wiki-song-area').classList.add('hidden');
+        document.getElementById('wiki-timeline-area').classList.add('hidden');
+        document.getElementById('wiki-artist-area').classList.add('hidden');
+        
+        const cleanTitle = getCleanTitle(item.trackName);
+        fetchWikipediaForSong(cleanTitle);
+        fetchWikipediaForArtist(item.artistName);
+
+        document.getElementById('modal-detail').classList.add('active');
+    }
+
+    function closeDetailModal() { 
+        document.getElementById('modal-detail').classList.remove('active'); 
+        stopAudio(); 
+        if (currentMode === 'memo') {
+            if(currentMemoTab === 'saved') showSavedList();
+            else showHistoryList();
         }
     }
 
+    function playPreviewInModal() {
+        if (!currentTrackData || !currentTrackData.previewUrl) return;
+        const audio = document.getElementById('audio-player');
+        
+        if (currentPlayingUrl === currentTrackData.previewUrl && !audio.paused) {
+            stopAudio(); 
+        } else { 
+            stopAudio(); 
+            audio.src = currentTrackData.previewUrl; 
+            audio.play(); 
+            currentPlayingUrl = currentTrackData.previewUrl; 
+            updateModalPlayButton(true); 
+        }
+    }
+
+    function openLyrics() {
+        if (!currentTrackData) return;
+        const cleanTitle = getCleanTitle(currentTrackData.trackName);
+        const query = `${cleanTitle} ${currentTrackData.artistName}`;
+        const url = `https://www.uta-net.com/search/?Keyword=${encodeURIComponent(query).replace(/%20/g, '+')}&target=title&type=in`;
+        window.open(url, '_blank');
+    }
+
+    function searchDAM() {
+        if (!currentTrackData) return;
+        const cleanTitle = getCleanTitle(currentTrackData.trackName);
+        const url = `https://www.clubdam.com/karaokesearch/?keyword=${encodeURIComponent(cleanTitle)}&type=keyword`;
+        window.open(url, '_blank');
+    }
+    
+    function searchArtistFromDetail() {
+        if (!currentTrackData) return;
+        closeDetailModal();
+        const artistName = currentTrackData.artistName;
+        document.getElementById('search-input').value = artistName;
+        goToSearch('artist');
+        executeSearch(true, artistName);
+    }
+
+    function setupTextExpander(textElId, btnElId) {
+        const textEl = document.getElementById(textElId);
+        const btnEl = document.getElementById(btnElId);
+        setTimeout(() => {
+            if (textEl.scrollHeight > textEl.clientHeight) {
+                btnEl.classList.remove('hidden');
+                btnEl.textContent = '続きを読む ▼';
+                btnEl.onclick = () => {
+                    if (textEl.classList.contains('line-clamp-5')) {
+                        textEl.classList.remove('line-clamp-5');
+                        btnEl.textContent = '閉じる ▲';
+                    } else {
+                        textEl.classList.add('line-clamp-5');
+                        btnEl.textContent = '続きを読む ▼';
+                    }
+                };
+            } else {
+                btnEl.classList.add('hidden');
+            }
+        }, 150);
+    }
+
+    function fetchWikipediaForSong(songTitle) {
+        if(!songTitle) return;
+        fetch(`https://ja.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro&explaintext&redirects=1&titles=${encodeURIComponent(songTitle)}&origin=*`)
+            .then(res => res.json())
+            .then(data => {
+                const pages = data.query.pages;
+                const pageId = Object.keys(pages)[0];
+                if (pageId !== "-1" && pages[pageId].extract) {
+                    let text = pages[pageId].extract;
+                    if(text.includes("曖昧さ回避")) return; 
+                    document.getElementById('wiki-song-text').textContent = text;
+                    document.getElementById('wiki-song-text').classList.add('line-clamp-5');
+                    document.getElementById('wiki-song-area').classList.remove('hidden');
+                    setupTextExpander('wiki-song-text', 'wiki-song-more-btn');
+                }
+            }).catch(e => console.log(e));
+    }
+
+    function fetchWikipediaForArtist(artistName) {
+        if(!artistName) return;
+        fetch(`https://ja.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro&explaintext&redirects=1&titles=${encodeURIComponent(artistName)}&origin=*`)
+            .then(res => res.json())
+            .then(data => {
+                const pages = data.query.pages;
+                const pageId = Object.keys(pages)[0];
+                if (pageId !== "-1" && pages[pageId].extract) {
+                    let text = pages[pageId].extract;
+                    document.getElementById('wiki-text').textContent = text;
+                    document.getElementById('wiki-text').classList.add('line-clamp-5');
+                    document.getElementById('wiki-link').href = `https://ja.wikipedia.org/wiki/${encodeURIComponent(artistName)}`;
+                    document.getElementById('wiki-artist-area').classList.remove('hidden');
+                    setupTextExpander('wiki-text', 'wiki-more-btn');
+                }
+            }).catch(e => console.log(e));
+    }
+
+    // メモ（保存）関連
     function getMemoList() { try { return JSON.parse(localStorage.getItem('merodata_memos')) || []; } catch(e) { return []; } }
     
     function toggleMemo() {
         if (!currentTrackData) return;
         let memos = getMemoList();
         const idx = memos.findIndex(m => m.trackId === currentTrackData.trackId);
-        if (idx >= 0) memos.splice(idx, 1);
-        else memos.push(currentTrackData);
+        if (idx >= 0) {
+            memos.splice(idx, 1);
+            showToast("保存を取り消しました");
+        } else {
+            memos.push(currentTrackData);
+            showToast("メモ帳に保存しました");
+        }
         localStorage.setItem('merodata_memos', JSON.stringify(memos));
         updateMemoIcon(currentTrackData.trackId);
     }
@@ -1021,49 +984,112 @@
         let memos = getMemoList();
         memos = memos.filter(m => m.trackId !== trackId);
         localStorage.setItem('merodata_memos', JSON.stringify(memos));
-        loadMemoList();
+        showSavedList();
         showToast("削除しました");
     }
-    
+
     function updateMemoIcon(trackId) {
         const icon = document.getElementById('icon-modal-memo');
         if (getMemoList().find(m => m.trackId === trackId)) { icon.textContent = 'favorite'; icon.classList.add('text-red-500'); }
         else { icon.textContent = 'favorite_border'; icon.classList.remove('text-red-500'); }
     }
-    
-    function loadMemoList() { allFetchedResults = getMemoList(); applySortAndRender(); }
 
-    // 閲覧履歴（LocalStorage最大10件）の操作
-    function getHistoryList() { try { return JSON.parse(localStorage.getItem('merodata_history')) || []; } catch(e) { return []; } }
-
-    function addHistoryItem(item) {
-        let history = getHistoryList();
-        // 同一曲があれば先に削除して最新にする
-        history = history.filter(h => h.trackId !== item.trackId);
-        // 先頭に追加
-        history.unshift(item);
-        // 最大10件制限
-        if (history.length > 10) {
-            history = history.slice(0, 10);
+    function showSavedList() {
+        currentMemoTab = 'saved';
+        document.getElementById('btn-toggle-saved').className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
+        document.getElementById('btn-toggle-history').className = 'bg-indigo-500 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
+        allFetchedResults = getMemoList(); 
+        
+        displayResults = allFetchedResults;
+        displayLimit = 0;
+        document.getElementById('results-container').innerHTML = ''; 
+        if(displayResults.length === 0) {
+            document.getElementById('results-container').innerHTML = '<div class="text-center p-8 text-gray-500">保存した曲はありません。</div>';
+        } else {
+            loadMoreRender(); 
         }
-        localStorage.setItem('merodata_history', JSON.stringify(history));
     }
 
-    function removeHistory(trackId) {
-        let history = getHistoryList();
-        history = history.filter(h => h.trackId !== trackId);
-        localStorage.setItem('merodata_history', JSON.stringify(history));
-        loadHistoryList();
-        showToast("履歴から削除しました");
+    // 曲の閲覧履歴（最大10件）
+    function getViewHistory() { try { return JSON.parse(localStorage.getItem('merodata_view_history')) || []; } catch(e) { return []; } }
+    function saveViewHistory(item) {
+        if (!item || !item.trackId) return;
+        let history = getViewHistory();
+        history = history.filter(m => m.trackId !== item.trackId);
+        history.unshift(item);
+        if (history.length > 10) history.pop();
+        localStorage.setItem('merodata_view_history', JSON.stringify(history));
     }
 
-    function loadHistoryList() { allFetchedResults = getHistoryList(); applySortAndRender(); }
+    function showHistoryList() {
+        currentMemoTab = 'history';
+        document.getElementById('btn-toggle-history').className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
+        document.getElementById('btn-toggle-saved').className = 'bg-indigo-500 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
+        
+        const history = getViewHistory();
+        displayResults = history; 
+        
+        displayLimit = 0;
+        document.getElementById('results-container').innerHTML = ''; 
+        
+        if (history.length === 0) {
+            document.getElementById('results-container').innerHTML = '<div class="text-center p-8 text-gray-500">閲覧履歴はありません。</div>';
+            return;
+        }
+
+        loadMoreRender();
+    }
     
     function shareSong() {
         if (!currentTrackData) return;
-        const text = `${currentTrackData.trackName} / ${currentTrackData.artistName}\n#メロ出〜た`;
-        if (navigator.share) navigator.share({ title: '曲の共有', text: text }).catch(console.error);
-        else showToast("共有機能がサポートされていません");
+        const cleanTitle = getCleanTitle(currentTrackData.trackName);
+        const text = `${cleanTitle} / ${currentTrackData.artistName}\n#メロ出〜た`;
+        if (navigator.share) {
+            navigator.share({ title: '曲の共有', text: text }).catch(console.error);
+        } else {
+            showToast("共有機能がサポートされていません");
+        }
+    }
+
+    // 検索テキスト履歴（モード毎、最大5件）
+    function getSearchHistory(mode) { 
+        try { return JSON.parse(localStorage.getItem('merodata_search_history_' + mode)) || []; } 
+        catch(e) { return []; } 
+    }
+    
+    function saveSearchHistory(keyword) {
+        if(!keyword || currentMode === 'memo') return;
+        let history = getSearchHistory(currentMode);
+        history = history.filter(k => k !== keyword);
+        history.unshift(keyword);
+        if (history.length > 5) history.pop(); // 5件制限
+        localStorage.setItem('merodata_search_history_' + currentMode, JSON.stringify(history));
+    }
+    
+    function loadSearchHistory() {
+        const container = document.getElementById('search-history-container');
+        if (currentMode === 'memo') {
+            container.classList.add('hidden');
+            return;
+        }
+        const history = getSearchHistory(currentMode);
+        if (history.length === 0) {
+            container.classList.add('hidden');
+            return;
+        }
+        
+        container.innerHTML = '';
+        history.forEach(keyword => { 
+            const tag = document.createElement('button');
+            tag.className = 'bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full whitespace-nowrap active:bg-gray-300 transition-colors border border-gray-300 font-medium';
+            tag.textContent = keyword;
+            tag.onclick = () => {
+                document.getElementById('search-input').value = keyword;
+                executeSearch(true, keyword);
+            };
+            container.appendChild(tag);
+        });
+        container.classList.remove('hidden');
     }
 
     function fetchJSONP(url, callback) {
@@ -1076,11 +1102,20 @@
     }
 
     function startVoiceInput() {
-        if (!('webkitSpeechRecognition' in window)) { showToast('音声入力未対応のブラウザです'); return; }
-        const rec = new webkitSpeechRecognition();
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) { showToast('音声入力未対応のブラウザです'); return; }
+        const rec = new SpeechRecognition();
         rec.lang = 'ja-JP';
-        rec.onresult = (e) => { document.getElementById('search-input').value = e.results[0][0].transcript; executeSearch(true); };
+        rec.onresult = (e) => { 
+            const transcript = e.results[0][0].transcript;
+            document.getElementById('search-input').value = transcript; 
+            executeSearch(true, transcript); 
+        };
+        rec.onerror = (e) => {
+            showToast('音声認識エラー: ' + e.error);
+        };
         rec.start();
+        showToast('お話しください...');
     }
 </script>
 </body>
