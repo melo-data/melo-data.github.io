@@ -416,7 +416,7 @@
         document.getElementById('audio-player').addEventListener('ended', stopAudio);
         
         if (typeof liff !== 'undefined') {
-            liff.init({ liffId: 2010749970-n0PwMioA }).then(() => console.log("LIFF Initialized")).catch(err => {});
+            liff.init({ liffId: '2010749970-n0PwMioA' }).then(() => console.log("LIFF Initialized")).catch(err => {});
         }
 
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -433,10 +433,7 @@
         const params = new URLSearchParams(window.location.search);
         const trackId = params.get('trackId');
         if (trackId) {
-            // パラメータを消してURLをクリーンにする（ブラウザバック時の挙動対策）
             window.history.replaceState({}, document.title, window.location.pathname);
-            
-            // 対象曲の情報を取得して詳細モーダルを開く
             fetchJSONP(`https://itunes.apple.com/lookup?id=${trackId}&country=jp&lang=ja_jp`, (data) => {
                 if (data && data.results && data.results.length > 0) {
                     openDetailModal(data.results[0]);
@@ -461,7 +458,6 @@
         setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0'); }, 3000);
     }
 
-    // 汎用共有機能（Share API or クリップボードへのフォールバック）
     function customShare(title, text, url) {
         const shareData = { title, text, url };
         if (navigator.share) {
@@ -522,8 +518,15 @@
             deferredPrompt.userChoice.then((choiceResult) => { deferredPrompt = null; });
         }
         
-        // ホーム追加と同時に共有機能も呼び出す
         customShare('メロ出〜た', text, url);
+    }
+
+    function shareSong() {
+        if (!currentTrackData) return;
+        const text = `${currentTrackData.trackName} / ${currentTrackData.artistName}\n#メロ出〜た`;
+        // ディープリンク等が必要な場合はURLにパラメータを付与して共有する
+        const url = window.location.origin + window.location.pathname + `?trackId=${currentTrackData.trackId}`;
+        customShare('曲の共有', text, url);
     }
 
     function openSearchOptions() {
@@ -565,7 +568,6 @@
         document.getElementById('search-input-container').style.display = 'flex';
         document.getElementById('memo-header-buttons').classList.add('hidden');
         
-        // 違う検索ページに遷移した場合はリセット
         if (!isSameMode) {
             inputEl.value = '';
             clearResults();
@@ -577,7 +579,6 @@
             selectGenre('all', document.querySelector('.genre-tab'));
         }
         
-        // モードに応じてオプション領域を切り替え
         if (mode === 'song' || mode === 'lyrics' || mode === 'artist-songs' || mode === 'album-tracks') {
             document.getElementById('simple-options-container').style.display = 'none';
             document.getElementById('accordion-options-container').style.display = 'block';
@@ -595,7 +596,6 @@
         
         loadSearchHistory();
 
-        // 同じ画面に戻ってきた場合は前回の結果を描画復元
         if (isSameMode && allFetchedResults.length > 0) {
             applyFiltersAndRender();
         }
@@ -633,7 +633,6 @@
             if (!currentQuery) return;
             document.getElementById('search-input').value = currentQuery;
             
-            // リスト内検索中にテキスト検索した場合、曲名検索モードに強制移行
             if (currentMode === 'artist-songs' || currentMode === 'album-tracks') {
                 currentMode = 'song';
                 document.getElementById('search-title').textContent = '曲名で探す';
@@ -684,7 +683,6 @@
         const sortSelectId = isAccordionActive ? 'sort-select-accordion' : 'sort-select-simple';
         const sortType = document.getElementById(sortSelectId) ? document.getElementById(sortSelectId).value : 'default';
 
-        // 曲名・歌詞・リスト内検索のときのみ年代・ジャンルフィルタリングを適用する
         if (isAccordionActive) {
             const decade = document.getElementById('decade-select').value;
             if (decade !== 'all') {
@@ -724,7 +722,6 @@
             }
         }
 
-        // 共通ソート処理
         if (sortType === 'recent') {
             filtered.sort((a, b) => new Date(b.releaseDate || 0) - new Date(a.releaseDate || 0));
         } else if (sortType === 'aiueo') {
@@ -733,7 +730,6 @@
 
         displayResults = filtered;
         
-        // ヒット数表示
         if (isAccordionActive) {
             document.getElementById('result-count-accordion').textContent = `ヒット: ${displayResults.length}件`;
         } else {
@@ -797,7 +793,6 @@
                 ${rightHtml}
             `;
 
-            // メモ帳の「保存(saved)」タブの時のみ、スワイプ削除用のUIにする
             if (currentMode === 'memo' && currentMemoTab === 'saved') {
                 el.className = 'rounded-lg mb-2 mt-1 overflow-hidden shadow-sm border border-gray-200 bg-white'; 
                 el.innerHTML = `
@@ -833,7 +828,6 @@
         document.getElementById('search-title').textContent = artistName;
         clearResults();
         
-        // アコーディオンオプションを有効化
         document.getElementById('simple-options-container').style.display = 'none';
         document.getElementById('accordion-options-container').style.display = 'block';
         openSearchOptions();
@@ -849,12 +843,19 @@
         });
     }
 
+    function searchArtistFromDetail() {
+        if(!currentTrackData) return;
+        const artistId = currentTrackData.artistId;
+        const artistName = currentTrackData.artistName;
+        closeDetailModal();
+        fetchArtistSongs(artistId, artistName);
+    }
+
     function fetchAlbumTracks(collectionId, collectionName) {
         currentMode = 'album-tracks';
         document.getElementById('search-title').textContent = collectionName;
         clearResults();
         
-        // アコーディオンオプションを有効化
         document.getElementById('simple-options-container').style.display = 'none';
         document.getElementById('accordion-options-container').style.display = 'block';
         openSearchOptions();
@@ -892,6 +893,21 @@
         updateModalPlayButton(false);
     }
 
+    function playPreviewInModal() {
+        if (!currentTrackData || !currentTrackData.previewUrl) return;
+        const audio = document.getElementById('audio-player');
+        
+        if (currentPlayingUrl === currentTrackData.previewUrl && !audio.paused) {
+            stopAudio(); 
+        } else { 
+            stopAudio(); 
+            audio.src = currentTrackData.previewUrl; 
+            audio.play(); 
+            currentPlayingUrl = currentTrackData.previewUrl; 
+            updateModalPlayButton(true); 
+        }
+    }
+
     function updateModalPlayButton(isPlaying) {
         const btn = document.getElementById('btn-modal-play');
         const icon = document.getElementById('icon-modal-play');
@@ -924,7 +940,7 @@
 
     function openDetailModal(item) {
         currentTrackData = item;
-        saveViewHistory(item); // 閲覧履歴として保存
+        saveViewHistory(item); 
 
         stopAudio();
         const imgUrl = (item.artworkUrl100 || '').replace('100x100bb', '400x400bb');
@@ -932,7 +948,6 @@
         document.getElementById('detail-title').textContent = item.trackName;
         document.getElementById('detail-artist-btn').textContent = item.artistName;
         
-        // OGP画像の動的変更（JS実行可能な環境向け）
         let ogImage = document.querySelector('meta[property="og:image"]');
         if (ogImage) ogImage.setAttribute('content', imgUrl);
         
@@ -969,21 +984,6 @@
         }
     }
 
-    function playPreviewInModal() {
-        if (!currentTrackData || !currentTrackData.previewUrl) return;
-        const audio = document.getElementById('audio-player');
-        
-        if (currentPlayingUrl === currentTrackData.previewUrl && !audio.paused) {
-            stopAudio(); 
-        } else { 
-            stopAudio(); 
-            audio.src = currentTrackData.previewUrl; 
-            audio.play(); 
-            currentPlayingUrl = currentTrackData.previewUrl; 
-            updateModalPlayButton(true); 
-        }
-    }
-
     function openLyrics() {
         if (!currentTrackData) return;
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
@@ -998,88 +998,85 @@
         const url = `https://www.clubdam.com/karaokesearch/?keyword=${encodeURIComponent(cleanTitle)}&type=keyword`;
         window.open(url, '_blank');
     }
-    
-    function searchArtistFromDetail() {
-        if (!currentTrackData) return;
-        closeDetailModal();
-        const artistName = currentTrackData.artistName;
-        document.getElementById('search-input').value = artistName;
-        goToSearch('artist');
-        executeSearch(true, artistName);
-    }
 
-    function setupTextExpander(textElId, btnElId) {
-        const textEl = document.getElementById(textElId);
-        const btnEl = document.getElementById(btnElId);
-        setTimeout(() => {
-            if (textEl.scrollHeight > textEl.clientHeight) {
-                btnEl.classList.remove('hidden');
-                btnEl.textContent = '続きを読む ▼';
-                btnEl.onclick = () => {
-                    if (textEl.classList.contains('line-clamp-5')) {
-                        textEl.classList.remove('line-clamp-5');
-                        btnEl.textContent = '閉じる ▲';
-                    } else {
-                        textEl.classList.add('line-clamp-5');
-                        btnEl.textContent = '続きを読む ▼';
-                    }
-                };
+    function fetchWikipediaForSong(title) {
+        document.getElementById('wiki-song-area').classList.remove('hidden');
+        document.getElementById('wiki-song-text').textContent = '読み込み中...';
+        document.getElementById('wiki-song-more-btn').classList.add('hidden');
+        
+        fetchWikiData(title, (text) => {
+            if (text && !text.includes("曖昧さ回避")) {
+                setupAccordion('wiki-song-text', 'wiki-song-more-btn', text);
             } else {
-                btnEl.classList.add('hidden');
+                fetchWikiData(title + ' (曲)', (text2) => {
+                    if (text2) setupAccordion('wiki-song-text', 'wiki-song-more-btn', text2);
+                    else document.getElementById('wiki-song-area').classList.add('hidden');
+                });
             }
-        }, 150);
-    }
-
-    function fetchWikipediaForSong(songTitle) {
-        if(!songTitle) return;
-        fetch(`https://ja.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro&explaintext&redirects=1&titles=${encodeURIComponent(songTitle)}&origin=*`)
-            .then(res => res.json())
-            .then(data => {
-                const pages = data.query.pages;
-                const pageId = Object.keys(pages)[0];
-                if (pageId !== "-1" && pages[pageId].extract) {
-                    let text = pages[pageId].extract;
-                    if(text.includes("曖昧さ回避")) return; 
-                    document.getElementById('wiki-song-text').textContent = text;
-                    document.getElementById('wiki-song-text').classList.add('line-clamp-5');
-                    document.getElementById('wiki-song-area').classList.remove('hidden');
-                    setupTextExpander('wiki-song-text', 'wiki-song-more-btn');
-                }
-            }).catch(e => console.log(e));
+        });
     }
 
     function fetchWikipediaForArtist(artistName) {
-        if(!artistName) return;
-        fetch(`https://ja.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro&explaintext&redirects=1&titles=${encodeURIComponent(artistName)}&origin=*`)
+        document.getElementById('wiki-artist-area').classList.remove('hidden');
+        document.getElementById('wiki-text').textContent = '読み込み中...';
+        document.getElementById('wiki-more-btn').classList.add('hidden');
+        document.getElementById('wiki-link').href = '#';
+
+        fetchWikiData(artistName, (text) => {
+            if (text) {
+                setupAccordion('wiki-text', 'wiki-more-btn', text);
+                document.getElementById('wiki-link').href = `https://ja.wikipedia.org/wiki/${encodeURIComponent(artistName)}`;
+            } else {
+                document.getElementById('wiki-text').textContent = '情報が見つかりませんでした。';
+            }
+        });
+    }
+
+    function fetchWikiData(query, callback) {
+        fetch(`https://ja.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&explaintext&redirects=1&titles=${encodeURIComponent(query)}&origin=*&exchars=800`)
             .then(res => res.json())
             .then(data => {
                 const pages = data.query.pages;
                 const pageId = Object.keys(pages)[0];
-                if (pageId !== "-1" && pages[pageId].extract) {
-                    let text = pages[pageId].extract;
-                    document.getElementById('wiki-text').textContent = text;
-                    document.getElementById('wiki-text').classList.add('line-clamp-5');
-                    document.getElementById('wiki-link').href = `https://ja.wikipedia.org/wiki/${encodeURIComponent(artistName)}`;
-                    document.getElementById('wiki-artist-area').classList.remove('hidden');
-                    setupTextExpander('wiki-text', 'wiki-more-btn');
-                }
-            }).catch(e => console.log(e));
+                if (pageId !== "-1" && pages[pageId].extract) callback(pages[pageId].extract);
+                else callback(null);
+            }).catch(() => callback(null));
     }
 
-    // メモ（保存）関連
+    function setupAccordion(textId, btnId, fullText) {
+        const textEl = document.getElementById(textId);
+        const btnEl = document.getElementById(btnId);
+        
+        textEl.textContent = fullText;
+        textEl.classList.add('line-clamp-5');
+        
+        setTimeout(() => {
+            if (textEl.scrollHeight > textEl.clientHeight) {
+                btnEl.classList.remove('hidden');
+                btnEl.textContent = '▼ 続きを読む';
+                btnEl.onclick = () => {
+                    const isExpanded = !textEl.classList.contains('line-clamp-5');
+                    if (isExpanded) {
+                        textEl.classList.add('line-clamp-5');
+                        btnEl.textContent = '▼ 続きを読む';
+                    } else {
+                        textEl.classList.remove('line-clamp-5');
+                        btnEl.textContent = '▲ 閉じる';
+                    }
+                };
+            }
+        }, 50);
+    }
+
     function getMemoList() { try { return JSON.parse(localStorage.getItem('merodata_memos')) || []; } catch(e) { return []; } }
+    function getViewHistory() { try { return JSON.parse(localStorage.getItem('merodata_history')) || []; } catch(e) { return []; } }
     
     function toggleMemo() {
         if (!currentTrackData) return;
         let memos = getMemoList();
         const idx = memos.findIndex(m => m.trackId === currentTrackData.trackId);
-        if (idx >= 0) {
-            memos.splice(idx, 1);
-            showToast("保存を取り消しました");
-        } else {
-            memos.push(currentTrackData);
-            showToast("メモ帳に保存しました");
-        }
+        if (idx >= 0) memos.splice(idx, 1);
+        else memos.push(currentTrackData);
         localStorage.setItem('merodata_memos', JSON.stringify(memos));
         updateMemoIcon(currentTrackData.trackId);
     }
@@ -1088,162 +1085,88 @@
         let memos = getMemoList();
         memos = memos.filter(m => m.trackId !== trackId);
         localStorage.setItem('merodata_memos', JSON.stringify(memos));
-        showSavedList();
+        if (currentMode === 'memo' && currentMemoTab === 'saved') {
+            showSavedList();
+        }
         showToast("削除しました");
     }
-
+    
     function updateMemoIcon(trackId) {
         const icon = document.getElementById('icon-modal-memo');
         if (getMemoList().find(m => m.trackId === trackId)) { icon.textContent = 'favorite'; icon.classList.add('text-red-500'); }
         else { icon.textContent = 'favorite_border'; icon.classList.remove('text-red-500'); }
     }
 
+    function saveViewHistory(item) {
+        let history = getViewHistory();
+        history = history.filter(h => h.trackId !== item.trackId); 
+        history.unshift(item); 
+        if (history.length > 50) history.pop(); 
+        localStorage.setItem('merodata_history', JSON.stringify(history));
+    }
+
     function showSavedList() {
         currentMemoTab = 'saved';
         document.getElementById('btn-toggle-saved').className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
         document.getElementById('btn-toggle-history').className = 'bg-indigo-500 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
-        allFetchedResults = getMemoList(); 
         
-        displayResults = allFetchedResults;
-        displayLimit = 0;
-        document.getElementById('results-container').innerHTML = ''; 
+        allFetchedResults = getMemoList();
+        displayResults = [...allFetchedResults];
+        
+        document.getElementById('result-count-simple').textContent = `保存: ${displayResults.length}件`;
+        document.getElementById('result-count-accordion').textContent = `保存: ${displayResults.length}件`;
+        
+        clearResults();
         if(displayResults.length === 0) {
-            document.getElementById('results-container').innerHTML = '<div class="text-center p-8 text-gray-500">保存した曲はありません。</div>';
+            document.getElementById('results-container').innerHTML = '<div class="text-center p-8 text-gray-500">保存された曲はありません。</div>';
         } else {
-            loadMoreRender(); 
+            loadMoreRender();
         }
-    }
-
-    // 曲の閲覧履歴（最大10件）
-    function getViewHistory() { try { return JSON.parse(localStorage.getItem('merodata_view_history')) || []; } catch(e) { return []; } }
-    function saveViewHistory(item) {
-        if (!item || !item.trackId) return;
-        let history = getViewHistory();
-        history = history.filter(m => m.trackId !== item.trackId);
-        history.unshift(item);
-        if (history.length > 10) history.pop();
-        localStorage.setItem('merodata_view_history', JSON.stringify(history));
     }
 
     function showHistoryList() {
         currentMemoTab = 'history';
-        document.getElementById('btn-toggle-history').className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
         document.getElementById('btn-toggle-saved').className = 'bg-indigo-500 text-indigo-100 px-3 py-1 rounded text-sm border border-indigo-500 flex items-center opacity-85 transition-all duration-150';
+        document.getElementById('btn-toggle-history').className = 'bg-indigo-700 text-white px-3 py-1 rounded text-sm font-bold border border-indigo-400 flex items-center shadow transition-all duration-150';
         
-        const history = getViewHistory();
-        displayResults = history; 
+        allFetchedResults = getViewHistory();
+        displayResults = [...allFetchedResults];
         
-        displayLimit = 0;
-        document.getElementById('results-container').innerHTML = ''; 
+        document.getElementById('result-count-simple').textContent = `履歴: ${displayResults.length}件`;
+        document.getElementById('result-count-accordion').textContent = `履歴: ${displayResults.length}件`;
         
-        if (history.length === 0) {
+        clearResults();
+        if(displayResults.length === 0) {
             document.getElementById('results-container').innerHTML = '<div class="text-center p-8 text-gray-500">閲覧履歴はありません。</div>';
-            return;
+        } else {
+            loadMoreRender();
         }
-
-        loadMoreRender();
-    }
-    
-    function shareSong() {
-        if (!currentTrackData) return;
-        const cleanTitle = getCleanTitle(currentTrackData.trackName);
-        const baseUrl = window.location.origin + window.location.pathname;
-        const url = `${baseUrl}?trackId=${currentTrackData.trackId}`;
-        const text = `${cleanTitle} / ${currentTrackData.artistName}\n#メロ出〜た`;
-        
-        if (typeof liff !== 'undefined' && liff.isInClient()) {
-            const imgUrl = (currentTrackData.artworkUrl100 || '').replace('100x100bb', '400x400bb');
-            liff.shareTargetPicker([
-                {
-                    "type": "flex",
-                    "altText": `曲を共有しました: ${cleanTitle}`,
-                    "contents": {
-                        "type": "bubble",
-                        "hero": {
-                            "type": "image",
-                            "url": imgUrl || "https://placehold.co/400x400/eeeeee/999999?text=No+Image",
-                            "size": "full",
-                            "aspectRatio": "1:1",
-                            "aspectMode": "cover",
-                            "action": { "type": "uri", "uri": url }
-                        },
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                { "type": "text", "text": cleanTitle, "weight": "bold", "size": "xl", "wrap": true },
-                                { "type": "text", "text": currentTrackData.artistName, "size": "md", "color": "#666666", "wrap": true }
-                            ]
-                        },
-                        "footer": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "spacing": "sm",
-                            "contents": [
-                                { "type": "button", "style": "link", "height": "sm", "action": { "type": "uri", "label": "メロ出〜たで開く", "uri": url } }
-                            ],
-                            "flex": 0
-                        }
-                    }
-                }
-            ]).then((res) => {
-                if (res) showToast("LINEで友だちに共有しました");
-            }).catch((error) => console.error("LIFF Share Error:", error));
-            return;
-        }
-
-        // 通常ブラウザの場合は標準の共有APIを使用
-        customShare('曲の共有', text, url);
     }
 
-    // 検索テキスト履歴用モード判定（リスト内検索時はsongモードを共用）
-    function getEffectiveHistoryMode() {
-        if (currentMode === 'artist-songs' || currentMode === 'album-tracks') return 'song';
-        return currentMode;
+    function getSearchHistories() {
+        try { return JSON.parse(localStorage.getItem('merodata_search_history')) || []; } catch(e) { return []; }
     }
 
-    // 検索テキスト履歴（モード毎、最大5件）
-    function getSearchHistory() { 
-        if (currentMode === 'memo') return [];
-        const mode = getEffectiveHistoryMode();
-        try { return JSON.parse(localStorage.getItem('merodata_search_history_' + mode)) || []; } 
-        catch(e) { return []; } 
+    function saveSearchHistory(query) {
+        if(!query) return;
+        let history = getSearchHistories();
+        history = history.filter(h => h !== query);
+        history.unshift(query);
+        if(history.length > 10) history.pop();
+        localStorage.setItem('merodata_search_history', JSON.stringify(history));
     }
-    
-    function saveSearchHistory(keyword) {
-        if(!keyword || currentMode === 'memo') return;
-        const mode = getEffectiveHistoryMode();
-        let history = getSearchHistory();
-        history = history.filter(k => k !== keyword);
-        history.unshift(keyword);
-        if (history.length > 5) history.pop(); // 5件制限
-        localStorage.setItem('merodata_search_history_' + mode, JSON.stringify(history));
-    }
-    
+
     function loadSearchHistory() {
         const container = document.getElementById('search-history-container');
-        if (currentMode === 'memo') {
+        if(!container) return;
+        const histories = getSearchHistories();
+        if(histories.length > 0) {
+            container.innerHTML = histories.map(h => `<button onclick="executeSearch(true, '${h.replace(/'/g, "\\'")}')" class="bg-white border border-indigo-200 text-indigo-700 text-xs px-2 py-1 rounded-full whitespace-nowrap active:bg-indigo-50 shadow-sm">${h}</button>`).join('');
+            container.classList.remove('hidden');
+        } else {
+            container.innerHTML = '';
             container.classList.add('hidden');
-            return;
         }
-        const history = getSearchHistory();
-        if (history.length === 0) {
-            container.classList.add('hidden');
-            return;
-        }
-        
-        container.innerHTML = '';
-        history.forEach(keyword => { 
-            const tag = document.createElement('button');
-            tag.className = 'bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full whitespace-nowrap active:bg-gray-300 transition-colors border border-gray-300 font-medium';
-            tag.textContent = keyword;
-            tag.onclick = () => {
-                document.getElementById('search-input').value = keyword;
-                executeSearch(true, keyword);
-            };
-            container.appendChild(tag);
-        });
-        container.classList.remove('hidden');
     }
 
     function fetchJSONP(url, callback) {
@@ -1257,19 +1180,18 @@
 
     function startVoiceInput() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) { showToast('音声入力未対応のブラウザです'); return; }
+        if (!SpeechRecognition) {
+            showToast('音声入力未対応のブラウザです');
+            return;
+        }
         const rec = new SpeechRecognition();
         rec.lang = 'ja-JP';
         rec.onresult = (e) => { 
             const transcript = e.results[0][0].transcript;
             document.getElementById('search-input').value = transcript; 
-            executeSearch(true, transcript); 
-        };
-        rec.onerror = (e) => {
-            showToast('音声認識エラー: ' + e.error);
+            executeSearch(true); 
         };
         rec.start();
-        showToast('お話しください...');
     }
 </script>
 </body>
