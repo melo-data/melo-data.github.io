@@ -35,7 +35,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
-    <!-- LINEミニアプリ化を想定したLIFF SDK -->
+    <!-- LINEミニアプリ用 LIFF SDK -->
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     
     <style>
@@ -417,11 +417,16 @@
         
         document.getElementById('audio-player').addEventListener('ended', stopAudio);
         
-        // LIFFの初期化（指定のLIFF ID）
+        // LIFFの初期化（指定のLIFF ID：2010749970-n0PwMioA）
         if (typeof liff !== 'undefined') {
             liff.init({ liffId: '2010749970-n0PwMioA' }).then(() => {
                 isLiffInit = true;
                 console.log("LIFF Initialized successfully.");
+
+                // 【最重要】LINEの通常内蔵ブラウザで起動された場合、公式LINEミニアプリ(LIFFブラウザ)に即座に自動リダイレクトする
+                if (!liff.isInClient() && /line/i.test(navigator.userAgent)) {
+                    window.location.href = 'https://liff.line.me/2010749970-n0PwMioA';
+                }
             }).catch(err => {
                 console.error("LIFF Initialization failed", err);
             });
@@ -463,7 +468,7 @@
         document.getElementById('toast-text').textContent = message;
         toast.classList.remove('opacity-0');
         toast.classList.add('opacity-100');
-        setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0'); }, 3000);
+        setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0'); }, 4000); // じっくり読めるようにトーストの表示時間を少し延長
     }
 
     function customShare(title, text, url) {
@@ -513,6 +518,10 @@
                 showToast("LINE共有機能を準備中です。少し待ってから再度お試しください。");
                 return;
             }
+            if (!liff.isLoggedIn()) {
+                liff.login();
+                return;
+            }
             liff.shareTargetPicker([
                 {
                     type: "text",
@@ -522,6 +531,7 @@
                 if (res) showToast("LINEの友だちに共有しました");
             }).catch((error) => {
                 console.error("LIFF shareTargetPicker Error:", error);
+                showToast(`LINE共有エラー: ${error.message || error}。コンソール設定をご確認ください。`);
                 fallbackShare(text + "\n" + url);
             });
             return;
@@ -548,6 +558,10 @@
         if (typeof liff !== 'undefined' && liff.isInClient()) {
             if (!isLiffInit) {
                 showToast("LINE共有機能を準備中です。");
+                return;
+            }
+            if (!liff.isLoggedIn()) {
+                liff.login();
                 return;
             }
 
@@ -618,6 +632,8 @@
                 }
             }).catch((error) => {
                 console.error("LIFF Flex Share Error:", error);
+                // Share Target PickerがLINEコンソール上でOFFになっている、もしくは権限に問題がある場合のアラート
+                showToast(`LINE共有に失敗しました。LINE Developersコンソールで「シェアターゲットピッカー（Share Target Picker）」が有効になっているかご確認ください。`);
                 fallbackShare(text + "\n" + url);
             });
             return;
