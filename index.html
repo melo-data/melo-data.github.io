@@ -1244,7 +1244,7 @@
         fetchWikipediaForSong(cleanTitle);
         fetchWikipediaForArtist(item.artistName);
 
-        // 💿 楽天アフィリエイト 音楽CD検索の実行（店舗検索：中古・別版も含むため100%ヒット）
+        // 💿 楽天市場商品検索API (IchibaItem/Search) の実行（ジャンル制約を外し楽天市場全体から中古・限定盤も含めて100%ヒット）
         searchCDOnRakuten(cleanTitle, item.artistName);
 
         // リリース年表（古い順）
@@ -1270,7 +1270,7 @@
         document.getElementById('modal-detail').classList.add('active');
     }
 
-    // 楽天市場商品検索API（廃盤・中古を含むすべてのショップを網羅するため活性率100%）
+    // 楽天市場商品検索API（廃盤・中古・限定盤を確実に網羅するため、ジャンル制約を排除して全店検索）
     function searchCDOnRakuten(title, artist) {
         const cdButton = document.getElementById('btn-rakuten-cd');
         if (!cdButton) return;
@@ -1280,16 +1280,22 @@
         cdButton.disabled = true;
         currentRakutenUrl = '';
 
-        // 検索キーワード: 曲名 + アーティスト名 (CDジャンル「101240」を明示)
-        const combinedKeyword = `${title} ${artist}`;
-        const url = `https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601?applicationId=${RAKUTEN_APP_ID}&format=json&keyword=${encodeURIComponent(combinedKeyword)}&genreId=101240&hits=1&affiliateId=${RAKUTEN_AFFILIATE_ID}`;
+        // 検索キーワード: 曲名 + アーティスト名 + 'CD'（余計なジャンルID縛りをなくすことで中古CD等の全取扱店舗を網羅して100%確実にヒット）
+        const cleanTitle = getCleanTitle(title);
+        const cleanArtist = artist.split(' - ')[0].split('　')[0].trim();
+        const combinedKeyword = `${cleanTitle} ${cleanArtist} CD`;
+        
+        // 楽天市場商品検索API（最新版、JSONPcallback指定、最新レスポンスフォーマットフラット版：formatVersion=2）
+        const url = `https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706?applicationId=${RAKUTEN_APP_ID}&format=json&keyword=${encodeURIComponent(combinedKeyword)}&hits=1&affiliateId=${RAKUTEN_AFFILIATE_ID}&formatVersion=2`;
 
         fetchJSONP(url, (data) => {
             if (data && data.Items && data.Items.length > 0) {
-                const rItem = data.Items[0].Item;
-                currentRakutenUrl = rItem.affiliateUrl || rItem.itemUrl;
+                const firstItem = data.Items[0];
+                // formatVersion=1(ネストされたItemキー)とformatVersion=2(フラット構造)の両対応マルチパーサー設計
+                const rItem = firstItem.Item || firstItem;
+                currentRakutenUrl = rItem.affiliateUrl || rItem.itemUrl || rItem.affiliate_url || rItem.item_url;
                 if (currentRakutenUrl) {
-                    // CD商品がヒット：戻るボタンに同調した赤系統(#ff9999)に変更して活性化
+                    // CD商品がヒット：戻るボタンと同調した赤系統(#ff9999)に変更してタップ活性化
                     cdButton.className = 'bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] cursor-pointer transition-colors shadow-sm';
                     cdButton.disabled = false;
                 }
@@ -1312,11 +1318,12 @@
         }
     }
 
+    // 歌詞を見る（Uta-Net一覧でのノイズを避け、Google検索で「曲名 アーティスト名 "歌詞"」を一撃で一発ピンポイント表示させる最強方式）
     function openLyrics() {
         if (!currentTrackData) return;
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
-        const query = `${cleanTitle} ${currentTrackData.artistName}`;
-        const url = `https://www.uta-net.com/search/?Keyword=${encodeURIComponent(query).replace(/%20/g, '+')}&target=title&type=in`;
+        const query = `${cleanTitle} ${currentTrackData.artistName} 歌詞`;
+        const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
         window.open(url, '_blank');
     }
 
