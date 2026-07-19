@@ -416,7 +416,7 @@
         document.getElementById('audio-player').addEventListener('ended', stopAudio);
         
         if (typeof liff !== 'undefined') {
-            liff.init({ liffId: "YOUR_LIFF_ID_HERE" }).then(() => console.log("LIFF Initialized")).catch(err => {});
+            liff.init({ liffId: 2010749970-n0PwMioA }).then(() => console.log("LIFF Initialized")).catch(err => {});
         }
 
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -502,6 +502,20 @@
     function shareApp() {
         const text = "メロ出〜た\nカラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。";
         const url = window.location.origin + window.location.pathname;
+
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
+            liff.shareTargetPicker([
+                {
+                    type: "text",
+                    text: text + "\n\n" + url
+                }
+            ]).then((res) => {
+                if (res) showToast("LINEで共有しました");
+            }).catch((error) => {
+                console.error("LIFF Share Error:", error);
+            });
+            return;
+        }
 
         if (deferredPrompt) {
             deferredPrompt.prompt();
@@ -1137,6 +1151,48 @@
         const url = `${baseUrl}?trackId=${currentTrackData.trackId}`;
         const text = `${cleanTitle} / ${currentTrackData.artistName}\n#メロ出〜た`;
         
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
+            const imgUrl = (currentTrackData.artworkUrl100 || '').replace('100x100bb', '400x400bb');
+            liff.shareTargetPicker([
+                {
+                    "type": "flex",
+                    "altText": `曲を共有しました: ${cleanTitle}`,
+                    "contents": {
+                        "type": "bubble",
+                        "hero": {
+                            "type": "image",
+                            "url": imgUrl || "https://placehold.co/400x400/eeeeee/999999?text=No+Image",
+                            "size": "full",
+                            "aspectRatio": "1:1",
+                            "aspectMode": "cover",
+                            "action": { "type": "uri", "uri": url }
+                        },
+                        "body": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                { "type": "text", "text": cleanTitle, "weight": "bold", "size": "xl", "wrap": true },
+                                { "type": "text", "text": currentTrackData.artistName, "size": "md", "color": "#666666", "wrap": true }
+                            ]
+                        },
+                        "footer": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "spacing": "sm",
+                            "contents": [
+                                { "type": "button", "style": "link", "height": "sm", "action": { "type": "uri", "label": "メロ出〜たで開く", "uri": url } }
+                            ],
+                            "flex": 0
+                        }
+                    }
+                }
+            ]).then((res) => {
+                if (res) showToast("LINEで友だちに共有しました");
+            }).catch((error) => console.error("LIFF Share Error:", error));
+            return;
+        }
+
+        // 通常ブラウザの場合は標準の共有APIを使用
         customShare('曲の共有', text, url);
     }
 
