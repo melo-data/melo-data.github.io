@@ -400,6 +400,7 @@
     let observer;
     let deferredPrompt; 
     let isLiffInit = false; // LIFF初期化完了フラグ
+    let hasLoadedDeepLink = false; // 重複処理防止フラグ
 
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
@@ -417,19 +418,30 @@
         
         document.getElementById('audio-player').addEventListener('ended', stopAudio);
         
-        // LIFFの初期化（指定のLIFF ID：2010749970-n0PwMioA）
+        // LIFFの初期化
         if (typeof liff !== 'undefined') {
             liff.init({ liffId: '2010749970-n0PwMioA' }).then(() => {
                 isLiffInit = true;
                 console.log("LIFF Initialized successfully.");
 
-                // 【最重要】LINEの通常内蔵ブラウザで起動された場合、公式LINEミニアプリ(LIFFブラウザ)に即座に自動リダイレクトする
+                // LIFFデコード完了を待ってパラメータ読み取り・自動ポップアップ
+                checkDeepLink();
+
+                // 【最重要】LINEの通常内蔵ブラウザで起動された場合、公式LINEミニアプリ(LIFFブラウザ)にパラメータを引き継いで即座に自動リダイレクトする
                 if (!liff.isInClient() && /line/i.test(navigator.userAgent)) {
-                    window.location.href = 'https://liff.line.me/2010749970-n0PwMioA';
+                    window.location.href = 'https://liff.line.me/2010749970-n0PwMioA' + window.location.search;
                 }
             }).catch(err => {
                 console.error("LIFF Initialization failed", err);
+                // LIFFがコケた場合のフォールバック読み込み
+                checkDeepLink();
             });
+        }
+
+        // LINE以外のブラウザはDOMContentLoadedで即座にパラメータを判定
+        const isLine = /line/i.test(navigator.userAgent);
+        if (!isLine) {
+            checkDeepLink();
         }
 
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -441,19 +453,27 @@
         document.querySelectorAll('.genre-tab:not(.active)').forEach(el => {
             el.className = 'genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold bg-white/15 text-indigo-100 border-2 border-transparent transition-colors';
         });
+    });
 
-        // URLパラメータの確認（ディープリンク対応）
+    // パラメータに基づいた曲自動立ち上げ関数（ディープリンク）
+    function checkDeepLink() {
+        if (hasLoadedDeepLink) return;
         const params = new URLSearchParams(window.location.search);
         const trackId = params.get('trackId');
         if (trackId) {
+            hasLoadedDeepLink = true;
+            // リフレッシュによる再発火を防ぐためURLパラメータのみクリア
             window.history.replaceState({}, document.title, window.location.pathname);
+            
             fetchJSONP(`https://itunes.apple.com/lookup?id=${trackId}&country=jp&lang=ja_jp`, (data) => {
                 if (data && data.results && data.results.length > 0) {
                     openDetailModal(data.results[0]);
+                } else {
+                    console.error("曲データの取得に失敗しました。");
                 }
             });
         }
-    });
+    }
 
     function tryFullScreen() {
         const docEl = document.documentElement;
@@ -468,7 +488,7 @@
         document.getElementById('toast-text').textContent = message;
         toast.classList.remove('opacity-0');
         toast.classList.add('opacity-100');
-        setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0'); }, 4000); // じっくり読めるようにトーストの表示時間を少し延長
+        setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0'); }, 4000);
     }
 
     function customShare(title, text, url) {
@@ -510,7 +530,8 @@
 
     function shareApp() {
         const text = "メロ出〜た\nカラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。";
-        const url = window.location.origin + window.location.pathname;
+        const staticUrl = window.location.origin + window.location.pathname;
+        const liffUrl = 'https://liff.line.me/2010749970-n0PwMioA';
 
         // LINEミニアプリ環境（LIFFクライアント）の場合
         if (typeof liff !== 'undefined' && liff.isInClient()) {
@@ -525,14 +546,14 @@
             liff.shareTargetPicker([
                 {
                     type: "text",
-                    text: text + "\n\n" + url
+                    text: text + "\n\n" + liffUrl
                 }
             ]).then((res) => {
                 if (res) showToast("LINEの友だちに共有しました");
             }).catch((error) => {
                 console.error("LIFF shareTargetPicker Error:", error);
                 showToast(`LINE共有エラー: ${error.message || error}。コンソール設定をご確認ください。`);
-                fallbackShare(text + "\n" + url);
+                fallbackShare(text + "\n" + liffUrl);
             });
             return;
         }
@@ -543,7 +564,7 @@
             deferredPrompt.userChoice.then((choiceResult) => { deferredPrompt = null; });
         }
         
-        customShare('メロ出〜た', text, url);
+        customShare('メロ出〜た', text, staticUrl);
     }
 
     function shareSong() {
@@ -551,10 +572,13 @@
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
         const artistName = currentTrackData.artistName;
         const text = `${cleanTitle} / ${artistName}\n#メロ出〜た`;
-        const url = window.location.origin + window.location.pathname + `?trackId=${currentTrackData.trackId}`;
+        
+        // 相手側で自動的にLIFFを立ち上げ・デコードさせるために公式LIFFエンドポイントURL形式（liff.line.me）を使用
+        const liffUrl = `https://liff.line.me/2010749970-n0PwMioA?trackId=${currentTrackData.trackId}`;
+        const staticUrl = window.location.origin + window.location.pathname + `?trackId=${currentTrackData.trackId}`;
         const artworkUrl = (currentTrackData.artworkUrl100 || '').replace('100x100bb', '400x400bb');
 
-        // LINEミニアプリ環境（LIFFクライアント内）での「LINE友だちへの直接共有」
+        // LINEミニアプリ環境での「レコードジャケット画像を含めた美しくリッチなFlex共有」
         if (typeof liff !== 'undefined' && liff.isInClient()) {
             if (!isLiffInit) {
                 showToast("LINE共有機能を準備中です。");
@@ -565,7 +589,7 @@
                 return;
             }
 
-            // Flex Message のオブジェクト定義：ジャケット画像を埋め込む
+            // Flex Message オブジェクト定義
             const flexMessage = {
                 type: "flex",
                 altText: `カラオケで歌いたい曲: ${cleanTitle}`,
@@ -579,7 +603,7 @@
                         aspectMode: "cover",
                         action: {
                             type: "uri",
-                            uri: url
+                            uri: liffUrl
                         }
                     },
                     body: {
@@ -616,7 +640,7 @@
                                 action: {
                                     type: "uri",
                                     label: "メロ出〜た で聴く",
-                                    uri: url
+                                    uri: liffUrl
                                 }
                             }
                         ],
@@ -632,15 +656,14 @@
                 }
             }).catch((error) => {
                 console.error("LIFF Flex Share Error:", error);
-                // Share Target PickerがLINEコンソール上でOFFになっている、もしくは権限に問題がある場合のアラート
-                showToast(`LINE共有に失敗しました。LINE Developersコンソールで「シェアターゲットピッカー（Share Target Picker）」が有効になっているかご確認ください。`);
-                fallbackShare(text + "\n" + url);
+                showToast(`LINE共有に失敗しました。LINE Developersコンソールで「シェアターゲットピッカー」がONかご確認ください。`);
+                fallbackShare(text + "\n" + liffUrl);
             });
             return;
         }
 
-        // 通常ブラウザ等ではWeb Share APIまたはクリップボードコピー
-        customShare('曲の共有', text, url);
+        // 通常ブラウザや他SNSでは、URLにパラメータを付与して共有する
+        customShare('曲の共有', text, staticUrl);
     }
 
     function openSearchOptions() {
@@ -1071,7 +1094,7 @@
             lyricsBtn.className = 'bg-gray-200 text-gray-400 border border-gray-300 py-3 rounded-lg font-bold flex items-center justify-center';
             lyricsBtn.onclick = () => {};
         } else {
-            lyricsBtn.className = 'bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center transition-colors';
+            lyricsBtn.className = 'bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors';
             lyricsBtn.onclick = openLyrics;
         }
 
@@ -1215,7 +1238,7 @@
         let history = getViewHistory();
         history = history.filter(h => h.trackId !== item.trackId); 
         history.unshift(item); 
-        if (history.length > 10) history.pop(); 
+        if (history.length > 50) history.pop(); 
         localStorage.setItem('merodata_history', JSON.stringify(history));
     }
 
@@ -1257,24 +1280,17 @@
         }
     }
 
-    function getSearchHistoriesKey(mode) {
-        if (mode === 'artist-songs' || mode === 'album-tracks') return 'merodata_search_history_song';
-        return `merodata_search_history_${mode}`;
-    }
-
     function getSearchHistories() {
-        const key = getSearchHistoriesKey(currentMode);
-        try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e) { return []; }
+        try { return JSON.parse(localStorage.getItem('merodata_search_history')) || []; } catch(e) { return []; }
     }
 
     function saveSearchHistory(query) {
         if(!query) return;
-        const key = getSearchHistoriesKey(currentMode);
         let history = getSearchHistories();
         history = history.filter(h => h !== query);
         history.unshift(query);
-        if(history.length > 5) history.pop();
-        localStorage.setItem(key, JSON.stringify(history));
+        if(history.length > 10) history.pop();
+        localStorage.setItem('merodata_search_history', JSON.stringify(history));
     }
 
     function loadSearchHistory() {
