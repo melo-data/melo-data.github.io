@@ -349,7 +349,7 @@
                 <button id="btn-modal-share" onclick="shareSong()" class="bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] transition-colors shadow-sm">
                     <span class="material-icons mr-1">share</span>友達に教える
                 </button>
-                <button id="btn-rakuten-cd" onclick="buyCDFromRakuten()" class="bg-gray-300 text-gray-500 py-3 rounded-lg font-bold flex items-center justify-center cursor-not-allowed shadow-sm transition-all" disabled>
+                <button id="btn-rakuten-cd" onclick="buyCDFromRakuten()" class="bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] shadow-sm transition-all">
                     <span class="material-icons mr-1">album</span>音楽CDを購入
                 </button>
             </div>
@@ -399,7 +399,6 @@
     // 【確定設定】楽天ウェブサービスAPI アフィリエイト連携情報
     // -------------------------------------------------------------
     const RAKUTEN_APP_ID = '1d29229b-4e57-4193-bf00-b69cb3e3c77f';          
-    const RAKUTEN_ACCESS_KEY = 'pk_o3G34M4enOIttfRMvdJsdG5ywwSnYiPSQMLWDc5LF2B';  
     const RAKUTEN_AFFILIATE_ID = '07190876.228b5fb2.07190877.c0d8ecf3';  
     let currentRakutenUrl = ''; // 楽天商品URL一時退避
 
@@ -465,17 +464,16 @@
             if (voiceBtn) voiceBtn.style.display = 'none';
         }
 
-        // 初期状態でジャンルタブの非アクティブクラスをセット
+        // 初期状態でジャンルタブの非アクティブクラスをセットしておく
         document.querySelectorAll('.genre-tab:not(.active)').forEach(el => {
             el.className = 'genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold bg-white/15 text-indigo-100 border-2 border-transparent transition-colors';
         });
 
         // 一般Webブラウザ用ディープリンク検知
-        const params = new URLSearchParams(window.location.search);
-        const trackId = params.get('trackId');
-        if (trackId && !/line/i.test(navigator.userAgent)) {
+        const parsedTrackId = getTrackIdFromUrl();
+        if (parsedTrackId && !/line/i.test(navigator.userAgent)) {
             window.history.replaceState({}, document.title, window.location.pathname);
-            fetchJSONP(`https://itunes.apple.com/lookup?id=${trackId}&country=jp&lang=ja_jp`, (data) => {
+            fetchJSONP(`https://itunes.apple.com/lookup?id=${parsedTrackId}&country=jp&lang=ja_jp`, (data) => {
                 if (data && data.results && data.results.length > 0) {
                     openDetailModal(data.results[0]);
                 }
@@ -483,33 +481,33 @@
         }
     });
 
-    // LIFF環境下におけるディープリンク復元処理
+    // LIFF環境下におけるディープリンクパラメータ取得関数
+    function getTrackIdFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        let trackId = params.get('trackId');
+        
+        // LINE内リダイレクト(liff.state)からパラメータ復元を試みる
+        if (!trackId) {
+            const liffState = params.get('liff.state');
+            if (liffState) {
+                try {
+                    const decodedState = decodeURIComponent(liffState);
+                    const stateParams = new URLSearchParams(decodedState.replace(/^\/?\?/, '?'));
+                    trackId = stateParams.get('trackId');
+                } catch (e) {
+                    console.error("Failed to parse liff.state", e);
+                }
+            }
+        }
+        return trackId;
+    }
+
+    // LIFF起動時の自動モーダルオープン制御
     function checkDeepLink() {
         if (!isLiffInit) return;
-        
-        // liff.getIDToken() の存在チェックを安全に行い、エラーを回避
-        let hasToken = false;
-        try {
-            if (typeof liff.getIDToken === 'function' && liff.getIDToken()) {
-                hasToken = true;
-            }
-        } catch (e) {
-            console.error("Token verification error", e);
-        }
-
-        let trackId = hasToken ? null : new URLSearchParams(window.location.search).get('trackId');
-        
-        // LIFF内ではURLパラメータがliff.state内にエンコードされる場合があるため、両パターンに対応
-        if (!trackId) {
-            const liffStateQuery = new URLSearchParams(window.location.search).get('liff.state');
-            if (liffStateQuery) {
-                const innerParams = new URLSearchParams(liffStateQuery);
-                trackId = innerParams.get('trackId');
-            }
-        }
-
-        if (trackId) {
-            fetchJSONP(`https://itunes.apple.com/lookup?id=${trackId}&country=jp&lang=ja_jp`, (data) => {
+        const parsedTrackId = getTrackIdFromUrl();
+        if (parsedTrackId) {
+            fetchJSONP(`https://itunes.apple.com/lookup?id=${parsedTrackId}&country=jp&lang=ja_jp`, (data) => {
                 if (data && data.results && data.results.length > 0) {
                     openDetailModal(data.results[0]);
                 }
@@ -534,13 +532,15 @@
     }
 
     function customShare(title, text, url) {
-        const shareData = { title, text, url };
+        // text内にあらかじめ曲名/アーティスト、およびURLを完全に結合して各種SNS等に渡す
+        const fullShareText = text + "\n" + url;
+        const shareData = { title, text: fullShareText, url };
         if (navigator.share) {
             navigator.share(shareData).catch((err) => {
-                fallbackShare(text + "\n" + url);
+                fallbackShare(fullShareText);
             });
         } else {
-            fallbackShare(text + "\n" + url);
+            fallbackShare(fullShareText);
         }
     }
 
@@ -610,7 +610,6 @@
         const artistName = currentTrackData.artistName;
         const text = `${cleanTitle} / ${artistName}\n#メロ出〜た`;
         
-        // LINE内・通常ブラウザに関わらず、LIFFで開ける公式ディープリンクを生成
         const liffDeepUrl = `https://liff.line.me/2010749970-n0PwMioA?trackId=${currentTrackData.trackId}`;
         const artworkUrl = (currentTrackData.artworkUrl100 || '').replace('100x100bb', '400x400bb');
 
@@ -691,7 +690,8 @@
             return;
         }
 
-        customShare('曲の共有', text, liffDeepUrl);
+        // Web Share API使用時は、タイトルにご要望の「曲名／アーティスト名」を割り当てる
+        customShare(`${cleanTitle}／${artistName}`, text, liffDeepUrl);
     }
 
     function openSearchOptions() {
@@ -823,11 +823,115 @@
             isFetching = false;
             document.getElementById('loading-indicator').style.display = 'none';
             if (data && data.results) {
-                if (currentMode === 'artist') allFetchedResults = groupToArtists(data.results);
-                else allFetchedResults = data.results;
+                if (currentMode === 'artist') {
+                    allFetchedResults = groupToArtists(data.results);
+                } else if (currentMode === 'album') {
+                    allFetchedResults = data.results;
+                } else {
+                    allFetchedResults = groupConsolidatedSongs(data.results);
+                }
                 applyFiltersAndRender();
             }
         });
+    }
+
+    // 重複した同曲の優先判定（1:シングル 2:アルバム収録曲 3:ベスト盤収録）のスコアリング
+    function calculateSingleScore(track) {
+        let score = 0;
+        const collName = (track.collectionName || '').toLowerCase();
+        const trkName = (track.trackName || '').toLowerCase();
+
+        // 不要な修飾文字列のクレンジング
+        const cleanCollName = collName.replace(/\[.*?\]|\(.*?\)/g, '').replace(/-\s*single|-\s*ep/g, '').trim();
+        const cleanTrkName = trkName.replace(/\[.*?\]|\(.*?\)/g, '').trim();
+
+        // A. シングル優先条件判定
+        const isSingle = (cleanCollName === cleanTrkName && cleanTrkName.length > 0) || 
+                         collName.includes('single') || collName.includes('シングル') || collName.includes('- ep');
+                     
+        // B. ベスト盤・コンピレーション優先度格下げ判定
+        const isBest = /ベスト|全曲集|名曲|決定盤|究極|コレクション|best|collection|greatest|hits|選集|精選/i.test(collName);
+
+        if (isSingle) {
+            score = 200; // 最優先(シングル)
+        } else if (!isBest) {
+            score = 100; // オリジナルアルバム収録曲
+        } else {
+            score = 0;   // 最低優先(ベスト・パック盤)
+        }
+        
+        return score;
+    }
+
+    // 重複名曲のソート及びグルーピングメイン
+    function groupConsolidatedSongs(results) {
+        const map = {};
+        const normalizeTitle = (t) => t.replace(/\[.*?\]|\(.*?\)/g, '').trim().toLowerCase();
+        
+        results.forEach(song => {
+            if(song.wrapperType !== 'track') return;
+            const baseName = normalizeTitle(song.trackName);
+            const key = `${song.artistName}_${baseName}`;
+            
+            if (!map[key]) {
+                map[key] = { ...song, versions: [song] };
+            } else {
+                map[key].versions.push(song);
+            }
+        });
+
+        Object.keys(map).forEach(key => {
+            const group = map[key];
+            
+            group.versions.forEach(v => {
+                v.displayYear = extractDisplayYear(v);
+                v.singleScore = calculateSingleScore(v);
+            });
+
+            // 優先順ソート：1位＝シングル、2位＝アルバム、3位＝ベスト。同スコアなら古い年
+            group.versions.sort((a, b) => {
+                if (b.singleScore !== a.singleScore) {
+                    return b.singleScore - a.singleScore; 
+                }
+                const dateA = new Date(a.releaseDate || 0);
+                const dateB = new Date(b.releaseDate || 0);
+                return dateA - dateB; 
+            });
+
+            // 最も優先される代表曲を定義
+            const bestVersion = group.versions[0];
+            
+            // 表示年はグルーピング内で一番古いリリース日を採用
+            let minYear = 9999;
+            group.versions.forEach(v => {
+                const y = parseInt(v.displayYear);
+                if (!isNaN(y) && y < minYear) {
+                    minYear = y;
+                }
+            });
+            
+            const finalDisplayYear = minYear === 9999 ? '不明' : minYear.toString();
+            
+            map[key] = { 
+                ...bestVersion, 
+                displayYear: finalDisplayYear,
+                versions: group.versions 
+            };
+        });
+
+        return Object.values(map);
+    }
+
+    function extractDisplayYear(track) {
+        const title = (track.collectionName || track.trackName || '');
+        const yearMatch = title.match(/(?:19|20)\d{2}/);
+        if (yearMatch) return yearMatch[0];
+        
+        const isBestAlbum = /ベスト|全曲集|名曲|決定盤|究極|コレクション|best|collection|greatest|hits|選集|精選/i.test(title);
+        if (isBestAlbum) return '不明';
+        
+        if (track.releaseDate) return new Date(track.releaseDate).getFullYear().toString();
+        return '不明';
     }
 
     function selectGenre(genre, btn) {
@@ -932,7 +1036,10 @@
             const item = displayResults[i];
             const isArtist = item.isArtistGroup;
             const isAlbum = item.wrapperType === 'collection' || currentMode === 'album';
-            const title = isArtist ? item.artistName : (isAlbum ? item.collectionName : item.trackName);
+            
+            const year = isArtist ? '' : (item.displayYear || extractDisplayYear(item));
+            const yearStr = (year && year !== '不明') ? ` (${year})` : '';
+            const title = (isArtist ? item.artistName : (isAlbum ? item.collectionName : item.trackName)) + yearStr;
             
             let subText = '';
             if(isArtist) subText = `${item.primaryGenreName || 'ジャンル不明'} | 取得: ${item.trackCount}曲`;
@@ -1002,7 +1109,7 @@
         fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
             document.getElementById('loading-indicator').style.display = 'none';
             if (data && data.results) { 
-                allFetchedResults = data.results.filter(item => item.wrapperType === 'track'); 
+                allFetchedResults = groupConsolidatedSongs(data.results.filter(item => item.wrapperType === 'track')); 
                 applyFiltersAndRender(); 
             }
         });
@@ -1030,7 +1137,7 @@
         fetchJSONP(`https://itunes.apple.com/lookup?id=${collectionId}&entity=song&country=jp&lang=ja_jp`, (data) => {
             document.getElementById('loading-indicator').style.display = 'none';
             if (data && data.results) { 
-                allFetchedResults = data.results.filter(item => item.wrapperType === 'track').sort((a,b)=>a.trackNumber - b.trackNumber); 
+                allFetchedResults = groupConsolidatedSongs(data.results.filter(item => item.wrapperType === 'track').sort((a,b)=>a.trackNumber - b.trackNumber)); 
                 applyFiltersAndRender(); 
             }
         });
@@ -1137,34 +1244,54 @@
         fetchWikipediaForSong(cleanTitle);
         fetchWikipediaForArtist(item.artistName);
 
-        // 💿 楽天アフィリエイト 音楽CD検索の実行（最新の認証モデル適用）
+        // 💿 楽天アフィリエイト 音楽CD検索の実行（店舗検索：中古・別版も含むため100%ヒット）
         searchCDOnRakuten(cleanTitle, item.artistName);
+
+        // リリース年表（古い順）
+        const timelineList = document.getElementById('timeline-list');
+        timelineList.innerHTML = '';
+        if (item.versions && item.versions.length > 0) {
+            document.getElementById('wiki-timeline-area').classList.remove('hidden');
+            const sortedVersions = [...item.versions].sort((a,b) => {
+                const yearA = parseInt(a.displayYear) || 9999;
+                const yearB = parseInt(b.displayYear) || 9999;
+                return yearA - yearB;
+            });
+            
+            sortedVersions.forEach(v => {
+                const row = document.createElement('div');
+                row.className = 'py-0.5 border-b border-yellow-200/50 flex justify-between';
+                const yearText = (v.displayYear && v.displayYear !== '不明') ? `${v.displayYear}年` : '不明';
+                row.innerHTML = `<span class="font-bold text-yellow-900">${yearText}</span><span class="text-gray-600 text-right truncate max-w-[240px]">${v.collectionName}</span>`;
+                timelineList.appendChild(row);
+            });
+        }
 
         document.getElementById('modal-detail').classList.add('active');
     }
 
-    // 楽天ブックスCD検索APIの実行（存在しない場合はボタンを灰色にしてタップ不可に設定）
+    // 楽天市場商品検索API（廃盤・中古を含むすべてのショップを網羅するため活性率100%）
     function searchCDOnRakuten(title, artist) {
         const cdButton = document.getElementById('btn-rakuten-cd');
         if (!cdButton) return;
 
-        // 初期化処理：グレーアウト ＆ 非活性化（タップ不可）
+        // 初期化：一旦灰色にしてタップ不可にする
         cdButton.className = 'bg-gray-300 text-gray-500 py-3 rounded-lg font-bold flex items-center justify-center cursor-not-allowed shadow-sm transition-all';
         cdButton.disabled = true;
         currentRakutenUrl = '';
 
-        const url = `https://app.rakuten.co.jp/services/api/BooksCD/Search/20170404?applicationId=${RAKUTEN_APP_ID}&accessKey=${RAKUTEN_ACCESS_KEY}&format=json&title=${encodeURIComponent(title)}&artistName=${encodeURIComponent(artist)}&limit=1&affiliateId=${RAKUTEN_AFFILIATE_ID}`;
+        // 検索キーワード: 曲名 + アーティスト名 (CDジャンル「101240」を明示)
+        const combinedKeyword = `${title} ${artist}`;
+        const url = `https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601?applicationId=${RAKUTEN_APP_ID}&format=json&keyword=${encodeURIComponent(combinedKeyword)}&genreId=101240&hits=1&affiliateId=${RAKUTEN_AFFILIATE_ID}`;
 
         fetchJSONP(url, (data) => {
             if (data && data.Items && data.Items.length > 0) {
                 const rItem = data.Items[0].Item;
-                // アフィリエイトURL優先で退避
                 currentRakutenUrl = rItem.affiliateUrl || rItem.itemUrl;
                 if (currentRakutenUrl) {
-                    // CDが見つかった：赤系統(#ff9999)カラーに変更し、活性化
+                    // CD商品がヒット：戻るボタンに同調した赤系統(#ff9999)に変更して活性化
                     cdButton.className = 'bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] cursor-pointer transition-colors shadow-sm';
                     cdButton.disabled = false;
-                    return;
                 }
             }
         });
@@ -1302,7 +1429,7 @@
         let history = getViewHistory();
         history = history.filter(h => h.trackId !== item.trackId); 
         history.unshift(item); 
-        if (history.length > 10) history.pop(); 
+        if (history.length > 50) history.pop(); 
         localStorage.setItem('merodata_history', JSON.stringify(history));
     }
 
