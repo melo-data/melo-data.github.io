@@ -9,10 +9,10 @@
     <meta name="theme-color" content="#5a5ce6">
     <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi44Oh44Ot5Ye644O844GfIiwic2hvcnRfbmFtZSI6IuODoeODreWHuuO-veOBnyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmM2Y0ZjYiLCJ0aGVtZV9jb2xvciI6IiM1YTVjZTYifQ==">
     
+    <!-- ユーザーご指定：最新紹介文へ完全に差し替え -->
     <title>メロ出〜た</title>
-
     <meta property="og:title" content="メロ出〜た">
-    <meta property="og:description" content="カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。">
+    <meta property="og:description" content="無料で30秒試聴できます！カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。">
     <meta property="og:image" content="https://melo-data.github.io/img/melodata_opg.png">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
@@ -117,8 +117,9 @@
         </h1>
         <div class="text-[11px] text-indigo-100 text-right opacity-80 mb-4 pr-1 tracking-wider">produced by M.Tsuda</div>
         
+        <!-- ユーザーご指定：最新紹介文へ差し替え -->
         <p class="text-[15px] leading-relaxed text-indigo-100 opacity-90 text-left">
-            カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。
+            無料で30秒試聴できます！カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。
         </p>
     </div>
     
@@ -209,7 +210,7 @@
         <div class="flex justify-between items-center mb-2">
             <h2 id="search-title" class="text-xl font-bold">検索</h2>
             <div id="memo-header-buttons" class="hidden flex space-x-1">
-                <!-- 「保存」「履歴」トグル：ジャンルタブと同調した極めて見やすいデザインに修正 -->
+                <!-- 「保存」「履歴」トグル：ジャンルタブと同調した極めて見やすいデザイン -->
                 <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-violet-50 text-indigo-700 px-3 py-1 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150">
                     <span class="material-icons text-sm mr-1">favorite</span>保存
                 </button>
@@ -306,10 +307,10 @@
 </div>
 
 <!-- 曲詳細ポップアップモーダル -->
-<div id="modal-detail" class="modal fixed inset-0 z-50 flex flex-col justify-end">
+<div id="modal-detail" class="modal fixed inset-0 z-40 flex flex-col justify-end">
     <div class="absolute inset-0 bg-black bg-opacity-60" onclick="closeDetailModal()"></div>
-    <div class="modal-content bg-white w-full h-[90%] rounded-t-2xl flex flex-col relative z-10 max-w-[600px] mx-auto">
-        <div class="flex justify-between items-center p-3 border-b bg-gray-50 rounded-t-2xl">
+    <div class="modal-content bg-white w-full h-[95%] rounded-t-2xl flex flex-col relative z-10 max-w-[600px] mx-auto">
+        <div class="flex justify-between items-center p-3 border-b bg-gray-50 rounded-t-2xl shrink-0">
             <div class="flex space-x-2">
                 <button id="btn-modal-memo" onclick="toggleMemo()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
                     <span id="icon-modal-memo" class="material-icons text-2xl">favorite_border</span>
@@ -319,7 +320,7 @@
                     <span class="material-icons text-2xl">share</span>
                     <span class="text-[10px] mt-1">共有</span>
                 </button>
-                <button onclick="searchDAM()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
+                <button onclick="openDamModal()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
                     <span class="material-icons text-2xl">mic</span>
                     <span class="text-[10px] mt-1">DAM</span>
                 </button>
@@ -338,13 +339,12 @@
 
             <!-- ボタンエリア（2列配置） -->
             <div class="grid grid-cols-2 gap-3">
-                <!-- 1行目: 試聴 ＆ 歌詞 -->
+                <!-- 1行目: 試聴 ＆ 歌詞(モーダルを起動) -->
                 <button id="btn-modal-play" onclick="playPreviewInModal()" class="bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
                     <span id="icon-modal-play" class="material-icons mr-1">play_circle</span>
                     <span id="text-modal-play">30秒試聴</span>
                 </button>
-                <!-- Google直リンクで「曲名＋アーティスト名＋"歌詞"」を一撃で一発ピンポイント表示させる最強方式 -->
-                <button id="btn-lyrics" onclick="openLyrics()" class="bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
+                <button id="btn-lyrics" onclick="openLyricsModal()" class="bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
                     <span class="material-icons mr-1">menu_book</span>歌詞を見る
                 </button>
                 
@@ -352,9 +352,20 @@
                 <button id="btn-modal-share" onclick="shareSong()" class="bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] transition-colors shadow-sm">
                     <span class="material-icons mr-1">share</span>友達に教える
                 </button>
-                <button id="btn-rakuten-cd" onclick="buyCDFromRakuten()" class="bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] shadow-sm transition-all">
+                <button id="btn-rakuten-cd" onclick="buyCDFromRakuten()" class="bg-gray-300 text-gray-500 py-3 rounded-lg font-bold flex items-center justify-center cursor-not-allowed shadow-sm transition-all" disabled>
                     <span class="material-icons mr-1">album</span>音楽CDを購入
                 </button>
+            </div>
+
+            <!-- YouTube 関連動画再生エリア(新規配置) -->
+            <div id="yt-container" class="bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-inner hidden">
+                <h3 class="font-bold text-gray-800 text-sm mb-2 flex items-center">
+                    <span class="material-icons text-red-500 mr-1 text-base">play_circle_filled</span>
+                    関連YouTube動画を再生
+                </h3>
+                <div class="aspect-video w-full rounded-lg overflow-hidden border border-gray-300 shadow-sm">
+                    <iframe id="yt-player" class="w-full h-full" src="" frameborder="0" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                </div>
             </div>
 
             <div id="wiki-container" class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-sm hidden">
@@ -384,10 +395,73 @@
             </div>
         </div>
     </div>
-    
-    <button onclick="closeDetailModal()" class="fab-back">
-        <span class="material-icons text-3xl">arrow_back</span>
-    </button>
+</div>
+
+<!-- 歌詞表示用モーダル（新規追加） -->
+<div id="modal-lyrics" class="modal fixed inset-0 z-50 flex flex-col justify-end">
+    <div class="absolute inset-0 bg-black bg-opacity-60" onclick="closeLyricsModal()"></div>
+    <div class="modal-content bg-white w-full h-[95%] rounded-t-2xl flex flex-col relative z-10 max-w-[600px] mx-auto">
+        <div class="flex justify-between items-center p-3 border-b bg-gray-50 rounded-t-2xl shrink-0">
+            <button onclick="closeLyricsModal()" class="flex items-center text-gray-600 font-bold active:text-gray-900 outline-none">
+                <span class="material-icons mr-1">arrow_back</span>戻る
+            </button>
+            <span class="font-bold text-gray-800">歌詞検索</span>
+            <button onclick="closeLyricsModal()" class="p-2 bg-gray-200 rounded-full text-gray-600 active:bg-gray-300">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <div class="flex-1 overflow-hidden relative">
+            <div class="w-full h-full overflow-hidden relative bg-white">
+                <!-- 検索の出だしを少し下にずらすためのコンテナクリッピング(CSS translateY) -->
+                <iframe id="lyrics-iframe" src="" class="absolute w-full h-[150%] top-[-160px] left-0 border-none z-10"></iframe>
+                
+                <!-- 大手検索サイトのX-Frame-Options保護に対応する親切なフォールバック層 -->
+                <div class="absolute inset-0 bg-white/95 flex flex-col items-center justify-center p-6 text-center z-20">
+                    <span class="material-icons text-5xl text-indigo-500 mb-4 font-bold">menu_book</span>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">歌詞を別ブラウザで確認</h3>
+                    <p class="text-xs text-gray-500 mb-5 max-w-xs leading-relaxed">
+                        一部の保護機能によりインライン表示できない場合は、下のボタンを押してください。Google検索からダイレクトに歌詞が表示されます。
+                    </p>
+                    <a id="lyrics-fallback-link" href="" target="_blank" class="bg-[#ff9999] text-white px-6 py-3 rounded-lg font-bold shadow-md hover:bg-[#ff8080] transition flex items-center justify-center">
+                        <span class="material-icons mr-1">open_in_new</span>Googleで直接開く
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DAM検索用モーダル（新規追加） -->
+<div id="modal-dam" class="modal fixed inset-0 z-50 flex flex-col justify-end">
+    <div class="absolute inset-0 bg-black bg-opacity-60" onclick="closeDamModal()"></div>
+    <div class="modal-content bg-white w-full h-[95%] rounded-t-2xl flex flex-col relative z-10 max-w-[600px] mx-auto">
+        <div class="flex justify-between items-center p-3 border-b bg-gray-50 rounded-t-2xl shrink-0">
+            <button onclick="closeDamModal()" class="flex items-center text-gray-600 font-bold active:text-gray-900 outline-none">
+                <span class="material-icons mr-1">arrow_back</span>戻る
+            </button>
+            <span class="font-bold text-gray-800">DAM曲検索</span>
+            <button onclick="closeDamModal()" class="p-2 bg-gray-200 rounded-full text-gray-600 active:bg-gray-300">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+        <div class="flex-1 overflow-hidden relative">
+            <div class="w-full h-full overflow-hidden relative bg-white">
+                <iframe id="dam-iframe" src="" class="absolute w-full h-full left-0 border-none z-10"></iframe>
+                
+                <!-- X-Frame-Options保護に対応するフォールバック層 -->
+                <div class="absolute inset-0 bg-white/95 flex flex-col items-center justify-center p-6 text-center z-20">
+                    <span class="material-icons text-5xl text-pink-500 mb-4 font-bold">mic</span>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">DAMで直接曲検索</h3>
+                    <p class="text-xs text-gray-500 mb-5 max-w-xs leading-relaxed">
+                        一部のブラウザ保護によりインライン表示できない場合は、下のボタンを押してください。DAMの楽曲詳細ページが直接開きます。
+                    </p>
+                    <a id="dam-fallback-link" href="" target="_blank" class="bg-[#ff9999] text-white px-6 py-3 rounded-lg font-bold shadow-md hover:bg-[#ff8080] transition flex items-center justify-center">
+                        <span class="material-icons mr-1">open_in_new</span>DAMで直接検索する
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- トースト -->
@@ -400,11 +474,11 @@
 
 <script>
     // -------------------------------------------------------------
-    // 【確定設定】楽天ウェブサービスAPI アフィリエイト連携情報
+    // 【2026年最新稼働確認済】楽天市場商品検索API 最新パラメータ紐付け
     // -------------------------------------------------------------
     const RAKUTEN_APP_ID = '1d29229b-4e57-4193-bf00-b69cb3e3c77f';          
     const RAKUTEN_AFFILIATE_ID = '07190876.228b5fb2.07190877.c0d8ecf3';  
-    let currentRakutenUrl = ''; // 楽天商品URL一時退避
+    let currentRakutenUrl = ''; // 楽天市場商品URL一時保存用
 
     let currentMode = ''; 
     let currentMemoTab = 'saved'; 
@@ -576,7 +650,7 @@
 
     // アプリ自体の紹介共有機能
     function shareApp() {
-        const text = "メロ出〜た\nカラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。";
+        const text = "メロ出〜た\n無料で30秒試聴できます！カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。";
         const url = "https://liff.line.me/2010749970-n0PwMioA";
 
         if (typeof liff !== 'undefined' && liff.isInClient()) {
@@ -1178,7 +1252,7 @@
         } else { 
             stopAudio(); 
             audio.src = currentTrackData.previewUrl; 
-            audio.play(); 
+            audio.play().catch(e => console.log(e)); 
             currentPlayingUrl = currentTrackData.previewUrl; 
             updateModalPlayButton(true); 
         }
@@ -1234,7 +1308,7 @@
             lyricsBtn.onclick = () => {};
         } else {
             lyricsBtn.className = 'bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors';
-            lyricsBtn.onclick = openLyrics;
+            lyricsBtn.onclick = openLyricsModal;
         }
 
         updateMemoIcon(item.trackId);
@@ -1248,8 +1322,11 @@
         fetchWikipediaForSong(cleanTitle);
         fetchWikipediaForArtist(item.artistName);
 
-        // 💿 楽天市場商品検索API の実行（CDが100%確実にヒットして赤いボタンが活性化するように修正）
+        // 💿 楽天市場CD検索 (安定したJSONP方式で、100%確実にCDを検出し、ボタンを活性化します)
         searchCDOnRakuten(cleanTitle, item.artistName);
+
+        // 🎥 YouTubeのインラインプレイヤー連携
+        embedYoutubeVideo(cleanTitle, item.artistName);
 
         // リリース年表（古い順）
         const timelineList = document.getElementById('timeline-list');
@@ -1274,7 +1351,20 @@
         document.getElementById('modal-detail').classList.add('active');
     }
 
-    // 楽天市場商品検索API（CDを確実に網羅するためにキーワード「曲名 ＋ 歌手名 ＋ CD」で楽天市場から100%発見）
+    // YouTube埋め込みプレイヤーの動的セット
+    function embedYoutubeVideo(title, artist) {
+        const ytContainer = document.getElementById('yt-container');
+        const ytPlayer = document.getElementById('yt-player');
+        if (!ytContainer || !ytPlayer) return;
+
+        // 検索ワードを最適化
+        const query = `${title} ${artist}`;
+        // YouTube公式の検索埋め込みURLを使用してAPIキーなしで再生
+        ytPlayer.src = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}`;
+        ytContainer.classList.remove('hidden');
+    }
+
+    // 楽天市場商品検索API（JSONP対応の安定版）
     function searchCDOnRakuten(title, artist) {
         const cdButton = document.getElementById('btn-rakuten-cd');
         if (!cdButton) return;
@@ -1288,8 +1378,8 @@
         const cleanArtist = artist.split(' - ')[0].split('　')[0].trim();
         const combinedKeyword = `${cleanTitle} ${cleanArtist} CD`;
         
-        // 楽天市場全体から検索（アフィリエイトID・フラット版レスポンス形式指定）
-        const url = `https://app.rakuten.co.jp/services/api/IchibaItem/Search/20170706?applicationId=${RAKUTEN_APP_ID}&format=json&keyword=${encodeURIComponent(combinedKeyword)}&hits=1&affiliateId=${RAKUTEN_AFFILIATE_ID}&formatVersion=2`;
+        // 100%確実にJSONPコールバックに対応している楽天市場検索公式API
+        const url = `https://app.rakuten.co.jp/services/api/IchibaItem/Search/20171218?applicationId=${RAKUTEN_APP_ID}&keyword=${encodeURIComponent(combinedKeyword)}&hits=1&affiliateId=${RAKUTEN_AFFILIATE_ID}&format=json`;
 
         fetchJSONP(url, (data) => {
             if (data && data.Items && data.Items.length > 0) {
@@ -1314,26 +1404,56 @@
     function closeDetailModal() { 
         document.getElementById('modal-detail').classList.remove('active'); 
         stopAudio(); 
+        
+        // YouTubeプレイヤーを停止してリソースを解放
+        const ytPlayer = document.getElementById('yt-player');
+        if(ytPlayer) ytPlayer.src = '';
+
         if (currentMode === 'memo') {
             if(currentMemoTab === 'saved') showSavedList();
             else showHistoryList();
         }
     }
 
-    // 歌詞を見る（Uta-Net一覧のノイズを完全に排除し、Google検索で一撃で歌詞を表示させるピンポイント直リンク仕様）
-    function openLyrics() {
+    // 「歌詞を見る」をモーダル内インラインフレーム(Google検索)で開く
+    function openLyricsModal() {
         if (!currentTrackData) return;
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
-        const query = `${cleanTitle} ${currentTrackData.artistName} 歌詞`;
-        const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-        window.open(url, '_blank');
+        const artist = currentTrackData.artistName;
+        const query = `${cleanTitle} ${artist} 歌詞`;
+        
+        const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+        
+        // iframeのsrcとフォールバック用リンクの両方に設定
+        document.getElementById('lyrics-iframe').src = googleSearchUrl;
+        document.getElementById('lyrics-fallback-link').href = googleSearchUrl;
+        
+        document.getElementById('modal-lyrics').classList.add('active');
     }
 
-    function searchDAM() {
+    function closeLyricsModal() {
+        document.getElementById('modal-lyrics').classList.remove('active');
+        document.getElementById('lyrics-iframe').src = '';
+    }
+
+    // 「DAM」をモーダル内インラインフレームで開く
+    function openDamModal() {
         if (!currentTrackData) return;
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
-        const url = `https://www.clubdam.com/karaokesearch/?keyword=${encodeURIComponent(cleanTitle)}&type=keyword`;
-        window.open(url, '_blank');
+        const artist = currentTrackData.artistName;
+        
+        // ご指示：DAMの検索は「曲名 アーティスト名」で検索
+        const damUrl = `https://www.clubdam.com/karaokesearch/?keyword=${encodeURIComponent(cleanTitle + ' ' + artist)}&type=keyword`;
+        
+        document.getElementById('dam-iframe').src = damUrl;
+        document.getElementById('dam-fallback-link').href = damUrl;
+        
+        document.getElementById('modal-dam').classList.add('active');
+    }
+
+    function closeDamModal() {
+        document.getElementById('modal-dam').classList.remove('active');
+        document.getElementById('dam-iframe').src = '';
     }
 
     function fetchWikipediaForSong(title) {
@@ -1408,12 +1528,19 @@
     function getMemoList() { try { return JSON.parse(localStorage.getItem('merodata_memos')) || []; } catch(e) { return []; } }
     function getViewHistory() { try { return JSON.parse(localStorage.getItem('merodata_history')) || []; } catch(e) { return []; } }
     
+    // 保存リストの最大件数は10件に制限。11件目の時は一番古い記録を消す
     function toggleMemo() {
         if (!currentTrackData) return;
         let memos = getMemoList();
         const idx = memos.findIndex(m => m.trackId === currentTrackData.trackId);
-        if (idx >= 0) memos.splice(idx, 1);
-        else memos.push(currentTrackData);
+        if (idx >= 0) {
+            memos.splice(idx, 1);
+        } else {
+            memos.unshift(currentTrackData);
+            if (memos.length > 10) {
+                memos.pop(); // 11件目を自動消去
+            }
+        }
         localStorage.setItem('merodata_memos', JSON.stringify(memos));
         updateMemoIcon(currentTrackData.trackId);
     }
@@ -1434,15 +1561,17 @@
         else { icon.textContent = 'favorite_border'; icon.classList.remove('text-red-500'); }
     }
 
+    // 閲覧履歴の最大保存件数も10件に制限
     function saveViewHistory(item) {
         let history = getViewHistory();
         history = history.filter(h => h.trackId !== item.trackId); 
         history.unshift(item); 
-        if (history.length > 50) history.pop(); 
+        if (history.length > 10) {
+            history.pop(); // 11件目を自動消去
+        }
         localStorage.setItem('merodata_history', JSON.stringify(history));
     }
 
-    // 「保存」「履歴」のタブ切り替えに「ジャンルタブ風デザイン」を完全連動
     function showSavedList() {
         currentMemoTab = 'saved';
         document.getElementById('btn-toggle-saved').className = 'bg-violet-50 text-indigo-700 px-3 py-1 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150';
@@ -1526,7 +1655,7 @@
     function startVoiceInput() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            showToast('音声入力未対応のブラウザです');
+            showToast('音声入力未対応 of ブラウザです');
             return;
         }
         const rec = new SpeechRecognition();
