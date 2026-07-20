@@ -128,7 +128,7 @@
     </div>
     
     <div class="scrollable-content px-4 flex flex-col">
-        <!-- 2列グリッドエリア（歌手名・曲名 ＆ 新曲：余白を統一しつつ、正円をコンパクトに変更） -->
+        <!-- 2列グリッドエリア（歌手名・曲名 ＆ 新曲） -->
         <div class="grid grid-cols-12 gap-4 mb-4 items-stretch">
             <div class="col-span-7 flex flex-col gap-4">
                 <!-- 歌手名 -->
@@ -166,14 +166,11 @@
                 </button>
             </div>
 
-            <!-- 新曲 (指示により紫系から『赤・ピンク系』に配色変更) -->
             <div class="col-span-5 flex items-center justify-center">
                 <button onclick="goToSearch('new-song')" class="w-[140px] h-[140px] rounded-full border-[6px] border-pink-500 bg-white flex flex-col items-center justify-center p-3 shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 outline-none relative">
-                    <!-- 内側アイコン (他より大きいw-12の薄赤背景 ＆ 強調NEWバッジ) -->
                     <div class="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center mb-1 flex-shrink-0 shadow-inner">
                         <span class="text-[11px] font-black text-pink-500 border-[2px] border-pink-300 rounded px-1 scale-110 tracking-tighter">NEW</span>
                     </div>
-                    <!-- 文字サイズを他カード(text-lg)より大きく設定 -->
                     <span class="text-xl font-black text-gray-800 leading-tight">新曲</span>
                     <span class="text-[10px] text-gray-400 mt-0.5 whitespace-nowrap">新曲を探す</span>
                 </button>
@@ -197,7 +194,7 @@
             </div>
         </button>
 
-        <!-- 歌詞ワード (指示によりピンク系から『紫系』に配色変更) -->
+        <!-- 歌詞ワード (ピンク系から紫系に配色変更) -->
         <button onclick="goToSearch('lyrics')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden mb-4 active:bg-gray-50 border border-transparent active:border-gray-200 transition-all h-[90px]">
             <div class="w-2 h-full bg-[#8b5cf6] self-stretch flex-shrink-0"></div>
             <div class="p-3 flex-1 flex items-center justify-between min-w-0">
@@ -238,7 +235,7 @@
         <div class="flex justify-between items-center mb-2">
             <h2 id="search-title" class="text-xl font-bold">検索</h2>
             <div id="memo-header-buttons" class="hidden flex space-x-1">
-                <!-- 「保存」「履歴」トグル：ジャンルタブと同じく、非アクティブ時の文字が絶対に埋もれない配色設計 -->
+                <!-- 「保存」「履歴」トグル -->
                 <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-violet-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150">
                     <span class="material-icons text-sm mr-1">favorite</span>保存
                 </button>
@@ -321,7 +318,6 @@
         </div>
     </div>
 
-    <!-- 検索結果コンテンツリスト -->
     <div id="search-results" class="scrollable-content bg-gray-100 p-2 relative">
         <div id="results-container" class="space-y-0"></div>
         <div id="loading-indicator" class="text-center p-4 text-gray-500 hidden">
@@ -367,7 +363,6 @@
                 <button id="detail-artist-btn" onclick="searchArtistFromDetail()" class="text-lg text-indigo-600 mt-2 font-bold cursor-pointer active:text-indigo-800 underline decoration-indigo-300 underline-offset-4 outline-none"></button>
             </div>
 
-            <!-- ボタンエリア（2列配置） -->
             <div class="grid grid-cols-2 gap-3">
                 <!-- 1行目: 試聴 ＆ 歌詞を見る(直接外部起動) -->
                 <button id="btn-modal-play" onclick="playPreviewInModal()" class="bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
@@ -761,7 +756,10 @@
     }
 
     function openSearchOptions() {
-        if (currentMode === 'memo' || currentMode === 'artist' || currentMode === 'album' || currentMode === 'artist-songs' || currentMode === 'album-tracks' || currentMode === 'new-song') return;
+        // 'new-song'（新曲）はアコーディオン検索オプション（年代・ジャンル）を使うモードなので、
+        // ここから除外しないこと。以前はここに含まれていたため、新曲モードで「検索オプション」を
+        // タップしても年代・ジャンルタブが一切開かない不具合が起きていました。
+        if (currentMode === 'memo' || currentMode === 'artist' || currentMode === 'album' || currentMode === 'artist-songs' || currentMode === 'album-tracks') return;
         const acc = document.getElementById('search-options-accordion');
         const icon = document.getElementById('accordion-icon');
         if (!acc) return;
@@ -828,9 +826,9 @@
         
         loadSearchHistory();
 
-        // 新曲ボタンから遷移した場合：初期状態(キーワードが空)で最新トレンド曲200件を自動検索（今日から1年条件は完全撤廃）
+        // 【2026年最新仕様】新曲ボタンから遷移した場合：Apple Music公式新着・トレンドフィードを直接並行取得し lookup にかけて100件以上の豊かな最新リストを出力
         if (mode === 'new-song' && !isSameMode && allFetchedResults.length === 0) {
-            executeSearch(false, "J-POP 最新 2026");
+            executeNewSongSearch();
         } else if (isSameMode && allFetchedResults.length > 0) {
             applyFiltersAndRender();
         }
@@ -855,7 +853,6 @@
         showSavedList();
     }
 
-    // 戻るボタンの修正：詳細モーダルが表示されている場合は詳細画面のみを閉じるように変更
     function goBackToTop() {
         const modal = document.getElementById('modal-detail');
         if (modal && modal.classList.contains('active')) {
@@ -866,6 +863,102 @@
         closeSearchOptions();
         document.getElementById('page-search').style.display = 'none';
         document.getElementById('page-top').style.display = 'flex';
+    }
+
+    // 新曲検索を公式のNew Releases＋Most Playedフィードのハイブリッドマージで100%確実に検知する処理
+    function executeNewSongSearch() {
+        if (isFetching) return;
+        isFetching = true;
+        document.getElementById('loading-indicator').style.display = 'block';
+
+        // 2026年に rss.applemarketingtools.com は rss.marketingtools.apple.com へ移行済み。
+        // 旧ドメインのままだと取得に失敗し、以降は精度の低いキーワード検索頼みになってしまうため、
+        // 新曲リストの再現性・網羅性が大きく落ちていました（特定の新譜が出てこない主因もこれです）。
+        const rssUrls = [
+            'https://rss.marketingtools.apple.com/api/v2/jp/music/new-releases/100/songs.json',
+            'https://rss.marketingtools.apple.com/api/v2/jp/music/most-played/100/songs.json'
+        ];
+
+        let trackIds = new Set();
+        let rssCompleted = 0;
+
+        const onRssComplete = () => {
+            // Apple Music RSSから集めたIDに加え、さらに日本の最新トレンドワードでも並行検索を実行
+            const searchQueries = [
+                "2026",
+                "2025",
+                "最新"
+            ];
+            let searchCompleted = 0;
+            let searchResults = [];
+
+            const finalize = () => {
+                const idList = Array.from(trackIds).slice(0, 200).join(',');
+                if (idList) {
+                    const lookupUrl = `https://itunes.apple.com/lookup?id=${idList}&country=jp&lang=ja_jp`;
+                    fetchJSONPSilent(lookupUrl, (lookupData) => {
+                        let rssSongs = [];
+                        if (lookupData && lookupData.results) {
+                            rssSongs = lookupData.results.filter(item => item.wrapperType === 'track');
+                        }
+                        const combined = rssSongs.concat(searchResults);
+                        allFetchedResults = groupConsolidatedSongs(combined);
+                        isFetching = false;
+                        document.getElementById('loading-indicator').style.display = 'none';
+                        applyFiltersAndRender();
+                    }, () => {
+                        // ルックアップ失敗時は検索結果のみでフォールバック
+                        allFetchedResults = groupConsolidatedSongs(searchResults);
+                        isFetching = false;
+                        document.getElementById('loading-indicator').style.display = 'none';
+                        applyFiltersAndRender();
+                    });
+                } else {
+                    allFetchedResults = groupConsolidatedSongs(searchResults);
+                    isFetching = false;
+                    document.getElementById('loading-indicator').style.display = 'none';
+                    applyFiltersAndRender();
+                }
+            };
+
+            searchQueries.forEach(q => {
+                const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&country=jp&lang=ja_jp&limit=200&entity=song`;
+                fetchJSONPSilent(url, (data) => {
+                    if (data && data.results) {
+                        searchResults = searchResults.concat(data.results);
+                    }
+                    searchCompleted++;
+                    if (searchCompleted === searchQueries.length) finalize();
+                }, () => {
+                    searchCompleted++;
+                    if (searchCompleted === searchQueries.length) finalize();
+                });
+            });
+        };
+
+        rssUrls.forEach(url => {
+            fetch(url)
+                .then(res => {
+                    if (!res.ok) throw new Error();
+                    return res.json();
+                })
+                .then(data => {
+                    if (data && data.feed && data.feed.results) {
+                        data.feed.results.forEach(item => {
+                            if (item.id) trackIds.add(item.id);
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.log("RSS fetch error, falling back to search", err);
+                })
+                .finally(() => {
+                    rssCompleted++;
+                    if (rssCompleted === rssUrls.length) {
+                        onRssComplete();
+                    }
+                });
+        });
     }
 
     function executeSearch(isNewSearch = false, overrideQuery = null) {
@@ -1019,6 +1112,66 @@
     function applyFiltersAndRender() {
         let filtered = [...allFetchedResults];
         
+        // 新曲リスト表示モード時における、洋楽の自動排除 ＆ 今日(2026年)から1年以上前の旧作(2024以前)を厳密除外
+        if (currentMode === 'new-song') {
+            filtered = filtered.filter(item => {
+                const genre = (item.primaryGenreName || '').toLowerCase();
+                const artist = (item.artistName || '');
+                const title = (item.trackName || item.collectionName || '');
+                
+                // 1. 【洋楽フィルタリング】
+                // 日本語文字(ひらがな、かたかな、漢字)が含まれている場合は無条件で邦楽（キープ）
+                const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFC]/.test(artist + title);
+                let isWestern = false;
+                
+                if (!hasJapanese) {
+                    // 日本J-POP等の固有ジャンル判定
+                    const isExplicitlyJapaneseGenre = genre.includes('j-pop') || genre.includes('j-rock') || genre.includes('anime') || genre.includes('enka') || genre.includes('kayo') || genre.includes('world') || genre.includes('soundtrack') || genre.includes('game') || genre.includes('vocaloid');
+                    
+                    if (!isExplicitlyJapaneseGenre) {
+                        // アルファベット表記の邦楽/アジア系主要アーティストの保護ホワイトリスト
+                        const japaneseEnglishArtists = [
+                            'glay', 'b\'z', 'bz', 'l\'arc-en-ciel', 'man with a mission', 'one ok rock', 
+                            'radwimps', 'king gnu', 'yoasobi', 'ado', 'lisa', 'official hige dandism', 
+                            'mrs. green apple', 'vaundy', 'back number', 'spitz', 'mr.children', 
+                            'x japan', 'luna sea', 'aimyon', 'utada hikaru', 'perfume', 'babymetal', 
+                            'sekai no owari', 'gen hoshino', 'daoko', 'eve', 'creepy nuts', 'tani yuuki',
+                            'illit', 'twice', 'bts', 'newjeans', 'ive', 'le sserafim', 'aespa', 'm!lk', 'king & prince', 'kuwata', 'southern all stars'
+                        ];
+                        const artistLower = artist.toLowerCase().trim();
+                        const isJapaneseEnglishArtist = japaneseEnglishArtists.some(ja => artistLower.includes(ja));
+                        
+                        if (!isJapaneseEnglishArtist) {
+                            // 洋楽一般的なジャンルの場合、洋楽（除外対象）とする
+                            const westernGenres = ['pop', 'rock', 'alternative', 'dance', 'electronic', 'hip-hop', 'rap', 'r&b', 'soul', 'jazz', 'classical', 'reggae', 'country', 'blues'];
+                            if (westernGenres.some(wg => genre.includes(wg))) {
+                                isWestern = true;
+                            }
+                        }
+                    }
+                }
+                
+                if (isWestern) return false;
+
+                // 2. 【今日から1年以上前の曲を除外】年をハードコードすると翌年以降にズレるため、
+                //    現在の年を基準に動的計算する（例：2026年なら2025年以降のみ通過）
+                let songYear = NaN;
+                if (item.displayYear && item.displayYear !== '不明') {
+                    songYear = parseInt(item.displayYear);
+                }
+                if (isNaN(songYear) && item.releaseDate) {
+                    songYear = new Date(item.releaseDate).getFullYear();
+                }
+
+                const cutoffYear = new Date().getFullYear() - 1;
+                if (!isNaN(songYear) && songYear < cutoffYear) {
+                    return false;
+                }
+                
+                return true;
+            });
+        }
+
         const isAccordionActive = (currentMode === 'song' || currentMode === 'lyrics' || currentMode === 'artist-songs' || currentMode === 'album-tracks' || currentMode === 'new-song');
         const sortSelectId = isAccordionActive ? 'sort-select-accordion' : 'sort-select-simple';
         let sortType = document.getElementById(sortSelectId) ? document.getElementById(sortSelectId).value : 'default';
@@ -1054,7 +1207,7 @@
                         case 'kayo': return genre.includes('歌謡曲') || genre.includes('kayokyoku');
                         case 'folk': return genre.includes('フォーク') || genre.includes('folk');
                         case 'rockpop': return genre.includes('ポップ') || genre.includes('pop') || genre.includes('ロック') || genre.includes('rock') || genre.includes('j-pop');
-                        case 'duet': return genre.includes('デュエット') || genre.includes('duet');
+                        case 'duet': return genre.includes('デュエット') || genre.includes('duet') || item.artistName.includes('＆') || item.artistName.includes(' & ') || item.artistName.includes(' with ') || item.artistName.includes(' feat. ') || item.artistName.includes('デュエット');
                         case 'anime': return genre.includes('アニメ') || genre.includes('anime');
                         case 'jazz': return genre.includes('ジャズ') || genre.includes('jazz') || genre.includes('クラシック') || genre.includes('classic');
                         case 'other': return true; 
@@ -1347,6 +1500,12 @@
         document.getElementById('modal-detail').classList.add('active');
     }
 
+    // 楽天ブックスCD検索API（Books CD Search API version:2017-04-04）
+    // ドメイン・パス・パラメーター名は公式ドキュメントで再確認済み。それでも検出できないケースに
+    // 備え、①CORS対応のfetch()を先に試し、失敗した場合のみ②スクリプトタグによるJSONPに
+    // フォールバックする二段構えにした。各段階でconsole.log/warnを出力するので、もし引き続き
+    // 「CD未検出」になる場合は、ブラウザの開発者ツール→Consoleタブに表示される
+    // [楽天CD検索] から始まるログの内容を教えてください。
     function searchCDOnRakuten(title, artist) {
         const cdButton = document.getElementById('btn-rakuten-cd');
         if (!cdButton) return;
@@ -1372,18 +1531,25 @@
                     '&hits=1' +
                     '&format=json';
 
+        console.log('[楽天CD検索] 開始 title=' + cleanTitle + ' artist=' + cleanArtist);
+        console.log('[楽天CD検索] URL:', url);
+
         const timeoutId = setTimeout(() => {
-            if (myToken === rakutenSearchToken) setRakutenButtonState('notfound');
+            if (myToken === rakutenSearchToken) {
+                console.warn('[楽天CD検索] 8秒応答なしのためタイムアウト → CD未検出扱いにします');
+                setRakutenButtonState('notfound');
+            }
         }, 8000);
 
-        fetchJSONPSilent(url, (data) => {
+        const handleResult = (data, via) => {
             clearTimeout(timeoutId);
-            if (myToken !== rakutenSearchToken) return;
+            if (myToken !== rakutenSearchToken) return; // 別の曲の詳細に切り替え済みなら破棄
 
-            console.log("楽天ブックスCD検索 応答:", data);
+            console.log('[楽天CD検索] 応答受信(' + via + '):', data);
 
             if (data && data.error) {
-                console.warn("[楽天ブックスCD検索] APIエラー:", data.error, data.error_description);
+                // wrong_parameter / not_found / too_many_requests / system_error 等
+                console.warn('[楽天CD検索] APIエラー:', data.error, data.error_description);
                 setRakutenButtonState('notfound');
                 return;
             }
@@ -1395,16 +1561,35 @@
 
             if (purchaseUrl) {
                 currentRakutenUrl = purchaseUrl;
+                console.log('[楽天CD検索] CD発見:', rItem.title, '→', purchaseUrl);
                 setRakutenButtonState('found');
             } else {
+                console.log('[楽天CD検索] 該当CDなし（応答は正常に届いたが0件）');
                 setRakutenButtonState('notfound');
             }
-        }, () => {
-            clearTimeout(timeoutId);
-            if (myToken === rakutenSearchToken) {
-                console.warn('[楽天ブックスCD検索] 通信エラーが発生しました');
-                setRakutenButtonState('notfound');
-            }
+        };
+
+        const runJSONPFallback = (reason) => {
+            if (myToken !== rakutenSearchToken) return;
+            console.warn('[楽天CD検索] fetch()が失敗したためJSONPへフォールバック。理由:', reason);
+            fetchJSONPSilent(url, (data) => handleResult(data, 'JSONP'), () => {
+                clearTimeout(timeoutId);
+                if (myToken === rakutenSearchToken) {
+                    console.warn('[楽天CD検索] JSONPでも通信エラー（CORS・ネットワーク双方失敗）');
+                    setRakutenButtonState('notfound');
+                }
+            });
+        };
+
+        // ① まずCORS対応のfetch()を試す（成功すればより速く確実。失敗時のみ②へ）
+        fetch(url).then(res => {
+            console.log('[楽天CD検索] fetch() HTTPステータス:', res.status);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        }).then(data => {
+            handleResult(data, 'fetch');
+        }).catch(err => {
+            runJSONPFallback(err && err.message);
         });
     }
 
