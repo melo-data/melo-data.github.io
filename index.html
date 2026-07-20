@@ -459,8 +459,13 @@
 
     // -------------------------------------------------------------
     // YouTube Data API v3 認証情報（動画埋め込み検索用）
+    // ⚠️ ここに直接キーを貼り付けてGitHubへpushすると、GitHubのSecret Scanning（Push Protection）
+    //    がGoogle APIキーのパターンを検知してブロック/警告する場合があります。対処法はチャット回答を参照。
+    //    GitHub Actionsでの自動注入を使う場合は、この値を '__YOUTUBE_API_KEY__' に変更してください
+    //    （同梱の deploy.yml がデプロイ時に実際のキーへ自動置換します）。
+    // 空文字のままでも動作します（その場合は従来通り「外部アプリ/ブラウザで再生」カードが表示されます）
     // -------------------------------------------------------------
-    const YOUTUBE_API_KEY = '';
+    const YOUTUBE_API_KEY = 'AIzaSyBjkKWPsZURnPBbzb1RHHiao3mB0EzEYLk';
     let ytPlayer = null;             // 現在生成中のYouTube IFrameプレーヤー
     let ytIframeApiReady = false;    // YouTube IFrame Player APIの読み込み完了フラグ
     let ytSearchToken = 0;           // 詳細を連続で切り替えた際の競合防止トークン
@@ -1353,7 +1358,9 @@
             return;
         }
 
-        const url = 'https://app.rakuten.co.jp/services/api/BooksCD/Search/20170404?' +
+        // 楽天ブックスCD検索API 正式リクエストURL（ドメインは openapi.rakuten.co.jp が正。
+        // app.rakuten.co.jp は本APIでは存在しないため通信が必ず失敗し「CD未検出」になっていました）
+        const url = 'https://openapi.rakuten.co.jp/services/api/BooksCD/Search/20170404?' +
                     'applicationId=' + encodeURIComponent(RAKUTEN_APP_ID) +
                     '&accessKey=' + encodeURIComponent(RAKUTEN_ACCESS_KEY) +
                     '&affiliateId=' + encodeURIComponent(RAKUTEN_AFFILIATE_ID) +
@@ -1438,8 +1445,8 @@
         if (wrapper) wrapper.classList.add('hidden');
         if (fallback) fallback.classList.remove('hidden');
 
-        if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY.indexOf('YOUR_') === 0) {
-            return; 
+        if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY.length < 30) {
+            return; // APIキー未設定・プレースホルダーのままの場合は検索せず、外部起動カードのみ表示
         }
 
         const cleanTitle = getCleanTitle(title);
