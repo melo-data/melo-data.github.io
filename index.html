@@ -166,12 +166,12 @@
                 </button>
             </div>
 
-            <!-- 新曲 (ご要望通り正円枠サイズを小さく抑えつつ、中のアイコン・文字サイズを際立たせて強調) -->
+            <!-- 新曲 (指示により紫系から『赤・ピンク系』に配色変更) -->
             <div class="col-span-5 flex items-center justify-center">
-                <button onclick="goToSearch('new-song')" class="w-[140px] h-[140px] rounded-full border-[6px] border-[#8b5cf6] bg-white flex flex-col items-center justify-center p-3 shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 outline-none relative">
-                    <!-- 内側アイコン (他より大きいw-12の薄紫背景 ＆ 強調NEWバッジ) -->
-                    <div class="w-12 h-12 rounded-full bg-[#f3e8ff] flex items-center justify-center mb-1 flex-shrink-0 shadow-inner">
-                        <span class="text-[11px] font-black text-[#8b5cf6] border-[2px] border-[#a78bfa] rounded px-1 scale-110 tracking-tighter">NEW</span>
+                <button onclick="goToSearch('new-song')" class="w-[140px] h-[140px] rounded-full border-[6px] border-pink-500 bg-white flex flex-col items-center justify-center p-3 shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 outline-none relative">
+                    <!-- 内側アイコン (他より大きいw-12の薄赤背景 ＆ 強調NEWバッジ) -->
+                    <div class="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center mb-1 flex-shrink-0 shadow-inner">
+                        <span class="text-[11px] font-black text-pink-500 border-[2px] border-pink-300 rounded px-1 scale-110 tracking-tighter">NEW</span>
                     </div>
                     <!-- 文字サイズを他カード(text-lg)より大きく設定 -->
                     <span class="text-xl font-black text-gray-800 leading-tight">新曲</span>
@@ -197,12 +197,12 @@
             </div>
         </button>
 
-        <!-- 歌詞ワード -->
+        <!-- 歌詞ワード (指示によりピンク系から『紫系』に配色変更) -->
         <button onclick="goToSearch('lyrics')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden mb-4 active:bg-gray-50 border border-transparent active:border-gray-200 transition-all h-[90px]">
-            <div class="w-2 h-full bg-pink-500 self-stretch flex-shrink-0"></div>
+            <div class="w-2 h-full bg-[#8b5cf6] self-stretch flex-shrink-0"></div>
             <div class="p-3 flex-1 flex items-center justify-between min-w-0">
                 <div class="flex items-center min-w-0">
-                    <div class="w-12 h-12 rounded-full bg-pink-100 text-pink-500 flex items-center justify-center mr-3 flex-shrink-0">
+                    <div class="w-12 h-12 rounded-full bg-[#f3e8ff] text-[#8b5cf6] flex items-center justify-center mr-3 flex-shrink-0">
                         <span class="material-icons text-2xl">menu_book</span>
                     </div>
                     <div class="text-left min-w-0">
@@ -232,6 +232,7 @@
     </div>
 </div>
 
+<!-- 検索・一覧画面 -->
 <div id="page-search" class="screen-container screen-container-white" style="display: none;">
     <div class="bg-[#5a5ce6] text-white p-3 shadow-md flex flex-col z-10 shrink-0">
         <div class="flex justify-between items-center mb-2">
@@ -320,6 +321,7 @@
         </div>
     </div>
 
+    <!-- 検索結果コンテンツリスト -->
     <div id="search-results" class="scrollable-content bg-gray-100 p-2 relative">
         <div id="results-container" class="space-y-0"></div>
         <div id="loading-indicator" class="text-center p-4 text-gray-500 hidden">
@@ -328,11 +330,13 @@
         <div id="scroll-sentinel" class="h-10"></div>
     </div>
 
+    <!-- 画面右下のフローティング戻るボタン -->
     <button onclick="goBackToTop()" class="fab-back">
         <span class="material-icons text-3xl">arrow_back</span>
     </button>
 </div>
 
+<!-- 曲詳細ポップアップモーダル -->
 <div id="modal-detail" class="modal fixed inset-0 z-40 flex flex-col justify-end">
     <div class="absolute inset-0 bg-black bg-opacity-60" onclick="closeDetailModal()"></div>
     <div class="modal-content bg-white w-full h-[95%] rounded-t-2xl flex flex-col relative z-10 max-w-[600px] mx-auto">
@@ -383,14 +387,14 @@
                 </button>
             </div>
 
-            <!-- YouTube 動画エリア：見つかり次第、埋め込みプレーヤーに自動切り替え。見つからない/再生エラー時はダイレクト起動カードを表示 -->
+            <!-- YouTube 動画エリア -->
             <div id="yt-section" class="hidden">
                 <!-- 埋め込みプレーヤー本体（動画が見つかった時だけ表示） -->
                 <div id="yt-embed-wrapper" class="hidden relative w-full rounded-xl overflow-hidden shadow-xl bg-black mb-1" style="padding-top: 56.25%;">
                     <div id="yt-player-el" class="absolute inset-0 w-full h-full"></div>
                 </div>
 
-                <!-- YouTube 関連動画再生プレミアムカード(埋め込み153エラー完全回避・最高画質ダイレクト起動) -->
+                <!-- YouTube 関連動画再生プレミアムカード -->
                 <div id="yt-container" class="bg-[#111111] text-white border border-gray-800 rounded-xl p-4 shadow-xl relative overflow-hidden transition-all duration-300 active:scale-[0.98] cursor-pointer" onclick="playYouTubeVideoDirect()">
                     <!-- ぼかしたアルバムアート背景 -->
                     <div id="yt-bg-thumb" class="absolute inset-0 bg-cover bg-center opacity-15 blur-sm"></div>
@@ -404,13 +408,13 @@
                             <span class="material-icons text-base mr-1">play_circle_filled</span>
                             YouTube動画をアプリ/ブラウザで再生
                         </h3>
-                        <!-- 完全に綺麗に1行に収まるように指定 -->
                         <p class="text-[11px] text-gray-400 whitespace-nowrap">最適な高画質で関連動画を直接起動します</p>
                     </div>
                 </div>
             </div>
 
-            <div id="wiki-container" class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-sm hidden">
+            <!-- 豆知識/Wikipedia解説エリア -->
+            <div class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-sm" id="wiki-container" style="display: none;">
                 <div id="wiki-song-area" class="mb-5 hidden">
                     <h3 class="font-bold text-yellow-800 flex items-center mb-2">
                         <span class="material-icons text-yellow-600 mr-1 text-base">music_note</span> 曲の解説
@@ -459,11 +463,6 @@
 
     // -------------------------------------------------------------
     // YouTube Data API v3 認証情報（動画埋め込み検索用）
-    // ⚠️ ここに直接キーを貼り付けてGitHubへpushすると、GitHubのSecret Scanning（Push Protection）
-    //    がGoogle APIキーのパターンを検知してブロック/警告する場合があります。対処法はチャット回答を参照。
-    //    GitHub Actionsでの自動注入を使う場合は、この値を '__YOUTUBE_API_KEY__' に変更してください
-    //    （同梱の deploy.yml がデプロイ時に実際のキーへ自動置換します）。
-    // 空文字のままでも動作します（その場合は従来通り「外部アプリ/ブラウザで再生」カードが表示されます）
     // -------------------------------------------------------------
     const YOUTUBE_API_KEY = 'AIzaSyBjkKWPsZURnPBbzb1RHHiao3mB0EzEYLk';
     let ytPlayer = null;             // 現在生成中のYouTube IFrameプレーヤー
@@ -856,7 +855,13 @@
         showSavedList();
     }
 
+    // 戻るボタンの修正：詳細モーダルが表示されている場合は詳細画面のみを閉じるように変更
     function goBackToTop() {
+        const modal = document.getElementById('modal-detail');
+        if (modal && modal.classList.contains('active')) {
+            closeDetailModal();
+            return;
+        }
         stopAudio();
         closeSearchOptions();
         document.getElementById('page-search').style.display = 'none';
@@ -1313,7 +1318,7 @@
         // 💿 楽天ブックスCD検索
         searchCDOnRakuten(cleanTitle, item.artistName);
 
-        // 🎥 YouTube埋め込み検索
+        // 🎥 YouTube 動画エリア
         document.getElementById('yt-section').classList.remove('hidden');
         destroyYTPlayer();
         document.getElementById('yt-bg-thumb').style.backgroundImage = 'url(' + imgUrl + ')';
@@ -1358,8 +1363,6 @@
             return;
         }
 
-        // 楽天ブックスCD検索API 正式リクエストURL（ドメインは openapi.rakuten.co.jp が正。
-        // app.rakuten.co.jp は本APIでは存在しないため通信が必ず失敗し「CD未検出」になっていました）
         const url = 'https://openapi.rakuten.co.jp/services/api/BooksCD/Search/20170404?' +
                     'applicationId=' + encodeURIComponent(RAKUTEN_APP_ID) +
                     '&accessKey=' + encodeURIComponent(RAKUTEN_ACCESS_KEY) +
@@ -1446,7 +1449,7 @@
         if (fallback) fallback.classList.remove('hidden');
 
         if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY.length < 30) {
-            return; // APIキー未設定・プレースホルダーのままの場合は検索せず、外部起動カードのみ表示
+            return; 
         }
 
         const cleanTitle = getCleanTitle(title);
