@@ -8,10 +8,10 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#5a5ce6">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi44Oh44Ot5Ye644O844GfIiwic2hvcnRfbmFtZSI6IuODoeODreWHuuO-veOBnyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmM2Y0ZjYiLCJ0aGVtZV9jb2xvciI6IiM1YTVjZTYifQ==">
+    <link class="pwa-manifest" rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoi44Oh44Ot5Ye644O844GfIiwic2hvcnRfbmFtZSI6IuODoeODreWHuuO-veOBnyIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmM2Y0ZjYiLCJ0aGVtZV9jb2xvciI6IiM1YTVjZTYifQ==">
     
-    <!-- アプリ全体の紹介文をご指定の文言へ完全同期 -->
     <title>メロ出〜た</title>
+    <!-- OGP・共有紹介文の完全同期 -->
     <meta property="og:title" content="メロ出〜た">
     <meta property="og:description" content="無料で30秒試聴できます！カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。">
     <meta property="og:image" content="https://melo-data.github.io/img/melodata_opg.png">
@@ -39,7 +39,7 @@
     <!-- LINEミニアプリ用 LIFF SDK -->
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
-    <!-- YouTube IFrame Player API（曲詳細ウィンドウ内の動画埋め込み再生用） -->
+    <!-- YouTube IFrame Player API（動画埋め込み検索用） -->
     <script src="https://www.youtube.com/iframe_api"></script>
     
     <style>
@@ -116,91 +116,114 @@
         <button onclick="shareApp()" class="absolute top-4 right-4 text-white p-2 rounded-full bg-white/20 active:bg-white/30 backdrop-blur-sm transition">
             <span class="material-icons">add_to_home_screen</span>
         </button>
-        <h1 class="text-3xl font-bold tracking-wider flex items-center justify-center mb-1 mt-4">
+        <h1 class="text-3xl font-bold tracking-wider flex items-center justify-center mb-1 mt-4 font-sans">
             <span class="material-icons text-3xl mr-2">mic</span> メロ出〜た
         </h1>
         <div class="text-[11px] text-indigo-100 text-right opacity-80 mb-4 pr-1 tracking-wider">produced by M.Tsuda</div>
         
-        <!-- ご指定の紹介メッセージへ完全同期 -->
+        <!-- アプリ紹介文の完全同期 -->
         <p class="text-[15px] leading-relaxed text-indigo-100 opacity-90 text-left">
             無料で30秒試聴できます！カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。
         </p>
     </div>
     
     <div class="scrollable-content px-4 flex flex-col">
-        <button onclick="goToSearch('artist')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden mb-4 active:bg-gray-50 border border-transparent active:border-gray-200 transition-all">
-            <div class="w-2 h-full bg-blue-500 self-stretch flex-shrink-0"></div>
-            <div class="p-4 flex-1 flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center mr-4 flex-shrink-0">
-                        <span class="material-icons text-2xl">person</span>
+        <!-- 2列グリッドエリア（歌手名・曲名 ＆ 新曲：余白を統一しつつ、正円をコンパクトに変更） -->
+        <div class="grid grid-cols-12 gap-4 mb-4 items-stretch">
+            <div class="col-span-7 flex flex-col gap-4">
+                <!-- 歌手名 -->
+                <button onclick="goToSearch('artist')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all h-[90px]">
+                    <div class="w-2 h-full bg-blue-500 self-stretch flex-shrink-0"></div>
+                    <div class="p-3 flex-1 flex items-center justify-between min-w-0">
+                        <div class="flex items-center min-w-0">
+                            <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center mr-3 flex-shrink-0">
+                                <span class="material-icons text-2xl">person</span>
+                            </div>
+                            <div class="text-left min-w-0">
+                                <div class="text-lg font-bold text-gray-800 truncate">歌手名</div>
+                                <div class="text-[11px] text-gray-500 mt-0.5 truncate">歌手名から探す</div>
+                            </div>
+                        </div>
+                        <span class="material-icons text-gray-300">chevron_right</span>
                     </div>
-                    <div class="text-left">
-                        <div class="text-xl font-bold text-gray-800">歌手名</div>
-                        <div class="text-xs text-gray-500 mt-1">歌手名から探す</div>
-                    </div>
-                </div>
-                <span class="material-icons text-gray-300">chevron_right</span>
-            </div>
-        </button>
+                </button>
 
-        <button onclick="goToSearch('song')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden mb-4 active:bg-gray-50 border border-transparent active:border-gray-200 transition-all">
-            <div class="w-2 h-full bg-green-500 self-stretch flex-shrink-0"></div>
-            <div class="p-4 flex-1 flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-full bg-green-100 text-green-500 flex items-center justify-center mr-4 flex-shrink-0">
-                        <span class="material-icons text-2xl">music_note</span>
+                <!-- 曲名 -->
+                <button onclick="goToSearch('song')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all h-[90px]">
+                    <div class="w-2 h-full bg-green-500 self-stretch flex-shrink-0"></div>
+                    <div class="p-3 flex-1 flex items-center justify-between min-w-0">
+                        <div class="flex items-center min-w-0">
+                            <div class="w-12 h-12 rounded-full bg-green-100 text-green-500 flex items-center justify-center mr-3 flex-shrink-0">
+                                <span class="material-icons text-2xl">music_note</span>
+                            </div>
+                            <div class="text-left min-w-0">
+                                <div class="text-lg font-bold text-gray-800 truncate">曲名</div>
+                                <div class="text-[11px] text-gray-500 mt-0.5 truncate">曲名から探す</div>
+                            </div>
+                        </div>
+                        <span class="material-icons text-gray-300">chevron_right</span>
                     </div>
-                    <div class="text-left">
-                        <div class="text-xl font-bold text-gray-800">曲名</div>
-                        <div class="text-xs text-gray-500 mt-1">曲名から探す</div>
-                    </div>
-                </div>
-                <span class="material-icons text-gray-300">chevron_right</span>
+                </button>
             </div>
-        </button>
 
-        <button onclick="goToSearch('album')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden mb-4 active:bg-gray-50 border border-transparent active:border-gray-200 transition-all">
+            <!-- 新曲 (ご要望通り正円枠サイズを小さく抑えつつ、中のアイコン・文字サイズを際立たせて強調) -->
+            <div class="col-span-5 flex items-center justify-center">
+                <button onclick="goToSearch('new-song')" class="w-[140px] h-[140px] rounded-full border-[6px] border-[#8b5cf6] bg-white flex flex-col items-center justify-center p-3 shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 outline-none relative">
+                    <!-- 内側アイコン (他より大きいw-12の薄紫背景 ＆ 強調NEWバッジ) -->
+                    <div class="w-12 h-12 rounded-full bg-[#f3e8ff] flex items-center justify-center mb-1 flex-shrink-0 shadow-inner">
+                        <span class="text-[11px] font-black text-[#8b5cf6] border-[2px] border-[#a78bfa] rounded px-1 scale-110 tracking-tighter">NEW</span>
+                    </div>
+                    <!-- 文字サイズを他カード(text-lg)より大きく設定 -->
+                    <span class="text-xl font-black text-gray-800 leading-tight">新曲</span>
+                    <span class="text-[10px] text-gray-400 mt-0.5 whitespace-nowrap">新曲を探す</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- アルバム名 -->
+        <button onclick="goToSearch('album')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden mb-4 active:bg-gray-50 border border-transparent active:border-gray-200 transition-all h-[90px]">
             <div class="w-2 h-full bg-yellow-500 self-stretch flex-shrink-0"></div>
-            <div class="p-4 flex-1 flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center mr-4 flex-shrink-0">
+            <div class="p-3 flex-1 flex items-center justify-between min-w-0">
+                <div class="flex items-center min-w-0">
+                    <div class="w-12 h-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center mr-3 flex-shrink-0">
                         <span class="material-icons text-2xl">album</span>
                     </div>
-                    <div class="text-left">
-                        <div class="text-xl font-bold text-gray-800">アルバム名</div>
-                        <div class="text-xs text-gray-500 mt-1">アルバムから探す</div>
+                    <div class="text-left min-w-0">
+                        <div class="text-lg font-bold text-gray-800 truncate">アルバム名</div>
+                        <div class="text-[11px] text-gray-500 mt-0.5 truncate">アルバムから探す</div>
                     </div>
                 </div>
                 <span class="material-icons text-gray-300">chevron_right</span>
             </div>
         </button>
 
-        <button onclick="goToSearch('lyrics')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden mb-4 active:bg-gray-50 border border-transparent active:border-gray-200 transition-all">
+        <!-- 歌詞ワード -->
+        <button onclick="goToSearch('lyrics')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden mb-4 active:bg-gray-50 border border-transparent active:border-gray-200 transition-all h-[90px]">
             <div class="w-2 h-full bg-pink-500 self-stretch flex-shrink-0"></div>
-            <div class="p-4 flex-1 flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-full bg-pink-100 text-pink-500 flex items-center justify-center mr-4 flex-shrink-0">
+            <div class="p-3 flex-1 flex items-center justify-between min-w-0">
+                <div class="flex items-center min-w-0">
+                    <div class="w-12 h-12 rounded-full bg-pink-100 text-pink-500 flex items-center justify-center mr-3 flex-shrink-0">
                         <span class="material-icons text-2xl">menu_book</span>
                     </div>
-                    <div class="text-left">
-                        <div class="text-xl font-bold text-gray-800">歌詞ワード</div>
-                        <div class="text-xs text-gray-500 mt-1">歌詞の一部から探す</div>
+                    <div class="text-left min-w-0">
+                        <div class="text-lg font-bold text-gray-800 truncate">歌詞ワード</div>
+                        <div class="text-[11px] text-gray-500 mt-0.5 truncate">歌詞の一部から探す</div>
                     </div>
                 </div>
                 <span class="material-icons text-gray-300">chevron_right</span>
             </div>
         </button>
 
-        <button onclick="goToMemo()" class="w-full bg-[#2a303c] rounded-2xl shadow-sm flex items-center p-0 overflow-hidden mt-6 mb-8 active:bg-gray-800 transition-all">
-            <div class="p-4 flex-1 flex items-center justify-between">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 rounded-full bg-gray-600 text-white flex items-center justify-center mr-4 flex-shrink-0">
+        <!-- メモ帳 (ダークテーマ) -->
+        <button onclick="goToMemo()" class="w-full bg-[#2a303c] rounded-2xl shadow-sm flex items-center p-0 overflow-hidden mb-8 active:bg-gray-800 transition-all h-[90px]">
+            <div class="p-3 flex-1 flex items-center justify-between min-w-0 text-white">
+                <div class="flex items-center min-w-0">
+                    <div class="w-12 h-12 rounded-full bg-gray-600 text-white flex items-center justify-center mr-3 flex-shrink-0">
                         <span class="material-icons text-2xl">assignment</span>
                     </div>
-                    <div class="text-left">
-                        <div class="text-xl font-bold text-white">メモ帳</div>
-                        <div class="text-xs text-gray-300 mt-1">保存・閲覧履歴を見る</div>
+                    <div class="text-left min-w-0">
+                        <div class="text-lg font-bold truncate">メモ帳</div>
+                        <div class="text-[11px] text-gray-300 mt-0.5 truncate">保存・閲覧履歴を見る</div>
                     </div>
                 </div>
                 <span class="material-icons text-gray-400">chevron_right</span>
@@ -214,11 +237,11 @@
         <div class="flex justify-between items-center mb-2">
             <h2 id="search-title" class="text-xl font-bold">検索</h2>
             <div id="memo-header-buttons" class="hidden flex space-x-1">
-                <!-- 「保存」「履歴」トグル：ジャンルタブと同調した極めて見やすいデザインに完全修正 -->
-                <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-violet-50 text-indigo-700 px-3 py-1 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150">
+                <!-- 「保存」「履歴」トグル：ジャンルタブと同じく、非アクティブ時の文字が絶対に埋もれない配色設計 -->
+                <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-violet-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150">
                     <span class="material-icons text-sm mr-1">favorite</span>保存
                 </button>
-                <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-white/15 text-indigo-100 px-3 py-1 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
+                <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
                     <span class="material-icons text-sm mr-1">history</span>履歴
                 </button>
             </div>
@@ -249,7 +272,7 @@
             <span id="result-count-simple" class="text-indigo-200 text-xs font-bold tracking-wider"></span>
         </div>
 
-        <!-- 曲名・歌詞ワード用のアコーディオン検索オプション -->
+        <!-- 曲名・歌詞ワード・新曲用のアコーディオン検索オプション -->
         <div id="accordion-options-container" style="display: none;">
             <div id="search-options-accordion" class="overflow-hidden max-h-0 opacity-0 relative z-10 transition-all duration-300">
                 <div class="flex space-x-2 mt-2 text-sm px-1">
@@ -310,7 +333,6 @@
     </button>
 </div>
 
-<!-- 曲詳細ポップアップモーダル -->
 <div id="modal-detail" class="modal fixed inset-0 z-40 flex flex-col justify-end">
     <div class="absolute inset-0 bg-black bg-opacity-60" onclick="closeDetailModal()"></div>
     <div class="modal-content bg-white w-full h-[95%] rounded-t-2xl flex flex-col relative z-10 max-w-[600px] mx-auto">
@@ -361,7 +383,7 @@
                 </button>
             </div>
 
-            <!-- YouTube 動画エリア：見つかり次第、埋め込みプレーヤーに自動切り替え。見つからない/再生不可の場合は外部起動カードのまま -->
+            <!-- YouTube 動画エリア：見つかり次第、埋め込みプレーヤーに自動切り替え。見つからない/再生エラー時はダイレクト起動カードを表示 -->
             <div id="yt-section" class="hidden">
                 <!-- 埋め込みプレーヤー本体（動画が見つかった時だけ表示） -->
                 <div id="yt-embed-wrapper" class="hidden relative w-full rounded-xl overflow-hidden shadow-xl bg-black mb-1" style="padding-top: 56.25%;">
@@ -382,7 +404,8 @@
                             <span class="material-icons text-base mr-1">play_circle_filled</span>
                             YouTube動画をアプリ/ブラウザで再生
                         </h3>
-                        <p class="text-[11px] text-gray-400 max-w-[280px]">モバイルに最適な高画質で関連動画を直接起動します</p>
+                        <!-- 完全に綺麗に1行に収まるように指定 -->
+                        <p class="text-[11px] text-gray-400 whitespace-nowrap">最適な高画質で関連動画を直接起動します</p>
                     </div>
                 </div>
             </div>
@@ -435,10 +458,7 @@
     let rakutenSearchToken = 0; // 詳細を連続で切り替えた際、古い検索結果が別の曲に反映されないようにするためのトークン
 
     // -------------------------------------------------------------
-    // YouTube Data API v3 認証情報（動画埋め込み検索用／楽天とは別のキーが必要）
-    // 取得方法：Google Cloud Console → プロジェクトを作成 → 「YouTube Data API v3」を有効化
-    //         → 「認証情報」からAPIキーを発行してここに貼り付けてください
-    // 未設定のままでも動作します（その場合は従来通り「外部アプリ/ブラウザで再生」カードが表示されます）
+    // YouTube Data API v3 認証情報（動画埋め込み検索用）
     // -------------------------------------------------------------
     const YOUTUBE_API_KEY = '';
     let ytPlayer = null;             // 現在生成中のYouTube IFrameプレーヤー
@@ -645,7 +665,7 @@
         customShare('メロ出〜た', text, url);
     }
 
-    // 曲単体のFlex Message共有機能 (Chrome等のタイトルに「曲名／アーティスト名」を適用)
+    // 曲単体のFlex Message共有機能
     function shareSong() {
         if (!currentTrackData) return;
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
@@ -732,12 +752,12 @@
             return;
         }
 
-        // Web Share API使用時は、ご要望通りタイトルに「曲名／アーティスト名」を割り当て
+        // Web Share API使用時
         customShare(`${cleanTitle}／${artistName}`, text, liffDeepUrl);
     }
 
     function openSearchOptions() {
-        if (currentMode === 'memo' || currentMode === 'artist' || currentMode === 'album' || currentMode === 'artist-songs' || currentMode === 'album-tracks') return;
+        if (currentMode === 'memo' || currentMode === 'artist' || currentMode === 'album' || currentMode === 'artist-songs' || currentMode === 'album-tracks' || currentMode === 'new-song') return;
         const acc = document.getElementById('search-options-accordion');
         const icon = document.getElementById('accordion-icon');
         if (!acc) return;
@@ -786,7 +806,7 @@
             selectGenre('all', document.querySelector('.genre-tab'));
         }
         
-        if (mode === 'song' || mode === 'lyrics' || mode === 'artist-songs' || mode === 'album-tracks') {
+        if (mode === 'song' || mode === 'lyrics' || mode === 'artist-songs' || mode === 'album-tracks' || mode === 'new-song') {
             document.getElementById('simple-options-container').style.display = 'none';
             document.getElementById('accordion-options-container').style.display = 'block';
             if (!isSameMode) openSearchOptions();
@@ -798,12 +818,16 @@
 
         if (mode === 'artist') { titleEl.textContent = '歌手名で探す'; inputEl.placeholder = '歌手名を入力'; } 
         else if (mode === 'song') { titleEl.textContent = '曲名で探す'; inputEl.placeholder = '曲名を入力'; } 
+        else if (mode === 'new-song') { titleEl.textContent = '新曲で探す'; inputEl.placeholder = '新曲を曲名で検索...'; }
         else if (mode === 'album') { titleEl.textContent = 'アルバム名で探す'; inputEl.placeholder = 'アルバム名を入力'; } 
         else if (mode === 'lyrics') { titleEl.textContent = '歌詞ワードで探す'; inputEl.placeholder = '歌詞の一部を入力'; }
         
         loadSearchHistory();
 
-        if (isSameMode && allFetchedResults.length > 0) {
+        // 新曲ボタンから遷移した場合：初期状態(キーワードが空)で最新トレンド曲200件を自動検索（今日から1年条件は完全撤廃）
+        if (mode === 'new-song' && !isSameMode && allFetchedResults.length === 0) {
+            executeSearch(false, "J-POP 最新 2026");
+        } else if (isSameMode && allFetchedResults.length > 0) {
             applyFiltersAndRender();
         }
     }
@@ -850,14 +874,17 @@
             saveSearchHistory(currentQuery);
             loadSearchHistory();
             closeSearchOptions(); 
+        } else if (overrideQuery) {
+            currentQuery = overrideQuery;
         }
+
         if (isFetching) return;
         isFetching = true;
         document.getElementById('loading-indicator').style.display = 'block';
         
         let url = `https://itunes.apple.com/search?term=${encodeURIComponent(currentQuery)}&country=jp&lang=ja_jp&limit=${MAX_FETCH_LIMIT}`;
         if (currentMode === 'artist') url += `&entity=song&attribute=artistTerm`;
-        else if (currentMode === 'song') url += `&entity=song&attribute=songTerm`;
+        else if (currentMode === 'song' || currentMode === 'new-song') url += `&entity=song&attribute=songTerm`;
         else if (currentMode === 'album') url += `&entity=album`;
         else if (currentMode === 'lyrics') url += `&entity=song`;
         
@@ -877,35 +904,30 @@
         });
     }
 
-    // 重複した同曲の優先判定（1:シングル 2:アルバム収録曲 3:ベスト盤収録）のスコアリング
     function calculateSingleScore(track) {
         let score = 0;
         const collName = (track.collectionName || '').toLowerCase();
         const trkName = (track.trackName || '').toLowerCase();
 
-        // 不要な修飾文字列のクレンジング
         const cleanCollName = collName.replace(/\[.*?\]|\(.*?\)/g, '').replace(/-\s*single|-\s*ep/g, '').trim();
         const cleanTrkName = trkName.replace(/\[.*?\]|\(.*?\)/g, '').trim();
 
-        // A. シングル優先条件判定
         const isSingle = (cleanCollName === cleanTrkName && cleanTrkName.length > 0) || 
                          collName.includes('single') || collName.includes('シングル') || collName.includes('- ep');
                      
-        // B. ベスト盤・コンピレーション優先度格下げ判定
         const isBest = /ベスト|全曲集|名曲|決定盤|究極|コレクション|best|collection|greatest|hits|選集|精選/i.test(collName);
 
         if (isSingle) {
-            score = 200; // 最優先(シングル)
+            score = 200; 
         } else if (!isBest) {
-            score = 100; // オリジナルアルバム収録曲
+            score = 100; 
         } else {
-            score = 0;   // 最低優先(ベスト・パック盤)
+            score = 0;   
         }
         
         return score;
     }
 
-    // 重複名曲のソート及びグルーピングメイン
     function groupConsolidatedSongs(results) {
         const map = {};
         const normalizeTitle = (t) => t.replace(/\[.*?\]|\(.*?\)/g, '').trim().toLowerCase();
@@ -930,7 +952,6 @@
                 v.singleScore = calculateSingleScore(v);
             });
 
-            // 優先順ソート：1位＝シングル、2位＝アルバム、3位＝ベスト。同スコアなら古い年
             group.versions.sort((a, b) => {
                 if (b.singleScore !== a.singleScore) {
                     return b.singleScore - a.singleScore; 
@@ -940,10 +961,8 @@
                 return dateA - dateB; 
             });
 
-            // 最も優先される代表曲を定義
             const bestVersion = group.versions[0];
             
-            // 表示年はグルーピング内で一番古いリリース日を採用
             let minYear = 9999;
             group.versions.forEach(v => {
                 const y = parseInt(v.displayYear);
@@ -990,9 +1009,14 @@
     function applyFiltersAndRender() {
         let filtered = [...allFetchedResults];
         
-        const isAccordionActive = (currentMode === 'song' || currentMode === 'lyrics' || currentMode === 'artist-songs' || currentMode === 'album-tracks');
+        const isAccordionActive = (currentMode === 'song' || currentMode === 'lyrics' || currentMode === 'artist-songs' || currentMode === 'album-tracks' || currentMode === 'new-song');
         const sortSelectId = isAccordionActive ? 'sort-select-accordion' : 'sort-select-simple';
-        const sortType = document.getElementById(sortSelectId) ? document.getElementById(sortSelectId).value : 'default';
+        let sortType = document.getElementById(sortSelectId) ? document.getElementById(sortSelectId).value : 'default';
+
+        // 新曲検索モードの初期ソート
+        if (currentMode === 'new-song' && sortType === 'default') {
+            sortType = 'recent';
+        }
 
         if (isAccordionActive) {
             const decade = document.getElementById('decade-select').value;
@@ -1000,10 +1024,15 @@
                 const startYear = parseInt(decade);
                 const endYear = startYear + 9;
                 filtered = filtered.filter(item => {
-                    const dateStr = item.releaseDate;
-                    if (!dateStr) return false;
-                    const year = new Date(dateStr).getFullYear();
-                    return year >= startYear && year <= endYear;
+                    let yearNum = NaN;
+                    if (item.displayYear && item.displayYear !== '不明') {
+                        yearNum = parseInt(item.displayYear);
+                    }
+                    if (isNaN(yearNum) && item.releaseDate) {
+                        yearNum = new Date(item.releaseDate).getFullYear();
+                    }
+                    if (isNaN(yearNum)) return false;
+                    return yearNum >= startYear && yearNum <= endYear;
                 });
             }
 
@@ -1276,10 +1305,10 @@
         fetchWikipediaForSong(cleanTitle);
         fetchWikipediaForArtist(item.artistName);
 
-        // 💿 楽天ブックスCD検索（詳細表示のたびに実行し、CD有無でボタンの活性・グレーを判定）
+        // 💿 楽天ブックスCD検索
         searchCDOnRakuten(cleanTitle, item.artistName);
 
-        // 🎥 YouTube: 前回の埋め込みプレーヤーを確実に破棄してから、裏側で新しい曲の動画を検索
+        // 🎥 YouTube埋め込み検索
         document.getElementById('yt-section').classList.remove('hidden');
         destroyYTPlayer();
         document.getElementById('yt-bg-thumb').style.backgroundImage = 'url(' + imgUrl + ')';
@@ -1308,10 +1337,6 @@
         document.getElementById('modal-detail').classList.add('active');
     }
 
-    // 楽天ブックスCD検索API（Books CD Search API version:2017-04-04）
-    // ドキュメント: https://webservice.rakuten.co.jp/documentation/books-cd-search
-    // ※以前の実装は実在しないエンドポイント(ichibams/IchibaItem/Search/20260401)を参照しており、
-    //   必ず通信エラーとなってボタンがグレーアウトし続けていたため、正式なリクエストURLに修正。
     function searchCDOnRakuten(title, artist) {
         const cdButton = document.getElementById('btn-rakuten-cd');
         if (!cdButton) return;
@@ -1328,9 +1353,7 @@
             return;
         }
 
-        // title(CDタイトル) と artistName(アーティスト名) を個別パラメーターで指定した方が、
-        // 単一キーワードで曖昧検索するより無関係な商品がヒットしにくい
-        const url = 'https://openapi.rakuten.co.jp/services/api/BooksCD/Search/20170404?' +
+        const url = 'https://app.rakuten.co.jp/services/api/BooksCD/Search/20170404?' +
                     'applicationId=' + encodeURIComponent(RAKUTEN_APP_ID) +
                     '&accessKey=' + encodeURIComponent(RAKUTEN_ACCESS_KEY) +
                     '&affiliateId=' + encodeURIComponent(RAKUTEN_AFFILIATE_ID) +
@@ -1339,25 +1362,22 @@
                     '&hits=1' +
                     '&format=json';
 
-        // JSONPが何らかの理由で応答しない場合のフェイルセーフ（8秒でタイムアウトし「未検出」扱いにする）
         const timeoutId = setTimeout(() => {
             if (myToken === rakutenSearchToken) setRakutenButtonState('notfound');
         }, 8000);
 
         fetchJSONPSilent(url, (data) => {
             clearTimeout(timeoutId);
-            if (myToken !== rakutenSearchToken) return; // 別の曲の詳細に切り替え済みなら破棄
+            if (myToken !== rakutenSearchToken) return;
 
             console.log("楽天ブックスCD検索 応答:", data);
 
             if (data && data.error) {
-                // wrong_parameter / not_found / too_many_requests / system_error 等
                 console.warn("[楽天ブックスCD検索] APIエラー:", data.error, data.error_description);
                 setRakutenButtonState('notfound');
                 return;
             }
 
-            // formatVersion指定なし(=1)を前提に Items[0].Item を第一に見る。念のため代替の形も許容。
             const items = (data && (data.Items || data.items)) || [];
             const first = items[0];
             const rItem = first && (first.Item || first.item || first);
@@ -1378,7 +1398,6 @@
         });
     }
 
-    // CD購入ボタンの見た目を状態ごとに切り替える
     function setRakutenButtonState(state) {
         const cdButton = document.getElementById('btn-rakuten-cd');
         if (!cdButton) return;
@@ -1407,14 +1426,6 @@
         }
     }
 
-    // -------------------------------------------------------------
-    // YouTube 動画の埋め込み再生
-    // 曲名＋アーティスト名で YouTube Data API v3 を検索し、埋め込み可能(videoEmbeddable=true)な
-    // 動画が見つかればその場でプレーヤーを表示。見つからない/APIキー未設定/再生エラー時は
-    // 既存の「外部アプリ/ブラウザで再生」カード(yt-container)を表示したままにする。
-    // -------------------------------------------------------------
-
-    // YouTube IFrame Player APIの読み込みが完了すると、API側からこの関数が自動的に呼ばれる
     function onYouTubeIframeAPIReady() {
         ytIframeApiReady = true;
     }
@@ -1422,14 +1433,13 @@
     function searchAndEmbedYouTube(title, artist) {
         const myToken = ++ytSearchToken;
 
-        // 検索中も従来通り外部起動カードを表示しておき、埋め込みに成功した場合のみ切り替える
         const wrapper = document.getElementById('yt-embed-wrapper');
         const fallback = document.getElementById('yt-container');
         if (wrapper) wrapper.classList.add('hidden');
         if (fallback) fallback.classList.remove('hidden');
 
         if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY.indexOf('YOUR_') === 0) {
-            return; // APIキー未設定時は検索せず、外部起動カードのみ表示
+            return; 
         }
 
         const cleanTitle = getCleanTitle(title);
@@ -1442,18 +1452,17 @@
             if (cached) {
                 const cachedId = JSON.parse(cached).videoId;
                 if (cachedId) { embedYouTubeVideo(cachedId, myToken); return; }
-                if (cachedId === null) return; // 過去に「見つからなかった」と確認済みなら再検索しない
+                if (cachedId === null) return; 
             }
-        } catch (e) { /* キャッシュ破損時は無視して通常検索へ */ }
+        } catch (e) {}
 
         const url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=1&q=' +
                     encodeURIComponent(query) + '&key=' + encodeURIComponent(YOUTUBE_API_KEY);
 
         fetch(url).then(res => res.json()).then(data => {
-            if (myToken !== ytSearchToken) return; // 別の曲へ切り替わっていたら破棄
+            if (myToken !== ytSearchToken) return;
 
             if (data && data.error) {
-                // APIキー無効・クォータ超過等：キャッシュには残さず、外部起動カードのままにする
                 console.warn('[YouTube検索] APIエラー:', data.error);
                 return;
             }
@@ -1474,7 +1483,6 @@
     function embedYouTubeVideo(videoId, myToken) {
         if (myToken !== ytSearchToken) return;
 
-        // IFrame Player APIの読み込みが間に合っていない場合は少し待って再試行
         if (!ytIframeApiReady || typeof YT === 'undefined' || !YT.Player) {
             setTimeout(() => embedYouTubeVideo(videoId, myToken), 300);
             return;
@@ -1501,20 +1509,18 @@
             playerVars: { playsinline: 1, rel: 0, origin: window.location.origin },
             events: {
                 onError: (e) => {
-                    // 101/150: 権利者が埋め込みを許可していない、100: 削除・非公開 等
                     console.warn('[YouTube埋め込み再生エラー] code:', e.data, '→ 外部起動カードへ切り替えます');
                     destroyYTPlayer();
                 }
             }
         });
 
-        if (myToken !== ytSearchToken) { destroyYTPlayer(); return; } // 生成中に別の曲へ切り替わっていた場合
+        if (myToken !== ytSearchToken) { destroyYTPlayer(); return; }
 
         wrapper.classList.remove('hidden');
         if (fallback) fallback.classList.add('hidden');
     }
 
-    // 埋め込みプレーヤーを破棄し、外部起動カードの表示に戻す（モーダルを閉じた時／再生エラー時に使用）
     function destroyYTPlayer() {
         if (ytPlayer && typeof ytPlayer.destroy === 'function') {
             try { ytPlayer.destroy(); } catch (e) {}
@@ -1531,7 +1537,7 @@
     function closeDetailModal() { 
         document.getElementById('modal-detail').classList.remove('active'); 
         stopAudio(); 
-        ytSearchToken++; // 進行中のYouTube検索結果が閉じた後の画面に反映されないようにする
+        ytSearchToken++; 
         destroyYTPlayer();
 
         if (currentMode === 'memo') {
@@ -1540,7 +1546,6 @@
         }
     }
 
-    // YouTubeアプリ/ブラウザへの高セキュリティ直接遷移（エラー153の完全回避）
     function playYouTubeVideoDirect() {
         if (!currentTrackData) return;
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
@@ -1554,7 +1559,6 @@
         }
     }
 
-    // 「歌詞を見る」のGoogleダイレクト直通検索 (中間モーダルやエラーiframeを完全に排除)
     function openLyricsDirect() {
         if (!currentTrackData) return;
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
@@ -1569,7 +1573,6 @@
         }
     }
 
-    // 「DAM」の直接別ウィンドウ検索 (「曲名 アーティスト名」構成)
     function searchDAMDirect() {
         if (!currentTrackData) return;
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
@@ -1665,7 +1668,7 @@
         } else {
             memos.unshift(currentTrackData);
             if (memos.length > 10) {
-                memos.pop(); // 11件目を自動消去
+                memos.pop(); 
             }
         }
         localStorage.setItem('merodata_memos', JSON.stringify(memos));
@@ -1694,15 +1697,15 @@
         history = history.filter(h => h.trackId !== item.trackId); 
         history.unshift(item); 
         if (history.length > 10) {
-            history.pop(); // 11件目を自動消去
+            history.pop(); 
         }
         localStorage.setItem('merodata_history', JSON.stringify(history));
     }
 
     function showSavedList() {
         currentMemoTab = 'saved';
-        document.getElementById('btn-toggle-saved').className = 'bg-violet-50 text-indigo-700 px-3 py-1 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150';
-        document.getElementById('btn-toggle-history').className = 'bg-white/15 text-indigo-100 px-3 py-1 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150';
+        document.getElementById('btn-toggle-saved').className = 'bg-violet-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150';
+        document.getElementById('btn-toggle-history').className = 'bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150';
         
         allFetchedResults = getMemoList();
         displayResults = [...allFetchedResults];
@@ -1720,8 +1723,8 @@
 
     function showHistoryList() {
         currentMemoTab = 'history';
-        document.getElementById('btn-toggle-saved').className = 'bg-white/15 text-indigo-100 px-3 py-1 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150';
-        document.getElementById('btn-toggle-history').className = 'bg-violet-50 text-indigo-700 px-3 py-1 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150';
+        document.getElementById('btn-toggle-saved').className = 'bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150';
+        document.getElementById('btn-toggle-history').className = 'bg-violet-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150';
         
         allFetchedResults = getViewHistory();
         displayResults = [...allFetchedResults];
@@ -1779,8 +1782,6 @@
         document.body.appendChild(script);
     }
 
-    // fetchJSONPの静音版：画面下部のメイン検索用トースト/ローディング表示に影響を与えたくない
-    // バックグラウンド処理（CD検索など）専用。エラー時は onError コールバックにのみ通知する。
     function fetchJSONPSilent(url, callback, onError) {
         const cbName = 'jsonp_cb_' + Math.round(100000 * Math.random()) + '_' + Date.now();
         let settled = false;
