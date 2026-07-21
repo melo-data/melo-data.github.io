@@ -54,6 +54,7 @@
         .modal.active { opacity: 1; pointer-events: auto; }
         .modal-content { transition: transform 0.3s ease; transform: translateY(100%); }
         .modal.active .modal-content { transform: translateY(0); }
+        #hamburger-overlay.active #hamburger-panel { transform: translateX(0); }
         
         .fab-back { 
             position: absolute; 
@@ -136,9 +137,9 @@
     </div>
 
     <div class="top-header shadow-md">
-        <!-- シェア兼インストール促進ボタン -->
-        <button onclick="shareApp()" class="absolute top-4 right-4 text-white p-2 rounded-full bg-white/20 active:bg-white/30 backdrop-blur-sm transition">
-            <span class="material-icons">add_to_home_screen</span>
+        <!-- ハンバーガーメニュー -->
+        <button onclick="openHamburgerMenu()" class="absolute top-4 right-4 text-white p-2 rounded-full bg-white/20 active:bg-white/30 backdrop-blur-sm transition">
+            <span class="material-icons">menu</span>
         </button>
         <h1 class="text-3xl font-bold tracking-wider flex items-center justify-center mb-1 mt-4 font-sans">
             <span class="material-icons text-3xl mr-2">mic</span> メロ出〜た
@@ -201,14 +202,7 @@
             </div>
         </div>
 
-        <!-- 音楽ニュース（musicman.co.jp RSS） -->
-        <div class="mb-4">
-            <div class="flex items-center mb-2 px-1">
-                <span class="material-icons text-indigo-400 text-lg mr-1">campaign</span>
-                <span class="text-sm font-bold text-gray-500">音楽ニュース</span>
-            </div>
-            <div id="top-music-news-list"></div>
-        </div>
+        <!-- 音楽ニュース（末尾に移設） -->
 
         <!-- 2列グリッドエリア（アルバム名・歌詞ワード ＆ メモ帳） -->
         <div class="grid grid-cols-12 gap-4 mb-8 items-stretch">
@@ -259,10 +253,17 @@
                 </button>
             </div>
         </div>
+
+        <!-- 音楽ニュース（musicman.co.jp RSS。トップページ最下部に配置） -->
+        <div class="mb-4">
+            <div class="flex items-center mb-2 px-1">
+                <span class="material-icons text-indigo-400 text-lg mr-1">campaign</span>
+                <span class="text-sm font-bold text-gray-500">音楽ニュース</span>
+            </div>
+            <div id="top-music-news-list"></div>
+        </div>
     </div>
 </div>
-
-<!-- 検索・一覧画面 -->
 <div id="page-search" class="screen-container screen-container-white" style="display: none;">
     <div class="bg-[#5a5ce6] text-white p-3 shadow-md flex flex-col z-10 shrink-0">
         <div class="flex justify-between items-center mb-2">
@@ -489,6 +490,176 @@
 
 <audio id="audio-player" src="" class="hidden"></audio>
 
+<!-- ハンバーガーメニュー（右からスライドイン） -->
+<div id="hamburger-overlay" class="modal fixed inset-0 z-50 flex justify-end" onclick="if(event.target===this) closeHamburgerMenu()">
+    <div id="hamburger-panel" class="bg-white w-[78%] max-w-[320px] h-full shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300 ease-out">
+        <div class="bg-[#5a5ce6] text-white px-4 py-5 flex items-center justify-between shrink-0">
+            <div class="flex items-center">
+                <span class="material-icons text-2xl mr-2">mic</span>
+                <div>
+                    <div class="font-bold text-lg leading-tight">メロ出〜た</div>
+                    <div class="text-[10px] text-indigo-100 opacity-80">produced by M.Tsuda</div>
+                </div>
+            </div>
+            <button onclick="closeHamburgerMenu()" class="p-1 text-white/80 active:text-white"><span class="material-icons">close</span></button>
+        </div>
+        <div class="flex-1 overflow-y-auto py-2">
+            <button onclick="closeHamburgerMenu(); openBadgeModal();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-amber-500 mr-3">emoji_events</span>
+                <span class="flex-1 font-bold text-gray-800">会員達成バッジ</span>
+                <span id="hamburger-badge-count" class="text-[11px] text-amber-600 bg-amber-50 rounded-full px-2 py-0.5 font-bold mr-1"></span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
+            <button onclick="closeHamburgerMenu(); handleInstallClick();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-indigo-500 mr-3">add_to_home_screen</span>
+                <span class="flex-1 font-bold text-gray-800">アプリインストール</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
+            <button onclick="closeHamburgerMenu(); shareAppOnly();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-pink-500 mr-3">share</span>
+                <span class="flex-1 font-bold text-gray-800">友達に共有</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
+            <button onclick="closeHamburgerMenu(); goToHowto();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-green-500 mr-3">help_outline</span>
+                <span class="flex-1 font-bold text-gray-800">使い方</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
+            <button onclick="closeHamburgerMenu(); goToTerms();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-gray-500 mr-3">description</span>
+                <span class="flex-1 font-bold text-gray-800">利用規約</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
+            <button onclick="closeHamburgerMenu(); openAboutModal();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-blue-400 mr-3">info</span>
+                <span class="flex-1 font-bold text-gray-800">運営元</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
+        </div>
+        <div class="px-4 py-3 text-[10px] text-gray-400 text-center border-t border-gray-100 shrink-0">メロ出〜た v1.0.0</div>
+    </div>
+</div>
+
+<!-- 会員達成バッジ モーダル -->
+<div id="modal-badge" class="modal fixed inset-0 z-50 flex items-end justify-center" onclick="if(event.target===this) closeBadgeModal()">
+    <div class="modal-content bg-white w-full max-w-[600px] rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+            <div class="flex items-center">
+                <span class="material-icons text-amber-500 mr-2">emoji_events</span>
+                <h2 class="text-lg font-bold text-gray-800">会員達成バッジ</h2>
+            </div>
+            <button onclick="closeBadgeModal()" class="p-1 text-gray-400 active:text-gray-700"><span class="material-icons">close</span></button>
+        </div>
+        <div class="px-4 py-2 text-[12px] text-gray-500 border-b border-gray-100 shrink-0">
+            <span id="badge-progress-text">達成 0 / 0</span>
+        </div>
+        <div id="badge-list-container" class="overflow-y-auto p-4 grid grid-cols-3 gap-3"></div>
+    </div>
+</div>
+
+<!-- バッジ獲得トースト -->
+<div id="badge-toast" class="fixed top-6 left-1/2 transform -translate-x-1/2 -translate-y-24 bg-white border-2 border-amber-400 text-gray-800 px-4 py-3 rounded-xl shadow-2xl z-[60] transition-all duration-500 flex items-center w-11/12 max-w-sm opacity-0">
+    <span class="material-icons text-amber-500 mr-2 text-3xl">military_tech</span>
+    <div class="flex-1 min-w-0">
+        <div class="text-[11px] font-bold text-amber-600">バッジ獲得！</div>
+        <div id="badge-toast-text" class="text-sm font-bold text-gray-800 truncate"></div>
+    </div>
+</div>
+
+<!-- 運営元 モーダル -->
+<div id="modal-about" class="modal fixed inset-0 z-50 flex items-center justify-center px-6" onclick="if(event.target===this) closeAboutModal()">
+    <div class="modal-content bg-white w-full max-w-[360px] rounded-2xl shadow-2xl p-6 text-center">
+        <div class="w-16 h-16 rounded-full bg-[#5a5ce6] text-white flex items-center justify-center mx-auto mb-3 shadow-md">
+            <span class="material-icons text-3xl">mic</span>
+        </div>
+        <h2 class="text-xl font-bold text-gray-800">メロ出〜た</h2>
+        <p class="text-sm text-gray-500 mt-1">Produced by M.Tsuda</p>
+        <div class="mt-4 pt-4 border-t border-gray-100 text-left text-sm text-gray-600 space-y-2">
+            <div class="flex justify-between"><span class="text-gray-400">バージョン</span><span class="font-bold">1.0.0</span></div>
+        </div>
+        <button onclick="closeAboutModal()" class="mt-5 w-full bg-gray-100 text-gray-700 font-bold py-2.5 rounded-lg active:bg-gray-200">閉じる</button>
+    </div>
+</div>
+
+<!-- 使い方ページ -->
+<div id="page-howto" class="screen-container screen-container-white" style="display: none;">
+    <div class="bg-[#5a5ce6] text-white p-4 shadow-md flex items-center shrink-0">
+        <button onclick="goBackFromSubPage('howto')" class="flex items-center text-white active:opacity-70 mr-2">
+            <span class="material-icons">arrow_back</span>
+        </button>
+        <h2 class="text-lg font-bold">使い方</h2>
+    </div>
+    <div class="scrollable-content px-5 py-5 text-[14px] leading-relaxed text-gray-700">
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-indigo-400 mr-1 text-lg">search</span>曲を探す</h3>
+            <p>トップ画面の「歌手名」「曲名」「アルバム名」「歌詞ワード」のいずれかをタップして、分かる情報を入力・検索してください。うろ覚えでも一部が合っていればヒットします。</p>
+        </section>
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-pink-500 mr-1 text-lg">fiber_new</span>新曲</h3>
+            <p>「新曲」ボタンからは、直近リリースされた日本国内の楽曲をまとめて確認できます。年代・ジャンルで絞り込みも可能です。</p>
+        </section>
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-blue-500 mr-1 text-lg">info</span>曲の詳細ウィンドウ</h3>
+            <p>検索結果の曲をタップすると詳細ウィンドウが開きます。ここでは30秒試聴・歌詞の確認・関連するYouTube動画の再生・CDの購入（楽天ブックス）ができます。「保存」（ハートマーク）で気になる曲をメモ帳に残せます。</p>
+        </section>
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-gray-500 mr-1 text-lg">assignment</span>メモ帳</h3>
+            <p>「メモ帳」からは、保存した曲（最大10件）と最近見た曲の履歴（最大10件）をあとから確認できます。カラオケの前に見返すのに便利です。</p>
+        </section>
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-amber-500 mr-1 text-lg">emoji_events</span>達成バッジ</h3>
+            <p>検索・保存・シェアなどアプリを使うほど「達成バッジ」がたまっていきます。右上のメニュー（☰）内の「会員達成バッジ」からいつでも確認できます。</p>
+        </section>
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-green-500 mr-1 text-lg">home</span>ホーム画面に追加</h3>
+            <p>右上のメニュー（☰）から「アプリインストール」を選ぶと、ホーム画面にアイコンを追加していつものアプリのように起動できます（ご利用の環境により手順が異なる場合があります）。</p>
+        </section>
+    </div>
+</div>
+
+<!-- 利用規約ページ -->
+<div id="page-terms" class="screen-container screen-container-white" style="display: none;">
+    <div class="bg-[#5a5ce6] text-white p-4 shadow-md flex items-center shrink-0">
+        <button onclick="goBackFromSubPage('terms')" class="flex items-center text-white active:opacity-70 mr-2">
+            <span class="material-icons">arrow_back</span>
+        </button>
+        <h2 class="text-lg font-bold">利用規約</h2>
+    </div>
+    <div class="scrollable-content px-5 py-5 text-[13px] leading-relaxed text-gray-700">
+        <p class="mb-4 text-gray-500">この利用規約（以下「本規約」）は、「メロ出〜た」（以下「本サービス」）の利用条件を定めるものです。本サービスをご利用いただいた場合、本規約に同意いただいたものとみなします。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第1条（本サービスの内容）</h3>
+        <p class="mb-3">本サービスは、楽曲情報の検索、試聴、関連動画の表示、CD購入ページへの案内などを無料で提供する情報サービスです。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第2条（外部サービスの利用）</h3>
+        <p class="mb-3">本サービスは、楽曲情報・試聴・動画の表示にあたり、Apple社（iTunes/Apple Music）、Google社（YouTube）、楽天グループ株式会社（楽天ブックス）等、第三者が提供するサービス・APIを利用しています。これら外部サービスの内容・提供状況が変更・終了された場合、本サービスの一部機能が予告なく変更・停止される場合があります。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第3条（アフィリエイトについて）</h3>
+        <p class="mb-3">本サービス内のCD購入等の外部リンクの一部には、アフィリエイトプログラムのリンクが含まれます。これらのリンク経由でご購入いただいた場合、運営者に一定の成果報酬が支払われることがありますが、ユーザーが負担する価格が変わることはありません。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第4条（保存データについて）</h3>
+        <p class="mb-3">「保存」「履歴」等の情報は、ユーザーがご利用の端末（ブラウザ）内にのみ保存され、運営者のサーバーに送信・保存されることはありません。端末やブラウザを変更した場合、保存データは引き継がれません。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第5条（禁止事項）</h3>
+        <p class="mb-3">ユーザーは、本サービスの利用にあたり、法令に違反する行為、本サービスの運営を妨げる行為、他のユーザーまたは第三者に不利益・損害を与える行為を行ってはならないものとします。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第6条（免責事項）</h3>
+        <p class="mb-3">本サービスで表示される楽曲情報・歌詞・価格・リンク先等の正確性・最新性について、運営者は保証するものではありません。本サービスの利用により生じた損害について、運営者は故意または重過失がある場合を除き、責任を負わないものとします。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第7条（サービス内容の変更・中断・終了）</h3>
+        <p class="mb-3">運営者は、ユーザーへの事前通知なく、本サービスの内容を変更し、または提供を中断・終了することができるものとします。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第8条（規約の変更）</h3>
+        <p class="mb-3">運営者は、必要と判断した場合には、ユーザーへの通知なく本規約を変更できるものとします。変更後の規約は、本ページに掲載した時点から効力を生じるものとします。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第9条（お問い合わせ）</h3>
+        <p class="mb-3">本サービスに関するお問い合わせは、運営元（メロ出〜た　Produced by M.Tsuda）までお願いいたします。</p>
+
+        <p class="mt-6 text-gray-400 text-[11px]">制定日：2026年7月21日</p>
+    </div>
+</div>
+
+
 <script>
     // -------------------------------------------------------------
     // 楽天ブックスCD検索API（Books CD Search API version:2017-04-04）認証情報
@@ -618,6 +789,9 @@
 
         // トップページ：テレビ・ラジオ番組放送通知の開始
         startBroadcastNoticeQueue();
+
+        // 達成バッジ：本日の利用記録と連続ログイン日数の更新
+        recordDailyVisitAndStreak();
     });
 
     // LIFF環境下におけるディープリンクパラメータ取得関数
@@ -687,16 +861,28 @@
 
     function handleInstallClick() {
         // LINEミニアプリ内：LIFF公式のホーム画面ショートカット追加APIを使用
+        // ⚠️ liff.createShortcutOnHomeScreen() は「認証済み（verified）LINE MINI App」でのみ
+        //    利用可能な機能です（LINE公式FAQより）。LINEアプリのバージョンとは無関係で、
+        //    未認証のMini App／通常のLIFFアプリではAPI自体が使えないため、闇雲に実行してcatch
+        //    しても「バージョンが古い」という案内は不正確でした。liff.isApiAvailable() で
+        //    事前に判定し、使えない場合は外部ブラウザでのPWAインストール導線に誘導します。
         if (typeof liff !== 'undefined' && liff.isInClient()) {
-            if (typeof liff.createShortcutOnHomeScreen === 'function') {
+            const available = (typeof liff.isApiAvailable === 'function') && liff.isApiAvailable('createShortcutOnHomeScreen');
+            if (available) {
                 liff.createShortcutOnHomeScreen().then(() => {
                     dismissInstallBanner();
                 }).catch((err) => {
                     console.warn('[LIFF] createShortcutOnHomeScreen error:', err);
-                    showToast('お使いのLINEのバージョンが古い可能性があります。LINEアプリを最新版に更新してください。');
+                    showToast('ショートカットの追加に失敗しました。時間をおいて再度お試しください。');
                 });
             } else {
-                showToast('LINEアプリを最新版に更新すると、ホーム画面に追加できるようになります。');
+                // 未認証Mini Appではここに入る（LINEのバージョンは無関係）
+                showToast('LINEアプリ内でのワンタップ追加は認証済みLINE MINI Appでのみ利用できます。外部ブラウザで開いて「ホーム画面に追加」をご利用ください。');
+                setTimeout(() => {
+                    if (typeof liff.openWindow === 'function') {
+                        liff.openWindow({ url: 'https://melo-data.github.io/', external: true });
+                    }
+                }, 1800);
             }
             return;
         }
@@ -1205,6 +1391,7 @@
     function goToSearch(mode) {
         tryFullScreen();
         const isSameMode = (currentMode === mode);
+        if (mode === 'new-song' && !isSameMode) recordStat('newSongViewCount');
         currentMode = mode;
         
         document.getElementById('page-top').style.display = 'none';
@@ -1282,6 +1469,187 @@
         closeSearchOptions();
         document.getElementById('page-search').style.display = 'none';
         document.getElementById('page-top').style.display = 'flex';
+    }
+
+    // -------------------------------------------------------------
+    // ハンバーガーメニュー
+    // -------------------------------------------------------------
+    function openHamburgerMenu() {
+        document.getElementById('hamburger-overlay').classList.add('active');
+        renderHamburgerBadgeCount();
+    }
+    function closeHamburgerMenu() {
+        document.getElementById('hamburger-overlay').classList.remove('active');
+    }
+
+    // -------------------------------------------------------------
+    // 運営元モーダル
+    // -------------------------------------------------------------
+    function openAboutModal() { document.getElementById('modal-about').classList.add('active'); }
+    function closeAboutModal() { document.getElementById('modal-about').classList.remove('active'); }
+
+    // -------------------------------------------------------------
+    // 使い方・利用規約（別ページ遷移。トップ／検索画面のどちらから開いても「戻る」でトップへ）
+    // -------------------------------------------------------------
+    function goToHowto() {
+        document.getElementById('page-top').style.display = 'none';
+        document.getElementById('page-search').style.display = 'none';
+        document.getElementById('page-howto').style.display = 'flex';
+    }
+    function goToTerms() {
+        document.getElementById('page-top').style.display = 'none';
+        document.getElementById('page-search').style.display = 'none';
+        document.getElementById('page-terms').style.display = 'flex';
+    }
+    function goBackFromSubPage(page) {
+        document.getElementById('page-' + page).style.display = 'none';
+        document.getElementById('page-top').style.display = 'flex';
+    }
+
+    // -------------------------------------------------------------
+    // 友達に共有（ハンバーガーメニュー専用。従来の shareApp() と異なりPWAインストール導線は含めない）
+    // -------------------------------------------------------------
+    function shareAppOnly() {
+        const text = "メロ出〜た\n無料で30秒試聴できます！カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。";
+        const url = "https://liff.line.me/2010749970-n0PwMioA";
+
+        recordStat('shareCount');
+
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
+            if (!isLiffInit) {
+                showToast("LINE共有機能を準備中です。少し待ってから再度お試しください。");
+                return;
+            }
+            liff.shareTargetPicker([{ type: "text", text: text + "\n\n" + url }]).then((res) => {
+                if (res) showToast("LINEの友だちに共有しました");
+            }).catch((error) => {
+                console.error("LIFF shareTargetPicker Error:", error);
+                showToast("LINE Developers管理画面で「Share Target Picker」を有効化してください。");
+                fallbackShare(text + "\n" + url);
+            });
+            return;
+        }
+        customShare('メロ出〜た', text, url);
+    }
+
+    // -------------------------------------------------------------
+    // 達成バッジ（ゲーミフィケーション）
+    // 継続利用を促すため、検索・保存・シェア等の利用実績に応じてバッジを解除する。
+    // 実績・解除状況はすべて端末内のlocalStorageのみで完結（サーバー送信なし）。
+    // -------------------------------------------------------------
+    const BADGES = [
+        { id: 'first_search', icon: 'travel_explore',       name: 'はじめの一歩',       desc: '初めて検索した',           check: (s) => s.searchCount >= 1 },
+        { id: 'search_10',    icon: 'manage_search',        name: '探求者',             desc: '検索を10回行った',         check: (s) => s.searchCount >= 10 },
+        { id: 'search_50',    icon: 'auto_awesome',         name: '検索マスター',        desc: '検索を50回行った',         check: (s) => s.searchCount >= 50 },
+        { id: 'save_1',       icon: 'favorite',             name: 'コレクター誕生',      desc: '曲を1曲保存した',          check: (s) => s.saveCount >= 1 },
+        { id: 'save_10',      icon: 'collections_bookmark', name: 'コレクションマニア',   desc: '曲を10曲保存した',         check: (s) => s.saveCount >= 10 },
+        { id: 'new_song_5',   icon: 'fiber_new',            name: '新曲ハンター',        desc: '新曲リストを5回チェック',    check: (s) => s.newSongViewCount >= 5 },
+        { id: 'cd_click_1',   icon: 'album',                name: 'CDコレクター',        desc: 'CD購入ページを開いた',       check: (s) => s.cdClickCount >= 1 },
+        { id: 'youtube_1',    icon: 'smart_display',        name: 'MV鑑賞家',           desc: 'YouTube動画を再生した',      check: (s) => s.youtubePlayCount >= 1 },
+        { id: 'lyrics_5',     icon: 'menu_book',            name: '歌詞探偵',           desc: '歌詞検索を5回行った',        check: (s) => s.lyricsSearchCount >= 5 },
+        { id: 'share_1',      icon: 'share',                name: 'シェアマスター',      desc: '友達に共有した',            check: (s) => s.shareCount >= 1 },
+        { id: 'streak_3',     icon: 'local_fire_department',name: '3日連続ログイン',     desc: '3日連続で利用した',         check: (s) => s.streak >= 3 },
+        { id: 'streak_7',     icon: 'workspace_premium',    name: '週間皆勤賞',          desc: '7日連続で利用した',         check: (s) => s.streak >= 7 },
+    ];
+    const STATS_KEY = 'merodata_stats';
+    const UNLOCKED_BADGES_KEY = 'merodata_unlocked_badges';
+    const STATS_DEFAULT = { searchCount: 0, saveCount: 0, newSongViewCount: 0, cdClickCount: 0, youtubePlayCount: 0, lyricsSearchCount: 0, shareCount: 0, visitDates: [], streak: 0 };
+
+    function getStats() {
+        try {
+            const s = JSON.parse(localStorage.getItem(STATS_KEY));
+            if (s && typeof s === 'object') return Object.assign({}, STATS_DEFAULT, s);
+        } catch (e) {}
+        return Object.assign({}, STATS_DEFAULT);
+    }
+    function saveStats(stats) { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); }
+    function getUnlockedBadgeIds() {
+        try { return JSON.parse(localStorage.getItem(UNLOCKED_BADGES_KEY)) || []; } catch (e) { return []; }
+    }
+
+    // 統計値を+amount更新し、新たに条件を満たしたバッジがあれば獲得トーストを表示する
+    function recordStat(key, amount) {
+        const stats = getStats();
+        stats[key] = (stats[key] || 0) + (amount === undefined ? 1 : amount);
+        saveStats(stats);
+        checkAndAwardBadges(stats);
+    }
+
+    function checkAndAwardBadges(stats) {
+        const unlocked = getUnlockedBadgeIds();
+        let newlyUnlocked = null;
+        BADGES.forEach(b => {
+            if (!unlocked.includes(b.id) && b.check(stats)) {
+                unlocked.push(b.id);
+                newlyUnlocked = b; // 同時に複数解除された場合は最後の1件のみトースト表示
+            }
+        });
+        if (newlyUnlocked) {
+            localStorage.setItem(UNLOCKED_BADGES_KEY, JSON.stringify(unlocked));
+            showBadgeToast(newlyUnlocked);
+        }
+    }
+
+    function showBadgeToast(badge) {
+        const toast = document.getElementById('badge-toast');
+        if (!toast) return;
+        document.getElementById('badge-toast-text').textContent = badge.name + '（' + badge.desc + '）';
+        toast.classList.remove('-translate-y-24', 'opacity-0');
+        setTimeout(() => { toast.classList.add('-translate-y-24', 'opacity-0'); }, 3500);
+    }
+
+    // 日次の利用記録＋連続利用日数(streak)の算出。アプリ起動時に1回だけ呼ぶ。
+    function recordDailyVisitAndStreak() {
+        const stats = getStats();
+        const today = new Date();
+        const toKey = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const todayStr = toKey(today);
+
+        if (!stats.visitDates.includes(todayStr)) {
+            stats.visitDates.push(todayStr);
+            if (stats.visitDates.length > 60) stats.visitDates = stats.visitDates.slice(-60);
+
+            let streak = 0;
+            for (let i = 0; i < 60; i++) {
+                const d = new Date(today);
+                d.setDate(d.getDate() - i);
+                if (stats.visitDates.includes(toKey(d))) streak++;
+                else break;
+            }
+            stats.streak = streak;
+            saveStats(stats);
+            checkAndAwardBadges(stats);
+        }
+    }
+
+    function openBadgeModal() {
+        renderBadgeList();
+        document.getElementById('modal-badge').classList.add('active');
+    }
+    function closeBadgeModal() {
+        document.getElementById('modal-badge').classList.remove('active');
+    }
+
+    function renderBadgeList() {
+        const unlocked = getUnlockedBadgeIds();
+        const container = document.getElementById('badge-list-container');
+        document.getElementById('badge-progress-text').textContent = `達成 ${unlocked.length} / ${BADGES.length}`;
+        container.innerHTML = BADGES.map(b => {
+            const isUnlocked = unlocked.includes(b.id);
+            return `
+            <div class="flex flex-col items-center text-center p-2 rounded-xl ${isUnlocked ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50 border border-gray-100'}">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center mb-1.5 ${isUnlocked ? 'bg-amber-400 text-white shadow' : 'bg-gray-200 text-gray-400'}">
+                    <span class="material-icons text-2xl">${isUnlocked ? b.icon : 'lock'}</span>
+                </div>
+                <div class="text-[11px] font-bold leading-tight ${isUnlocked ? 'text-gray-800' : 'text-gray-400'}">${b.name}</div>
+                <div class="text-[9px] leading-tight mt-0.5 ${isUnlocked ? 'text-gray-500' : 'text-gray-300'}">${b.desc}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderHamburgerBadgeCount() {
+        const el = document.getElementById('hamburger-badge-count');
+        if (el) el.textContent = getUnlockedBadgeIds().length + '/' + BADGES.length;
     }
 
     // 新曲検索を公式のNew Releases＋Most Playedフィードのハイブリッドマージで100%確実に検知する処理
@@ -1426,7 +1794,9 @@
             clearResults();
             saveSearchHistory(currentQuery);
             loadSearchHistory();
-            closeSearchOptions(); 
+            closeSearchOptions();
+            recordStat('searchCount');
+            if (currentMode === 'lyrics') recordStat('lyricsSearchCount');
         } else if (overrideQuery) {
             currentQuery = overrideQuery;
         }
@@ -2145,6 +2515,7 @@
 
     function buyCDFromRakuten() {
         if (currentRakutenUrl) {
+            recordStat('cdClickCount');
             if (typeof liff !== 'undefined' && liff.isInClient()) {
                 liff.openWindow({ url: currentRakutenUrl, external: true });
             } else {
@@ -2229,12 +2600,19 @@
         innerDiv.id = 'yt-player-el-inner';
         playerHost.appendChild(innerDiv);
 
+        let ytPlayCounted = false;
         ytPlayer = new YT.Player('yt-player-el-inner', {
             height: '100%',
             width: '100%',
             videoId: videoId,
             playerVars: { playsinline: 1, rel: 0, origin: window.location.origin },
             events: {
+                onStateChange: (e) => {
+                    if (e.data === 1 && !ytPlayCounted) { // 1 = playing
+                        ytPlayCounted = true;
+                        recordStat('youtubePlayCount');
+                    }
+                },
                 onError: (e) => {
                     console.warn('[YouTube埋め込み再生エラー] code:', e.data, '→ 外部起動カードへ切り替えます');
                     destroyYTPlayer();
@@ -2275,6 +2653,7 @@
 
     function playYouTubeVideoDirect() {
         if (!currentTrackData) return;
+        recordStat('youtubePlayCount');
         const cleanTitle = getCleanTitle(currentTrackData.trackName);
         const artist = currentTrackData.artistName;
         const targetUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(cleanTitle + ' ' + artist);
@@ -2397,6 +2776,7 @@
             if (memos.length > 10) {
                 memos.pop(); 
             }
+            recordStat('saveCount');
         }
         localStorage.setItem('merodata_memos', JSON.stringify(memos));
         updateMemoIcon(currentTrackData.trackId);
