@@ -50,6 +50,12 @@
         .screen-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background-color: #f3f4f6; max-width: 600px; margin: 0 auto; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
         .screen-container-white { background-color: #ffffff; }
         .scrollable-content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
+
+        /* 広告枠：AdMax等の広告スクリプトが後から高さを持って描画されても、あらかじめ最低高さを
+           確保しておくことでレイアウトのガタつき（＝戻るボタンやテキストへの重なり）を防ぐ */
+        .ad-slot { min-height: 100px; display: flex; align-items: center; justify-content: center; margin: 16px 0; overflow: hidden; }
+        /* 戻る／一括再生ボタンの真下に本文が来ないよう、スクロール領域の最後に常に確保する余白 */
+        .fab-safe-spacer { height: 96px; flex-shrink: 0; }
         
         .modal { transition: opacity 0.3s ease; opacity: 0; pointer-events: none; }
         .modal.active { opacity: 1; pointer-events: auto; }
@@ -60,7 +66,7 @@
         .fab-back { 
             position: absolute; 
             bottom: 20px; 
-            right: 20px; 
+            left: 20px; 
             width: 60px; 
             height: 60px; 
             background-color: #ff9999;
@@ -374,18 +380,24 @@
             <span class="material-icons animate-spin">refresh</span> <span id="loading-indicator-text">読み込み中...</span>
         </div>
         <div id="scroll-sentinel" class="h-10"></div>
+
+        <!-- 広告枠（忍者AdMax）：一覧の最後に表示。あらかじめ高さを確保し、下に戻るボタン分の余白を追加 -->
+        <div class="ad-slot">
+            <script src="https://adm.shinobi.jp/s/ff27122d877290e07334a80f369c1b40"></script>
+        </div>
+        <div class="fab-safe-spacer"></div>
     </div>
 
-    <!-- 画面右下のフローティング戻るボタン -->
+    <!-- 画面左下のフローティング戻るボタン（メモ帳以外） -->
     <button onclick="goBackToTop()" class="fab-back">
         <span class="material-icons text-3xl">arrow_back</span>
     </button>
 
-    <!-- メモ帳専用：左下の戻る＆一括再生ボタン（メモ帳モードの時だけ表示） -->
-    <button id="btn-memo-back" onclick="goBackToTop()" class="fab-back hidden" style="left: 20px; right: auto; background-color:#6b7280;">
+    <!-- メモ帳専用：左下の戻る＆一括再生ボタン（メモ帳モードの時だけ表示。戻るボタンは他画面と同じ色・同じ位置） -->
+    <button id="btn-memo-back" onclick="goBackToTop()" class="fab-back hidden">
         <span class="material-icons text-3xl">arrow_back</span>
     </button>
-    <button id="btn-memo-playall" onclick="toggleMemoPlayAll()" class="fab-back hidden" style="left: 92px; right: auto; background-color:#5a5ce6;">
+    <button id="btn-memo-playall" onclick="toggleMemoPlayAll()" class="fab-back hidden" style="left: 92px; background-color:#5a5ce6;">
         <span id="btn-memo-playall-icon" class="material-icons text-3xl">playlist_play</span>
     </button>
 </div>
@@ -414,7 +426,7 @@
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-8">
+        <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-16">
             <div class="flex flex-col items-center text-center">
                 <img id="detail-img" src="" alt="ジャケット" class="w-48 h-48 object-cover rounded-lg shadow-lg mb-4 bg-gray-200">
                 <h2 id="detail-title" class="text-2xl font-bold text-gray-900 leading-tight"></h2>
@@ -502,6 +514,11 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 広告枠（忍者AdMax）：豆知識の下に配置し、テキストと重ならないようにする -->
+            <div class="ad-slot">
+                <script src="https://adm.shinobi.jp/s/ff27122d877290e07334a80f369c1b40"></script>
+            </div>
         </div>
     </div>
 </div>
@@ -541,15 +558,20 @@
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-8">
+        <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-16">
             <div class="flex flex-col items-center text-center">
                 <img id="artist-detail-img" src="" alt="アーティスト画像" class="w-48 h-48 object-cover rounded-full shadow-lg mb-4 bg-gray-200">
                 <h2 id="artist-detail-name" class="text-2xl font-bold text-gray-900 leading-tight"></h2>
             </div>
 
-            <button onclick="proceedToArtistSongs()" class="w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
-                <span class="material-icons mr-1">search</span>曲名を探す
-            </button>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="proceedToArtistSongs()" class="w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
+                    <span class="material-icons mr-1">search</span>曲名を探す
+                </button>
+                <button onclick="shareArtistFromDetail()" class="w-full bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] transition-colors shadow-sm">
+                    <span class="material-icons mr-1">share</span>友達に教える
+                </button>
+            </div>
 
             <!-- 豆知識/Wikipedia解説エリア -->
             <div class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-sm" id="artist-detail-wiki-container" style="display: none;">
@@ -563,6 +585,11 @@
                         <a id="artist-detail-wiki-link" href="#" target="_blank" class="text-indigo-600 font-bold" style="text-decoration: underline;">＞ 続きはこちら</a>
                     </div>
                 </div>
+            </div>
+
+            <!-- 広告枠（忍者AdMax） -->
+            <div class="ad-slot">
+                <script src="https://adm.shinobi.jp/s/ff27122d877290e07334a80f369c1b40"></script>
             </div>
         </div>
     </div>
@@ -587,7 +614,7 @@
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-8">
+        <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-16">
             <div class="flex flex-col items-center text-center">
                 <img id="album-detail-img" src="" alt="アルバム画像" class="w-48 h-48 object-cover rounded-lg shadow-lg mb-4 bg-gray-200">
                 <h2 id="album-detail-name" class="text-2xl font-bold text-gray-900 leading-tight"></h2>
@@ -597,6 +624,15 @@
             <button onclick="proceedToAlbumTracks()" class="w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
                 <span class="material-icons mr-1">search</span>曲名を探す
             </button>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="shareAlbumFromDetail()" class="w-full bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] transition-colors shadow-sm">
+                    <span class="material-icons mr-1">share</span>友達に教える
+                </button>
+                <button id="btn-album-cd-purchase" onclick="buyAlbumCD()" class="bg-gray-300 text-gray-500 py-3 rounded-lg font-bold flex items-center justify-center cursor-not-allowed shadow-sm transition-all" disabled>
+                    <span class="material-icons mr-1">album</span>CD未検出
+                </button>
+            </div>
 
             <!-- アルバムの解説／豆知識(アーティスト) -->
             <div class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-sm" id="album-detail-wiki-container" style="display: none;">
@@ -618,6 +654,11 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 広告枠（忍者AdMax） -->
+            <div class="ad-slot">
+                <script src="https://adm.shinobi.jp/s/ff27122d877290e07334a80f369c1b40"></script>
+            </div>
         </div>
     </div>
 </div>
@@ -634,7 +675,7 @@
 <!-- ハンバーガーメニュー（右からスライドイン） -->
 <div id="hamburger-overlay" class="modal fixed inset-0 z-50 flex justify-end" onclick="if(event.target===this) closeHamburgerMenu()">
     <div id="hamburger-panel" class="bg-white w-[78%] max-w-[320px] h-full shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300 ease-out">
-        <div class="bg-[#5a5ce6] text-white px-4 py-5 flex items-center justify-between shrink-0">
+        <div class="bg-[#5a5ce6] text-white px-4 py-5 flex items-center justify-between shrink-0 border-b-[3px] border-white shadow-md relative z-10">
             <div class="flex items-center">
                 <span class="material-icons text-2xl mr-2">mic</span>
                 <div>
@@ -645,6 +686,11 @@
             <button onclick="closeHamburgerMenu()" class="p-1 text-white/80 active:text-white"><span class="material-icons">close</span></button>
         </div>
         <div class="flex-1 overflow-y-auto py-2">
+            <button onclick="closeHamburgerMenu(); openSettingsModal();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-gray-600 mr-3">settings</span>
+                <span class="flex-1 font-bold text-gray-800">設定</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
             <button onclick="closeHamburgerMenu(); openBadgeModal();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
                 <span class="material-icons text-amber-500 mr-3">emoji_events</span>
                 <span class="flex-1 font-bold text-gray-800">会員達成バッジ</span>
@@ -681,7 +727,78 @@
     </div>
 </div>
 
-<!-- 会員達成バッジ モーダル -->
+<!-- 設定モーダル -->
+<div id="modal-settings" class="modal fixed inset-0 z-50 flex items-end justify-center" onclick="if(event.target===this) closeSettingsModal()">
+    <div class="modal-content bg-white w-full max-w-[600px] rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+            <div class="flex items-center">
+                <span class="material-icons text-gray-600 mr-2">settings</span>
+                <h2 class="text-lg font-bold text-gray-800">設定</h2>
+            </div>
+            <button onclick="closeSettingsModal()" class="p-1 text-gray-400 active:text-gray-700"><span class="material-icons">close</span></button>
+        </div>
+        <div class="overflow-y-auto p-4 space-y-6">
+
+            <div>
+                <div class="text-sm font-bold text-gray-700 mb-2">曲購入リンク</div>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center justify-center gap-2 border-2 rounded-lg py-2.5 cursor-pointer transition-colors" id="label-pref-rakuten">
+                        <input type="radio" name="purchase-pref" value="rakuten" onchange="setPurchaseLinkPreference('rakuten')" class="accent-indigo-600">
+                        <span class="font-bold text-sm">楽天優先</span>
+                    </label>
+                    <label class="flex items-center justify-center gap-2 border-2 rounded-lg py-2.5 cursor-pointer transition-colors" id="label-pref-amazon">
+                        <input type="radio" name="purchase-pref" value="amazon" onchange="setPurchaseLinkPreference('amazon')" class="accent-indigo-600">
+                        <span class="font-bold text-sm">Amazon優先</span>
+                    </label>
+                </div>
+                <p class="text-[11px] text-gray-400 mt-1.5">「Amazon優先」にすると、CD購入リンクは楽天ブックスではなくAmazon Musicの検索結果になります。</p>
+            </div>
+
+            <div>
+                <div class="text-sm font-bold text-gray-700 mb-2">メモ帳表示優先</div>
+                <div class="grid grid-cols-3 gap-2">
+                    <label class="flex items-center justify-center gap-1 border-2 rounded-lg py-2.5 cursor-pointer transition-colors" id="label-memotab-saved">
+                        <input type="radio" name="memotab-pref" value="saved" onchange="setMemoTabPreference('saved')" class="accent-indigo-600">
+                        <span class="font-bold text-xs">保存</span>
+                    </label>
+                    <label class="flex items-center justify-center gap-1 border-2 rounded-lg py-2.5 cursor-pointer transition-colors" id="label-memotab-fan">
+                        <input type="radio" name="memotab-pref" value="fan" onchange="setMemoTabPreference('fan')" class="accent-indigo-600">
+                        <span class="font-bold text-xs">ファン</span>
+                    </label>
+                    <label class="flex items-center justify-center gap-1 border-2 rounded-lg py-2.5 cursor-pointer transition-colors" id="label-memotab-history">
+                        <input type="radio" name="memotab-pref" value="history" onchange="setMemoTabPreference('history')" class="accent-indigo-600">
+                        <span class="font-bold text-xs">履歴</span>
+                    </label>
+                </div>
+                <p class="text-[11px] text-gray-400 mt-1.5">「メモ帳」を開いた時に最初に表示するタブを選べます。</p>
+            </div>
+
+            <div class="border-t border-gray-100 pt-5 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-bold text-gray-700">メモ帳履歴クリア</div>
+                        <div class="text-[11px] text-gray-400">閲覧履歴だけを削除します</div>
+                    </div>
+                    <button onclick="confirmClearHistory()" class="bg-gray-100 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm active:bg-gray-200 shrink-0">実行</button>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-bold text-gray-700">テキスト欄検索入力文字クリア</div>
+                        <div class="text-[11px] text-gray-400">各検索欄の入力履歴を削除します</div>
+                    </div>
+                    <button onclick="confirmClearSearchHistory()" class="bg-gray-100 text-gray-700 font-bold px-4 py-2 rounded-lg text-sm active:bg-gray-200 shrink-0">実行</button>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-bold text-red-500">オールキャッシュクリア</div>
+                        <div class="text-[11px] text-gray-400">保存・ファン・履歴・設定など全データを削除します</div>
+                    </div>
+                    <button onclick="confirmClearAllCache()" class="bg-red-50 text-red-600 font-bold px-4 py-2 rounded-lg text-sm active:bg-red-100 shrink-0">実行</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <div id="modal-badge" class="modal fixed inset-0 z-50 flex items-end justify-center" onclick="if(event.target===this) closeBadgeModal()">
     <div class="modal-content bg-white w-full max-w-[600px] rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col">
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
@@ -1051,15 +1168,26 @@
             el.className = 'genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold bg-white/15 text-indigo-100 border-2 border-transparent transition-colors';
         });
 
-        // 一般Webブラウザ用ディープリンク検知
-        const parsedTrackId = getTrackIdFromUrl();
-        if (parsedTrackId && !/line/i.test(navigator.userAgent)) {
+        // 一般Webブラウザ用ディープリンク検知（曲・アーティスト・アルバム共通）
+        const deepLink = getDeepLinkParams();
+        if ((deepLink.trackId || deepLink.artistId || deepLink.albumId) && !/line/i.test(navigator.userAgent)) {
             window.history.replaceState({}, document.title, window.location.pathname);
-            fetchJSONP(`https://itunes.apple.com/lookup?id=${parsedTrackId}&country=jp&lang=ja_jp`, (data) => {
-                if (data && data.results && data.results.length > 0) {
-                    openDetailModal(data.results[0]);
-                }
-            });
+            if (deepLink.trackId) {
+                fetchJSONP(`https://itunes.apple.com/lookup?id=${deepLink.trackId}&country=jp&lang=ja_jp`, (data) => {
+                    if (data && data.results && data.results.length > 0) openDetailModal(data.results[0]);
+                });
+            } else if (deepLink.artistId) {
+                fetchJSONP(`https://itunes.apple.com/lookup?id=${deepLink.artistId}&country=jp&lang=ja_jp`, (data) => {
+                    if (data && data.results && data.results.length > 0) {
+                        const a = data.results[0];
+                        openArtistDetailModal({ artistId: a.artistId, artistName: a.artistName, artworkUrl100: a.artworkUrl100, primaryGenreName: a.primaryGenreName });
+                    }
+                });
+            } else if (deepLink.albumId) {
+                fetchJSONP(`https://itunes.apple.com/lookup?id=${deepLink.albumId}&country=jp&lang=ja_jp`, (data) => {
+                    if (data && data.results && data.results.length > 0) openAlbumDetailModal(data.results[0]);
+                });
+            }
         }
 
         // ホーム画面インストール誘導バナー（iOS Safariはbeforeinstallpromptが発火しないため、ここで判定して出す）
@@ -1083,34 +1211,51 @@
     });
 
     // LIFF環境下におけるディープリンクパラメータ取得関数
-    function getTrackIdFromUrl() {
+    function getDeepLinkParams() {
         const params = new URLSearchParams(window.location.search);
-        let trackId = params.get('trackId');
-        
+        let result = { trackId: params.get('trackId'), artistId: params.get('artistId'), albumId: params.get('albumId') };
+
         // LINE内リダイレクト(liff.state)からパラメータ復元を試みる
-        if (!trackId) {
+        if (!result.trackId && !result.artistId && !result.albumId) {
             const liffState = params.get('liff.state');
             if (liffState) {
                 try {
                     const decodedState = decodeURIComponent(liffState);
                     const stateParams = new URLSearchParams(decodedState.replace(/^\/?\?/, '?'));
-                    trackId = stateParams.get('trackId');
+                    result = { trackId: stateParams.get('trackId'), artistId: stateParams.get('artistId'), albumId: stateParams.get('albumId') };
                 } catch (e) {
                     console.error("Failed to parse liff.state", e);
                 }
             }
         }
-        return trackId;
+        return result;
     }
 
-    // LIFF起動時の自動モーダルオープン制御
+    function getTrackIdFromUrl() {
+        return getDeepLinkParams().trackId;
+    }
+
+    // LIFF起動時の自動モーダルオープン制御（曲・アーティスト・アルバムいずれの共有リンクにも対応）
     function checkDeepLink() {
         if (!isLiffInit) return;
-        const parsedTrackId = getTrackIdFromUrl();
-        if (parsedTrackId) {
-            fetchJSONP(`https://itunes.apple.com/lookup?id=${parsedTrackId}&country=jp&lang=ja_jp`, (data) => {
+        const { trackId, artistId, albumId } = getDeepLinkParams();
+        if (trackId) {
+            fetchJSONP(`https://itunes.apple.com/lookup?id=${trackId}&country=jp&lang=ja_jp`, (data) => {
                 if (data && data.results && data.results.length > 0) {
                     openDetailModal(data.results[0]);
+                }
+            });
+        } else if (artistId) {
+            fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&country=jp&lang=ja_jp`, (data) => {
+                if (data && data.results && data.results.length > 0) {
+                    const a = data.results[0];
+                    openArtistDetailModal({ artistId: a.artistId, artistName: a.artistName, artworkUrl100: a.artworkUrl100, primaryGenreName: a.primaryGenreName });
+                }
+            });
+        } else if (albumId) {
+            fetchJSONP(`https://itunes.apple.com/lookup?id=${albumId}&country=jp&lang=ja_jp`, (data) => {
+                if (data && data.results && data.results.length > 0) {
+                    openAlbumDetailModal(data.results[0]);
                 }
             });
         }
@@ -1785,7 +1930,6 @@
     function goToMemo() {
         tryFullScreen();
         currentMode = 'memo';
-        currentMemoTab = 'saved';
         document.getElementById('page-top').style.display = 'none';
         document.getElementById('page-search').style.display = 'flex';
         document.getElementById('search-title').textContent = 'メモ帳';
@@ -1801,7 +1945,10 @@
         setMemoFabButtons(true);
         
         clearResults();
-        showSavedList();
+        const defaultTab = getMemoTabPreference();
+        if (defaultTab === 'fan') showFanList();
+        else if (defaultTab === 'history') showHistoryList();
+        else showSavedList();
     }
 
     // メモ帳専用の左下ボタン（戻る＆一括再生）と、通常の右下戻るボタンの表示切り替え
@@ -1847,6 +1994,76 @@
     // -------------------------------------------------------------
     // ハンバーガーメニュー
     // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // 設定（購入リンク優先／メモ帳表示優先／各種クリア機能）
+    // -------------------------------------------------------------
+    function getPurchaseLinkPreference() {
+        return localStorage.getItem('merodata_pref_purchase_link') || 'rakuten';
+    }
+    function setPurchaseLinkPreference(value) {
+        localStorage.setItem('merodata_pref_purchase_link', value);
+        syncSettingsRadioUI();
+        showToast(value === 'amazon' ? 'CD購入リンクをAmazon優先にしました' : 'CD購入リンクを楽天優先にしました');
+    }
+
+    function getMemoTabPreference() {
+        return localStorage.getItem('merodata_pref_memo_tab') || 'saved';
+    }
+    function setMemoTabPreference(value) {
+        localStorage.setItem('merodata_pref_memo_tab', value);
+        syncSettingsRadioUI();
+        showToast('メモ帳を開いた時に最初に表示するタブを変更しました');
+    }
+
+    function syncSettingsRadioUI() {
+        const purchasePref = getPurchaseLinkPreference();
+        const memoPref = getMemoTabPreference();
+
+        document.querySelectorAll('input[name="purchase-pref"]').forEach(input => {
+            input.checked = (input.value === purchasePref);
+            const label = document.getElementById('label-pref-' + input.value);
+            if (label) label.className = 'flex items-center justify-center gap-2 border-2 rounded-lg py-2.5 cursor-pointer transition-colors ' + (input.checked ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600');
+        });
+        document.querySelectorAll('input[name="memotab-pref"]').forEach(input => {
+            input.checked = (input.value === memoPref);
+            const label = document.getElementById('label-memotab-' + input.value);
+            if (label) label.className = 'flex items-center justify-center gap-1 border-2 rounded-lg py-2.5 cursor-pointer transition-colors ' + (input.checked ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600');
+        });
+    }
+
+    function openSettingsModal() {
+        syncSettingsRadioUI();
+        document.getElementById('modal-settings').classList.add('active');
+    }
+    function closeSettingsModal() {
+        document.getElementById('modal-settings').classList.remove('active');
+    }
+
+    function confirmClearHistory() {
+        openConfirmModal('メモ帳履歴クリア', '閲覧履歴をすべて削除します。よろしいですか？', () => {
+            localStorage.removeItem('merodata_history');
+            if (currentMode === 'memo' && currentMemoTab === 'history') showHistoryList();
+            showToast('閲覧履歴をクリアしました');
+        });
+    }
+
+    function confirmClearSearchHistory() {
+        openConfirmModal('検索入力履歴クリア', '各検索欄の入力履歴をすべて削除します。よろしいですか？', () => {
+            Object.keys(localStorage).filter(k => k.startsWith('merodata_search_history_')).forEach(k => localStorage.removeItem(k));
+            loadSearchHistory();
+            showToast('検索入力履歴をクリアしました');
+        });
+    }
+
+    function confirmClearAllCache() {
+        openConfirmModal('オールキャッシュクリア', '保存・ファン・履歴・設定など、このアプリの全データを削除します。よろしいですか？\nこの操作は取り消せません。', () => {
+            Object.keys(localStorage).filter(k => k.startsWith('merodata_')).forEach(k => localStorage.removeItem(k));
+            closeSettingsModal();
+            showToast('すべてのキャッシュをクリアしました');
+            if (currentMode === 'memo') goToMemo();
+        });
+    }
+
     function openHamburgerMenu() {
         document.getElementById('hamburger-overlay').classList.add('active');
         renderHamburgerBadgeCount();
@@ -2871,6 +3088,12 @@
         // 曲名と同様、アーティスト名も「／」区切りの読み仮名や連名表記で検索に失敗しないよう正規化
         const cleanArtist = (item.artistName || '').split(' - ')[0].split('　')[0].split(/[\/／]/)[0].trim();
 
+        // 設定で「Amazon優先」が選ばれている場合は楽天検索を省略し、直接Amazon Music検索へ
+        if (getPurchaseLinkPreference() === 'amazon') {
+            fallbackToAmazonMusic({ title: cleanTitle, artist: cleanArtist });
+            return;
+        }
+
         const isBestAlbumName = (n) => /ベスト|全曲集|名曲|決定盤|究極|コレクション|best|collection|greatest|hits|選集|精選/i.test(n);
 
         const candidates = [];
@@ -3055,6 +3278,115 @@
                 window.open(currentAmazonUrl, '_blank');
             }
         }
+    }
+
+    // -------------------------------------------------------------
+    // アルバム詳細ウィンドウ：アルバム購入リンク（楽天ブックス／設定次第でAmazon Music優先）
+    // -------------------------------------------------------------
+    let currentAlbumRakutenUrl = '';
+    let currentAlbumAmazonUrl = '';
+    let albumRakutenSearchToken = 0;
+
+    function setAlbumCDButtonState(state) {
+        const btn = document.getElementById('btn-album-cd-purchase');
+        if (!btn) return;
+        if (state === 'found') {
+            currentAlbumAmazonUrl = '';
+            btn.className = 'bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] cursor-pointer transition-colors shadow-sm';
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-icons mr-1">album</span>音楽CDを購入';
+        } else if (state === 'loading') {
+            currentAlbumRakutenUrl = ''; currentAlbumAmazonUrl = '';
+            btn.className = 'bg-gray-300 text-gray-500 py-3 rounded-lg font-bold flex items-center justify-center cursor-not-allowed shadow-sm transition-all';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-icons mr-1 animate-spin text-base">refresh</span>検索中...';
+        } else if (state === 'amazon') {
+            currentAlbumRakutenUrl = '';
+            btn.className = 'bg-[#ff9900] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#e68a00] cursor-pointer transition-colors shadow-sm';
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-icons mr-1">shopping_bag</span>Amazon Musicで探す';
+        } else {
+            currentAlbumRakutenUrl = ''; currentAlbumAmazonUrl = '';
+            btn.className = 'bg-gray-300 text-gray-500 py-3 rounded-lg font-bold flex items-center justify-center cursor-not-allowed shadow-sm transition-all';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-icons mr-1">album</span>CD未検出';
+        }
+    }
+
+    function buyAlbumCD() {
+        if (currentAlbumRakutenUrl) {
+            recordStat('cdClickCount');
+            if (typeof liff !== 'undefined' && liff.isInClient()) liff.openWindow({ url: currentAlbumRakutenUrl, external: true });
+            else window.open(currentAlbumRakutenUrl, '_blank');
+        } else if (currentAlbumAmazonUrl) {
+            recordStat('cdClickCount');
+            if (typeof liff !== 'undefined' && liff.isInClient()) liff.openWindow({ url: currentAlbumAmazonUrl, external: true });
+            else window.open(currentAlbumAmazonUrl, '_blank');
+        }
+    }
+
+    function fallbackAlbumToAmazon(title, artist) {
+        currentAlbumAmazonUrl = buildAmazonMusicSearchUrl(title, artist);
+        setAlbumCDButtonState('amazon');
+    }
+
+    function searchAlbumCD(item) {
+        const myToken = ++albumRakutenSearchToken;
+        setAlbumCDButtonState('loading');
+
+        const cleanTitle = getCleanTitle(item.collectionName);
+        const cleanArtist = (item.artistName || '').split(' - ')[0].split('　')[0].split(/[\/／]/)[0].trim();
+
+        if (!cleanTitle) { setAlbumCDButtonState('notfound'); return; }
+
+        // 設定で「Amazon優先」が選ばれている場合は楽天検索を省略し、直接Amazon Music検索へ
+        if (getPurchaseLinkPreference() === 'amazon') {
+            currentAlbumAmazonUrl = buildAmazonMusicSearchUrl(cleanTitle, cleanArtist);
+            setAlbumCDButtonState('amazon');
+            return;
+        }
+
+        const url = 'https://openapi.rakuten.co.jp/services/api/BooksCD/Search/20170404?' +
+                    'applicationId=' + encodeURIComponent(RAKUTEN_APP_ID) +
+                    '&accessKey=' + encodeURIComponent(RAKUTEN_ACCESS_KEY) +
+                    '&affiliateId=' + encodeURIComponent(RAKUTEN_AFFILIATE_ID) +
+                    '&title=' + encodeURIComponent(cleanTitle) +
+                    '&artistName=' + encodeURIComponent(cleanArtist) +
+                    '&hits=1' +
+                    '&format=json';
+
+        const timeoutId = setTimeout(() => {
+            if (myToken === albumRakutenSearchToken) {
+                console.warn('[楽天CD検索:アルバム] タイムアウト → Amazon Musicへフォールバック');
+                fallbackAlbumToAmazon(cleanTitle, cleanArtist);
+            }
+        }, 8000);
+
+        const handleResult = (data) => {
+            clearTimeout(timeoutId);
+            if (myToken !== albumRakutenSearchToken) return;
+            if (data && data.error) { fallbackAlbumToAmazon(cleanTitle, cleanArtist); return; }
+            const items = (data && (data.Items || data.items)) || [];
+            const first = items[0];
+            const rItem = first && (first.Item || first.item || first);
+            const purchaseUrl = rItem && (rItem.affiliateUrl || rItem.itemUrl);
+            if (purchaseUrl) {
+                currentAlbumRakutenUrl = purchaseUrl;
+                setAlbumCDButtonState('found');
+            } else {
+                fallbackAlbumToAmazon(cleanTitle, cleanArtist);
+            }
+        };
+
+        fetch(url).then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+            .then(data => handleResult(data))
+            .catch(() => {
+                if (myToken !== albumRakutenSearchToken) return;
+                fetchJSONPSilent(url, (data) => handleResult(data), () => {
+                    clearTimeout(timeoutId);
+                    if (myToken === albumRakutenSearchToken) fallbackAlbumToAmazon(cleanTitle, cleanArtist);
+                });
+            });
     }
 
     function onYouTubeIframeAPIReady() {
@@ -3310,8 +3642,42 @@
     }
     function shareArtistFromDetail() {
         if (!currentArtistDetailData) return;
-        const text = `${currentArtistDetailData.artistName}\n#メロ出〜た`;
-        customShare(currentArtistDetailData.artistName, text, 'https://liff.line.me/2010749970-n0PwMioA');
+        const artistName = currentArtistDetailData.artistName;
+        const text = `${artistName}\n#メロ出〜た`;
+        const liffDeepUrl = `https://liff.line.me/2010749970-n0PwMioA?artistId=${encodeURIComponent(currentArtistDetailData.artistId)}`;
+        const artworkUrl = (currentArtistDetailData.artworkUrl100 || '').replace('100x100bb', '400x400bb');
+
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
+            if (!isLiffInit) { showToast("LINE共有機能を準備中です。"); return; }
+            const flexMessage = {
+                type: "flex",
+                altText: `このアーティストはオススメです！ ${artistName}`,
+                contents: {
+                    type: "bubble",
+                    hero: { type: "image", url: artworkUrl || "https://placehold.co/400x400/5a5ce6/ffffff?text=MeloData", size: "full", aspectRatio: "1:1", aspectMode: "cover", action: { type: "uri", uri: liffDeepUrl } },
+                    body: { type: "box", layout: "vertical", contents: [ { type: "text", text: artistName, weight: "bold", size: "xl", wrap: true } ] },
+                    footer: { type: "box", layout: "vertical", spacing: "sm", contents: [ { type: "button", style: "primary", color: "#5a5ce6", height: "sm", action: { type: "uri", label: "メロ出〜た で見る", uri: liffDeepUrl } } ], flex: 0 }
+                }
+            };
+            liff.shareTargetPicker([flexMessage]).then((res) => {
+                if (res) showToast("LINEの友だちにアーティスト情報を共有しました！");
+            }).catch((error) => {
+                console.error("LIFF Flex Share Error:", error);
+                showToast("LINE Developers管理画面で「Share Target Picker」を有効化してください。");
+                fallbackShare(text + "\n" + liffDeepUrl);
+            });
+            return;
+        }
+
+        openConfirmModal('LINEでシェア', 'LINEアカウントでシェアしますか？\n「はい」を選ぶとLINEアプリでこのアーティストのページが開きます。', () => {
+            if (typeof liff !== 'undefined' && liff.isInClient() && typeof liff.openWindow === 'function') {
+                liff.openWindow({ url: liffDeepUrl, external: true });
+            } else {
+                window.open(liffDeepUrl, '_blank');
+            }
+        }, () => {
+            customShare(artistName, text, liffDeepUrl);
+        });
     }
     function searchDAMFromArtistDetail() {
         if (!currentArtistDetailData) return;
@@ -3355,6 +3721,8 @@
         if (item.collectionName) fetchWikipediaForAlbum(item.collectionName);
         if (item.artistName) fetchWikipediaGeneric(item.artistName, 'album-detail-wiki-artist-area', 'album-detail-wiki-artist-text', 'album-detail-wiki-artist-more-btn', 'album-detail-wiki-artist-link');
 
+        searchAlbumCD(item);
+
         document.getElementById('modal-album-detail').classList.add('active');
     }
     function closeAlbumDetailModal() {
@@ -3378,8 +3746,46 @@
     }
     function shareAlbumFromDetail() {
         if (!currentAlbumDetailData) return;
-        const text = `${currentAlbumDetailData.collectionName} / ${currentAlbumDetailData.artistName}\n#メロ出〜た`;
-        customShare(currentAlbumDetailData.collectionName, text, 'https://liff.line.me/2010749970-n0PwMioA');
+        const albumName = currentAlbumDetailData.collectionName;
+        const artistName = currentAlbumDetailData.artistName;
+        const text = `${albumName} / ${artistName}\n#メロ出〜た`;
+        const liffDeepUrl = `https://liff.line.me/2010749970-n0PwMioA?albumId=${encodeURIComponent(currentAlbumDetailData.collectionId)}`;
+        const artworkUrl = (currentAlbumDetailData.artworkUrl100 || '').replace('100x100bb', '400x400bb');
+
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
+            if (!isLiffInit) { showToast("LINE共有機能を準備中です。"); return; }
+            const flexMessage = {
+                type: "flex",
+                altText: `このアルバムはオススメです！ ${albumName}`,
+                contents: {
+                    type: "bubble",
+                    hero: { type: "image", url: artworkUrl || "https://placehold.co/400x400/5a5ce6/ffffff?text=MeloData", size: "full", aspectRatio: "1:1", aspectMode: "cover", action: { type: "uri", uri: liffDeepUrl } },
+                    body: { type: "box", layout: "vertical", contents: [
+                        { type: "text", text: albumName, weight: "bold", size: "xl", wrap: true },
+                        { type: "text", text: artistName, size: "sm", color: "#666666", wrap: true, margin: "md" }
+                    ] },
+                    footer: { type: "box", layout: "vertical", spacing: "sm", contents: [ { type: "button", style: "primary", color: "#5a5ce6", height: "sm", action: { type: "uri", label: "メロ出〜た で見る", uri: liffDeepUrl } } ], flex: 0 }
+                }
+            };
+            liff.shareTargetPicker([flexMessage]).then((res) => {
+                if (res) showToast("LINEの友だちにアルバム情報を共有しました！");
+            }).catch((error) => {
+                console.error("LIFF Flex Share Error:", error);
+                showToast("LINE Developers管理画面で「Share Target Picker」を有効化してください。");
+                fallbackShare(text + "\n" + liffDeepUrl);
+            });
+            return;
+        }
+
+        openConfirmModal('LINEでシェア', 'LINEアカウントでシェアしますか？\n「はい」を選ぶとLINEアプリでこのアルバムのページが開きます。', () => {
+            if (typeof liff !== 'undefined' && liff.isInClient() && typeof liff.openWindow === 'function') {
+                liff.openWindow({ url: liffDeepUrl, external: true });
+            } else {
+                window.open(liffDeepUrl, '_blank');
+            }
+        }, () => {
+            customShare(albumName, text, liffDeepUrl);
+        });
     }
     function searchDAMFromAlbumDetail() {
         if (!currentAlbumDetailData) return;
