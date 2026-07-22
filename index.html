@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="mobile-web-app-capable" content="yes">
@@ -269,27 +269,26 @@
     <div class="bg-[#5a5ce6] text-white p-3 shadow-md flex flex-col z-10 shrink-0">
         <div class="flex justify-between items-center mb-2">
             <h2 id="search-title" class="text-xl font-bold">検索</h2>
-            <div class="flex items-center space-x-1">
-                <div id="memo-header-buttons" class="hidden flex space-x-1">
-                <!-- 「保存」「ファン」「履歴」トグル -->
-                <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-violet-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150">
-                    <span class="material-icons text-sm mr-1">favorite</span>保存
-                </button>
-                <button id="btn-toggle-fan" onclick="showFanList()" class="bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
-                    <span class="material-icons text-sm mr-1">star</span>ファン
-                </button>
-                <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
-                    <span class="material-icons text-sm mr-1">history</span>履歴
-                </button>
-                </div>
-                <button onclick="openHamburgerMenu()" class="text-white p-2 active:opacity-70 transition">
-                    <span class="material-icons">menu</span>
-                </button>
-            </div>
+            <button onclick="openHamburgerMenu()" class="text-white p-2 active:opacity-70 transition">
+                <span class="material-icons">menu</span>
+            </button>
+        </div>
+
+        <!-- 「保存」「ファン」「履歴」トグル（メモ帳表示時のみ、タイトル行の一段下に表示） -->
+        <div id="memo-header-buttons" class="hidden flex space-x-1 mb-2">
+            <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-violet-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150">
+                <span class="material-icons text-sm mr-1">favorite</span>保存
+            </button>
+            <button id="btn-toggle-fan" onclick="showFanList()" class="bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
+                <span class="material-icons text-sm mr-1">star</span>ファン
+            </button>
+            <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
+                <span class="material-icons text-sm mr-1">history</span>履歴
+            </button>
         </div>
         
         <div id="search-input-container" class="flex items-center bg-white rounded-lg p-1 shadow-inner border border-gray-200 relative z-20">
-            <input type="text" id="search-input" placeholder="ここに入力..." class="flex-1 p-2 text-black text-lg outline-none rounded-l-lg bg-transparent w-full" onkeypress="if(event.key === 'Enter') executeSearch(true)" onfocus="openSearchOptions()">
+            <input type="text" id="search-input" placeholder="ここに入力..." class="flex-1 p-2 text-black text-lg outline-none rounded-l-lg bg-transparent w-full" onkeypress="if(event.key === 'Enter') executeSearch(true)" onfocus="openSearchOptions(); scrollSearchInputIntoView();">
             
             <div class="flex space-x-1 pl-1">
                 <button id="btn-voice-input" onclick="startVoiceInput()" class="flex items-center justify-center bg-pink-50 text-pink-600 px-3 py-2 rounded-md font-bold text-sm active:bg-pink-100 transition-colors border border-pink-200 whitespace-nowrap">
@@ -519,6 +518,110 @@
     </div>
 </div>
 
+<!-- アーティスト詳細ウィンドウ -->
+<div id="modal-artist-detail" class="modal fixed inset-0 z-40 flex flex-col justify-end">
+    <div class="modal-content bg-white rounded-t-2xl shadow-2xl max-h-[92vh] flex flex-col">
+        <div class="flex items-center justify-between p-3 border-b border-gray-100 shrink-0">
+            <div class="flex space-x-1">
+                <button id="btn-artist-detail-fan" onclick="toggleFanFromArtistDetail()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
+                    <span id="icon-artist-detail-fan" class="material-icons text-2xl">star_border</span>
+                    <span class="text-[10px] mt-1">ファン</span>
+                </button>
+                <button onclick="shareArtistFromDetail()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
+                    <span class="material-icons text-2xl">share</span>
+                    <span class="text-[10px] mt-1">共有</span>
+                </button>
+                <button onclick="searchDAMFromArtistDetail()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
+                    <span class="material-icons text-2xl">mic</span>
+                    <span class="text-[10px] mt-1">DAM</span>
+                </button>
+            </div>
+            <button onclick="closeArtistDetailModal()" class="p-2 bg-gray-200 rounded-full text-gray-600 active:bg-gray-300">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-8">
+            <div class="flex flex-col items-center text-center">
+                <img id="artist-detail-img" src="" alt="アーティスト画像" class="w-48 h-48 object-cover rounded-full shadow-lg mb-4 bg-gray-200">
+                <h2 id="artist-detail-name" class="text-2xl font-bold text-gray-900 leading-tight"></h2>
+            </div>
+
+            <button onclick="proceedToArtistSongs()" class="w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
+                <span class="material-icons mr-1">search</span>曲名を探す
+            </button>
+
+            <!-- 豆知識/Wikipedia解説エリア -->
+            <div class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-sm" id="artist-detail-wiki-container" style="display: none;">
+                <div id="artist-detail-wiki-area" class="hidden">
+                    <h3 class="font-bold text-yellow-800 flex items-center mb-2">
+                        <span class="material-icons text-yellow-600 mr-1 text-base">person</span> 豆知識 (アーティスト)
+                    </h3>
+                    <p id="artist-detail-wiki-text" class="text-gray-700 leading-relaxed text-sm line-clamp-5"></p>
+                    <button id="artist-detail-wiki-more-btn" class="text-indigo-600 font-bold text-xs mt-2 hidden outline-none"></button>
+                    <div class="text-right mt-2">
+                        <a id="artist-detail-wiki-link" href="#" target="_blank" class="text-indigo-600 font-bold" style="text-decoration: underline;">＞ 続きはこちら</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- アルバム詳細ウィンドウ -->
+<div id="modal-album-detail" class="modal fixed inset-0 z-40 flex flex-col justify-end">
+    <div class="modal-content bg-white rounded-t-2xl shadow-2xl max-h-[92vh] flex flex-col">
+        <div class="flex items-center justify-between p-3 border-b border-gray-100 shrink-0">
+            <div class="flex space-x-1">
+                <button onclick="shareAlbumFromDetail()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
+                    <span class="material-icons text-2xl">share</span>
+                    <span class="text-[10px] mt-1">共有</span>
+                </button>
+                <button onclick="searchDAMFromAlbumDetail()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
+                    <span class="material-icons text-2xl">mic</span>
+                    <span class="text-[10px] mt-1">DAM</span>
+                </button>
+            </div>
+            <button onclick="closeAlbumDetailModal()" class="p-2 bg-gray-200 rounded-full text-gray-600 active:bg-gray-300">
+                <span class="material-icons">close</span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-8">
+            <div class="flex flex-col items-center text-center">
+                <img id="album-detail-img" src="" alt="アルバム画像" class="w-48 h-48 object-cover rounded-lg shadow-lg mb-4 bg-gray-200">
+                <h2 id="album-detail-name" class="text-2xl font-bold text-gray-900 leading-tight"></h2>
+                <button id="album-detail-artist-btn" class="text-lg text-indigo-600 mt-2 font-bold cursor-pointer active:text-indigo-800 underline decoration-indigo-300 underline-offset-4 outline-none"></button>
+            </div>
+
+            <button onclick="proceedToAlbumTracks()" class="w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
+                <span class="material-icons mr-1">search</span>曲名を探す
+            </button>
+
+            <!-- アルバムの解説／豆知識(アーティスト) -->
+            <div class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-sm" id="album-detail-wiki-container" style="display: none;">
+                <div id="album-detail-wiki-album-area" class="mb-5 hidden">
+                    <h3 class="font-bold text-yellow-800 flex items-center mb-2">
+                        <span class="material-icons text-yellow-600 mr-1 text-base">album</span> アルバムの解説
+                    </h3>
+                    <p id="album-detail-wiki-album-text" class="text-gray-700 leading-relaxed text-sm line-clamp-5"></p>
+                    <button id="album-detail-wiki-album-more-btn" class="text-indigo-600 font-bold text-xs mt-2 hidden outline-none"></button>
+                </div>
+                <div id="album-detail-wiki-artist-area" class="border-t border-yellow-200 pt-4 hidden">
+                    <h3 class="font-bold text-yellow-800 flex items-center mb-2">
+                        <span class="material-icons text-yellow-600 mr-1 text-base">person</span> 豆知識 (アーティスト)
+                    </h3>
+                    <p id="album-detail-wiki-artist-text" class="text-gray-700 leading-relaxed text-sm line-clamp-5"></p>
+                    <button id="album-detail-wiki-artist-more-btn" class="text-indigo-600 font-bold text-xs mt-2 hidden outline-none"></button>
+                    <div class="text-right mt-2">
+                        <a id="album-detail-wiki-artist-link" href="#" target="_blank" class="text-indigo-600 font-bold" style="text-decoration: underline;">＞ 続きはこちら</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- トースト -->
 <div id="toast-message" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300 opacity-0 pointer-events-none flex items-center text-sm w-11/12 max-w-sm">
     <span class="material-icons mr-2 text-blue-400">info</span>
@@ -526,6 +629,7 @@
 </div>
 
 <audio id="audio-player" src="" class="hidden"></audio>
+
 
 <!-- ハンバーガーメニュー（右からスライドイン） -->
 <div id="hamburger-overlay" class="modal fixed inset-0 z-50 flex justify-end" onclick="if(event.target===this) closeHamburgerMenu()">
@@ -1587,6 +1691,15 @@
         });
     }
 
+    // 検索欄フォーカス時、ソフトキーボード（＋IMEの予測変換バー）で隠れないよう
+    // キーボードのアニメーションが始まった後にスクロールして確実に見える位置へ移動する
+    function scrollSearchInputIntoView() {
+        setTimeout(() => {
+            const input = document.getElementById('search-input');
+            if (input) input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }, 300);
+    }
+
     function openSearchOptions() {
         // 'new-song'（新曲）はアコーディオン検索オプション（年代・ジャンル）を使うモードなので、
         // ここから除外しないこと。以前はここに含まれていたため、新曲モードで「検索オプション」を
@@ -1694,12 +1807,22 @@
     // メモ帳専用の左下ボタン（戻る＆一括再生）と、通常の右下戻るボタンの表示切り替え
     function setMemoFabButtons(isMemoMode) {
         document.getElementById('btn-memo-back').classList.toggle('hidden', !isMemoMode);
-        document.getElementById('btn-memo-playall').classList.toggle('hidden', !isMemoMode);
         document.querySelectorAll('.fab-back').forEach(btn => {
             if (btn.id === 'btn-memo-back' || btn.id === 'btn-memo-playall') return;
             btn.classList.toggle('hidden', isMemoMode);
         });
         if (!isMemoMode) stopMemoPlayAll();
+        updateMemoPlayAllVisibility();
+    }
+
+    // 連続再生ボタンは「保存」タブの時だけ表示する（「ファン」「履歴」では非表示）
+    function updateMemoPlayAllVisibility() {
+        const btn = document.getElementById('btn-memo-playall');
+        if (!btn) return;
+        const inMemoMode = !document.getElementById('btn-memo-back').classList.contains('hidden');
+        const shouldShow = inMemoMode && currentMemoTab === 'saved';
+        btn.classList.toggle('hidden', !shouldShow);
+        if (!shouldShow) stopMemoPlayAll();
     }
 
     function hideArtistNewsSection() {
@@ -2410,16 +2533,11 @@
     function handleItemClick(isArtist, isAlbum, index) {
         const item = displayResults[index];
         if (isArtist) {
-            // 「歌手名」検索からアーティストを選んだ時だけ、ファン登録の確認ダイアログを出す
-            if (currentMode === 'artist' && item.artistId && !isFanArtist(item.artistId)) {
-                openConfirmModal('ファン登録', `「${item.artistName}」をファン登録しますか？\nメモ帳の「ファン」一覧からいつでも見返せます。`, () => {
-                    addFanArtist(item.artistId, item.artistName, item.artworkUrl100, item.primaryGenreName);
-                    showToast(`「${item.artistName}」をファン登録しました`);
-                });
-            }
-            fetchArtistSongs(item.artistId, item.artistName);
+            openArtistDetailModal(item);
         }
-        else if (isAlbum) fetchAlbumTracks(item.collectionId, item.collectionName);
+        else if (isAlbum) {
+            openAlbumDetailModal(item);
+        }
         else openDetailModal(item);
     }
 
@@ -2912,7 +3030,7 @@
         } else if (state === 'amazon') {
             cdButton.className = 'bg-[#ff9900] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#e68a00] cursor-pointer transition-colors shadow-sm';
             cdButton.disabled = false;
-            cdButton.innerHTML = '<span class="material-icons mr-1">shopping_bag</span>Amazon Musicで探す';
+            cdButton.innerHTML = '<span class="material-icons mr-1">shopping_bag</span>Amazon Music';
         } else {
             currentAmazonUrl = '';
             cdButton.className = 'bg-gray-300 text-gray-500 py-3 rounded-lg font-bold flex items-center justify-center cursor-not-allowed shadow-sm transition-all';
@@ -3125,19 +3243,155 @@
     }
 
     function fetchWikipediaForArtist(artistName) {
-        document.getElementById('wiki-artist-area').classList.remove('hidden');
-        document.getElementById('wiki-text').textContent = '読み込み中...';
-        document.getElementById('wiki-more-btn').classList.add('hidden');
-        document.getElementById('wiki-link').href = '#';
+        fetchWikipediaGeneric(artistName, 'wiki-artist-area', 'wiki-text', 'wiki-more-btn', 'wiki-link');
+    }
 
-        fetchWikiData(artistName, (text) => {
+    // 任意の要素IDセットに対してWikipedia本文を取得・展開表示する汎用版
+    // （曲詳細・アーティスト詳細・アルバム詳細のいずれからも共通で利用する）
+    function fetchWikipediaGeneric(query, areaId, textId, btnId, linkId) {
+        const areaEl = document.getElementById(areaId);
+        if (areaEl) areaEl.classList.remove('hidden');
+        document.getElementById(textId).textContent = '読み込み中...';
+        const btnEl = document.getElementById(btnId);
+        if (btnEl) btnEl.classList.add('hidden');
+        const linkEl = linkId ? document.getElementById(linkId) : null;
+        if (linkEl) linkEl.href = '#';
+
+        fetchWikiData(query, (text) => {
             if (text) {
-                setupAccordion('wiki-text', 'wiki-more-btn', text);
-                document.getElementById('wiki-link').href = `https://ja.wikipedia.org/wiki/${encodeURIComponent(artistName)}`;
+                setupAccordion(textId, btnId, text);
+                if (linkEl) linkEl.href = `https://ja.wikipedia.org/wiki/${encodeURIComponent(query)}`;
             } else {
-                document.getElementById('wiki-text').textContent = '情報が見つかりませんでした。';
+                document.getElementById(textId).textContent = '情報が見つかりませんでした。';
             }
         });
+    }
+
+    // -------------------------------------------------------------
+    // アーティスト詳細ウィンドウ
+    // -------------------------------------------------------------
+    let currentArtistDetailData = null;
+
+    function openArtistDetailModal(item) {
+        currentArtistDetailData = item;
+        const img = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '400x400bb') : 'https://placehold.co/400x400/5a5ce6/ffffff?text=Artist';
+        document.getElementById('artist-detail-img').src = img;
+        document.getElementById('artist-detail-name').textContent = item.artistName || '';
+        updateArtistDetailFanIcon();
+
+        document.getElementById('artist-detail-wiki-container').style.display = 'none';
+        document.getElementById('artist-detail-wiki-area').classList.add('hidden');
+        if (item.artistName) {
+            document.getElementById('artist-detail-wiki-container').style.display = 'block';
+            fetchWikipediaGeneric(item.artistName, 'artist-detail-wiki-area', 'artist-detail-wiki-text', 'artist-detail-wiki-more-btn', 'artist-detail-wiki-link');
+        }
+
+        document.getElementById('modal-artist-detail').classList.add('active');
+    }
+    function closeArtistDetailModal() {
+        document.getElementById('modal-artist-detail').classList.remove('active');
+    }
+    function updateArtistDetailFanIcon() {
+        const icon = document.getElementById('icon-artist-detail-fan');
+        if (!icon || !currentArtistDetailData) return;
+        if (isFanArtist(currentArtistDetailData.artistId)) { icon.textContent = 'star'; icon.classList.add('text-amber-500'); }
+        else { icon.textContent = 'star_border'; icon.classList.remove('text-amber-500'); }
+    }
+    function toggleFanFromArtistDetail() {
+        if (!currentArtistDetailData || !currentArtistDetailData.artistId) return;
+        const { artistId, artistName, artworkUrl100, primaryGenreName } = currentArtistDetailData;
+        if (isFanArtist(artistId)) {
+            removeFanArtist(artistId);
+        } else {
+            addFanArtist(artistId, artistName, artworkUrl100, primaryGenreName);
+            showToast(`「${artistName}」をファン登録しました`);
+        }
+        updateArtistDetailFanIcon();
+    }
+    function shareArtistFromDetail() {
+        if (!currentArtistDetailData) return;
+        const text = `${currentArtistDetailData.artistName}\n#メロ出〜た`;
+        customShare(currentArtistDetailData.artistName, text, 'https://liff.line.me/2010749970-n0PwMioA');
+    }
+    function searchDAMFromArtistDetail() {
+        if (!currentArtistDetailData) return;
+        const targetUrl = `https://www.clubdam.com/karaokesearch/?keyword=${encodeURIComponent(currentArtistDetailData.artistName)}&type=keyword`;
+        if (typeof liff !== 'undefined' && liff.isInClient()) liff.openWindow({ url: targetUrl, external: true });
+        else window.open(targetUrl, '_blank');
+    }
+    function proceedToArtistSongs() {
+        if (!currentArtistDetailData) return;
+        const { artistId, artistName } = currentArtistDetailData;
+        closeArtistDetailModal();
+        fetchArtistSongs(artistId, artistName);
+    }
+
+    // -------------------------------------------------------------
+    // アルバム詳細ウィンドウ
+    // -------------------------------------------------------------
+    let currentAlbumDetailData = null;
+
+    function openAlbumDetailModal(item) {
+        currentAlbumDetailData = item;
+        const img = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '400x400bb') : 'https://placehold.co/400x400/5a5ce6/ffffff?text=Album';
+        document.getElementById('album-detail-img').src = img;
+        document.getElementById('album-detail-name').textContent = item.collectionName || '';
+        const artistBtn = document.getElementById('album-detail-artist-btn');
+        artistBtn.textContent = item.artistName || '';
+        artistBtn.onclick = () => {
+            closeAlbumDetailModal();
+            if (item.artistId && /^\d+$/.test(String(item.artistId))) {
+                openArtistDetailModal({ artistId: item.artistId, artistName: item.artistName, artworkUrl100: item.artworkUrl100, primaryGenreName: item.primaryGenreName });
+            }
+        };
+
+        document.getElementById('album-detail-wiki-container').style.display = 'none';
+        document.getElementById('album-detail-wiki-album-area').classList.add('hidden');
+        document.getElementById('album-detail-wiki-artist-area').classList.add('hidden');
+
+        if (item.collectionName || item.artistName) {
+            document.getElementById('album-detail-wiki-container').style.display = 'block';
+        }
+        if (item.collectionName) fetchWikipediaForAlbum(item.collectionName);
+        if (item.artistName) fetchWikipediaGeneric(item.artistName, 'album-detail-wiki-artist-area', 'album-detail-wiki-artist-text', 'album-detail-wiki-artist-more-btn', 'album-detail-wiki-artist-link');
+
+        document.getElementById('modal-album-detail').classList.add('active');
+    }
+    function closeAlbumDetailModal() {
+        document.getElementById('modal-album-detail').classList.remove('active');
+    }
+    function fetchWikipediaForAlbum(albumName) {
+        document.getElementById('album-detail-wiki-album-area').classList.remove('hidden');
+        document.getElementById('album-detail-wiki-album-text').textContent = '読み込み中...';
+        document.getElementById('album-detail-wiki-album-more-btn').classList.add('hidden');
+
+        fetchWikiData(albumName, (text) => {
+            if (text && !text.includes("曖昧さ回避")) {
+                setupAccordion('album-detail-wiki-album-text', 'album-detail-wiki-album-more-btn', text);
+            } else {
+                fetchWikiData(albumName + ' (アルバム)', (text2) => {
+                    if (text2) setupAccordion('album-detail-wiki-album-text', 'album-detail-wiki-album-more-btn', text2);
+                    else document.getElementById('album-detail-wiki-album-area').classList.add('hidden');
+                });
+            }
+        });
+    }
+    function shareAlbumFromDetail() {
+        if (!currentAlbumDetailData) return;
+        const text = `${currentAlbumDetailData.collectionName} / ${currentAlbumDetailData.artistName}\n#メロ出〜た`;
+        customShare(currentAlbumDetailData.collectionName, text, 'https://liff.line.me/2010749970-n0PwMioA');
+    }
+    function searchDAMFromAlbumDetail() {
+        if (!currentAlbumDetailData) return;
+        const targetUrl = `https://www.clubdam.com/karaokesearch/?keyword=${encodeURIComponent(currentAlbumDetailData.collectionName + ' ' + currentAlbumDetailData.artistName)}&type=keyword`;
+        if (typeof liff !== 'undefined' && liff.isInClient()) liff.openWindow({ url: targetUrl, external: true });
+        else window.open(targetUrl, '_blank');
+    }
+    function proceedToAlbumTracks() {
+        if (!currentAlbumDetailData) return;
+        const { collectionId, collectionName } = currentAlbumDetailData;
+        closeAlbumDetailModal();
+        fetchAlbumTracks(collectionId, collectionName);
     }
 
     function fetchWikiData(query, callback) {
@@ -3272,6 +3526,7 @@
         } else {
             loadMoreRender();
         }
+        updateMemoPlayAllVisibility();
     }
 
     function showFanList() {
@@ -3290,6 +3545,7 @@
         } else {
             loadMoreRender();
         }
+        updateMemoPlayAllVisibility();
     }
 
     function showHistoryList() {
@@ -3308,6 +3564,7 @@
         } else {
             loadMoreRender();
         }
+        updateMemoPlayAllVisibility();
     }
 
     function getSearchHistoriesKey(mode) {
