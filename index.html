@@ -139,7 +139,7 @@
 
     <div class="top-header shadow-md">
         <!-- ハンバーガーメニュー -->
-        <button onclick="openHamburgerMenu()" class="absolute top-4 right-4 text-white p-2 rounded-full bg-white/20 active:bg-white/30 backdrop-blur-sm transition">
+        <button onclick="openHamburgerMenu()" class="absolute top-4 right-4 text-white p-2 active:opacity-70 transition">
             <span class="material-icons">menu</span>
         </button>
         <h1 class="text-3xl font-bold tracking-wider flex items-center justify-center mb-1 mt-4 font-sans">
@@ -269,13 +269,21 @@
     <div class="bg-[#5a5ce6] text-white p-3 shadow-md flex flex-col z-10 shrink-0">
         <div class="flex justify-between items-center mb-2">
             <h2 id="search-title" class="text-xl font-bold">検索</h2>
-            <div id="memo-header-buttons" class="hidden flex space-x-1">
-                <!-- 「保存」「履歴」トグル -->
+            <div class="flex items-center space-x-1">
+                <div id="memo-header-buttons" class="hidden flex space-x-1">
+                <!-- 「保存」「ファン」「履歴」トグル -->
                 <button id="btn-toggle-saved" onclick="showSavedList()" class="bg-violet-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150">
                     <span class="material-icons text-sm mr-1">favorite</span>保存
                 </button>
+                <button id="btn-toggle-fan" onclick="showFanList()" class="bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
+                    <span class="material-icons text-sm mr-1">star</span>ファン
+                </button>
                 <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
                     <span class="material-icons text-sm mr-1">history</span>履歴
+                </button>
+                </div>
+                <button onclick="openHamburgerMenu()" class="text-white p-2 active:opacity-70 transition">
+                    <span class="material-icons">menu</span>
                 </button>
             </div>
         </div>
@@ -354,6 +362,14 @@
     </div>
 
     <div id="search-results" class="scrollable-content bg-gray-100 p-2 relative">
+        <!-- アーティスト別ニュース（歌手のページを開いた時のみ表示） -->
+        <div id="artist-page-news-section" class="hidden mb-2 px-1">
+            <div class="flex items-center mb-1 px-1">
+                <span class="material-icons text-indigo-400 text-base mr-1">campaign</span>
+                <span class="text-xs font-bold text-gray-500">関連ニュース</span>
+            </div>
+            <div id="artist-page-news-list"></div>
+        </div>
         <div id="results-container" class="space-y-0"></div>
         <div id="loading-indicator" class="text-center p-4 text-gray-500 hidden">
             <span class="material-icons animate-spin">refresh</span> <span id="loading-indicator-text">読み込み中...</span>
@@ -364,6 +380,14 @@
     <!-- 画面右下のフローティング戻るボタン -->
     <button onclick="goBackToTop()" class="fab-back">
         <span class="material-icons text-3xl">arrow_back</span>
+    </button>
+
+    <!-- メモ帳専用：左下の戻る＆一括再生ボタン（メモ帳モードの時だけ表示） -->
+    <button id="btn-memo-back" onclick="goBackToTop()" class="fab-back hidden" style="left: 20px; right: auto; background-color:#6b7280;">
+        <span class="material-icons text-3xl">arrow_back</span>
+    </button>
+    <button id="btn-memo-playall" onclick="toggleMemoPlayAll()" class="fab-back hidden" style="left: 92px; right: auto; background-color:#5a5ce6;">
+        <span id="btn-memo-playall-icon" class="material-icons text-3xl">playlist_play</span>
     </button>
 </div>
 
@@ -483,6 +507,18 @@
     </div>
 </div>
 
+<!-- 汎用確認ダイアログ（ファン登録・LINEシェア確認などで共用） -->
+<div id="modal-confirm" class="modal fixed inset-0 z-[70] flex items-center justify-center px-6" onclick="if(event.target===this) closeConfirmModal(false)">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
+        <div id="confirm-modal-title" class="text-base font-bold text-gray-800 mb-2"></div>
+        <div id="confirm-modal-message" class="text-sm text-gray-600 mb-5 leading-relaxed"></div>
+        <div class="flex gap-3">
+            <button onclick="closeConfirmModal(false)" class="flex-1 bg-gray-100 text-gray-700 font-bold py-2.5 rounded-lg active:bg-gray-200">いいえ</button>
+            <button onclick="closeConfirmModal(true)" class="flex-1 bg-[#5a5ce6] text-white font-bold py-2.5 rounded-lg active:bg-indigo-700">はい</button>
+        </div>
+    </div>
+</div>
+
 <!-- トースト -->
 <div id="toast-message" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300 opacity-0 pointer-events-none flex items-center text-sm w-11/12 max-w-sm">
     <span class="material-icons mr-2 text-blue-400">info</span>
@@ -584,11 +620,16 @@
 
 <!-- 使い方ページ -->
 <div id="page-howto" class="screen-container screen-container-white" style="display: none;">
-    <div class="bg-[#5a5ce6] text-white p-4 shadow-md flex items-center shrink-0">
-        <button onclick="goBackFromSubPage('howto')" class="flex items-center text-white active:opacity-70 mr-2">
-            <span class="material-icons">arrow_back</span>
+    <div class="bg-[#5a5ce6] text-white p-4 shadow-md flex items-center justify-between shrink-0">
+        <div class="flex items-center">
+            <button onclick="goBackFromSubPage('howto')" class="flex items-center text-white active:opacity-70 mr-2">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <h2 class="text-lg font-bold">使い方</h2>
+        </div>
+        <button onclick="openHamburgerMenu()" class="text-white p-2 active:opacity-70 transition">
+            <span class="material-icons">menu</span>
         </button>
-        <h2 class="text-lg font-bold">使い方</h2>
     </div>
     <div class="scrollable-content px-5 py-5 text-[14px] leading-relaxed text-gray-700">
         <section class="mb-6">
@@ -620,11 +661,16 @@
 
 <!-- 利用規約ページ -->
 <div id="page-terms" class="screen-container screen-container-white" style="display: none;">
-    <div class="bg-[#5a5ce6] text-white p-4 shadow-md flex items-center shrink-0">
-        <button onclick="goBackFromSubPage('terms')" class="flex items-center text-white active:opacity-70 mr-2">
-            <span class="material-icons">arrow_back</span>
+    <div class="bg-[#5a5ce6] text-white p-4 shadow-md flex items-center justify-between shrink-0">
+        <div class="flex items-center">
+            <button onclick="goBackFromSubPage('terms')" class="flex items-center text-white active:opacity-70 mr-2">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <h2 class="text-lg font-bold">利用規約</h2>
+        </div>
+        <button onclick="openHamburgerMenu()" class="text-white p-2 active:opacity-70 transition">
+            <span class="material-icons">menu</span>
         </button>
-        <h2 class="text-lg font-bold">利用規約</h2>
     </div>
     <div class="scrollable-content px-5 py-5 text-[13px] leading-relaxed text-gray-700">
         <p class="mb-4 text-gray-500">この利用規約（以下「本規約」）は、「メロ出〜た」（以下「本サービス」）の利用条件を定めるものです。本サービスをご利用いただいた場合、本規約に同意いただいたものとみなします。</p>
@@ -670,6 +716,143 @@
     const RAKUTEN_AFFILIATE_ID = '07190876.228b5fb2.07190877.c0d8ecf3';  
     let currentRakutenUrl = ''; // 楽天ブックス商品URL一時保存用
     let rakutenSearchToken = 0; // 詳細を連続で切り替えた際、古い検索結果が別の曲に反映されないようにするためのトークン
+
+    // -------------------------------------------------------------
+    // Spotify Web API（iTunes検索で抜けている曲を補完するため）
+    // -------------------------------------------------------------
+    // 【重要な注意点】
+    // ① Client Credentialsフロー（Authorizationヘッダ用トークン取得）にはClient Secretが必要ですが、
+    //    Client SecretをこのようにHTML/JS内にそのまま埋め込むと、誰でもブラウザの開発者ツールから
+    //    読み取れてしまいます。楽天APIのアクセスキー同様、このアプリは「静的サイト単体で完結させる」
+    //    という制約上、既に同種のリスクを許容していますが、Spotify側は不正利用を検知すると
+    //    Client IDごとレート制限・停止される場合があります。本格運用する場合は、Secretはサーバー
+    //    レス関数（Cloudflare Workers等）の裏側に隠し、トークン取得だけそこで代行することを推奨します。
+    // ② Spotifyは2024年11月のポリシー変更により、ほとんどの楽曲でpreview_url（30秒試聴URL）が
+    //    nullになりました。そのため、Spotify経由で見つかった曲は「試聴再生ボタンが出ない」
+    //    ことが多い点はご了承ください（曲情報・アートワーク自体は取得できます）。
+    // ③ Client IDはいただいたスクショから設定済みですが、Client Secretはスクショ上でマスクされて
+    //    おり読み取れなかったため、下の SPOTIFY_CLIENT_SECRET は空欄にしています。
+    //    Spotify Developer Dashboard →「メロ出〜た」アプリ→ Basic Information →
+    //    「View client secret」で表示される値をコピーして、このダブルクォートの中に貼り付けてください。
+    const SPOTIFY_CLIENT_ID = 'b3072df16f5e4685b0ec6d95d7fe0c58';
+    const SPOTIFY_CLIENT_SECRET = ''; // ← ここにClient Secretを貼り付けてください（未設定の間はSpotify補完は自動的にスキップされます）
+
+    let spotifyAccessToken = null;
+    let spotifyTokenExpiresAt = 0;
+
+    function getSpotifyToken(callback) {
+        if (!SPOTIFY_CLIENT_SECRET) { callback(null); return; }
+        if (spotifyAccessToken && Date.now() < spotifyTokenExpiresAt) { callback(spotifyAccessToken); return; }
+        fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': 'Basic ' + btoa(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET)
+            },
+            body: 'grant_type=client_credentials'
+        }).then(res => {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        }).then(data => {
+            spotifyAccessToken = data.access_token;
+            spotifyTokenExpiresAt = Date.now() + ((data.expires_in || 3600) - 60) * 1000;
+            callback(spotifyAccessToken);
+        }).catch(err => {
+            console.warn('[Spotify] トークン取得に失敗しました:', err);
+            callback(null);
+        });
+    }
+
+    function searchSpotifyTracks(query, limit, callback) {
+        getSpotifyToken((token) => {
+            if (!token) { callback([]); return; }
+            const url = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&market=JP&limit=${limit || 30}`;
+            fetch(url, { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+                .then(data => callback((data.tracks && data.tracks.items) || []))
+                .catch(err => { console.warn('[Spotify] 検索に失敗しました:', err); callback([]); });
+        });
+    }
+
+    // SpotifyのトラックIDを、iTunesの数値trackIdと絶対に衝突しない負の整数に変換する
+    // （アプリ内のonclickハンドラ等は trackId を素のJS数値としてテンプレートに埋め込んでいるため、
+    // 文字列IDのままだと構文エラーになる。負数にしておけばiTunes由来(常に正の整数)と衝突しない）
+    function spotifyIdToNegativeInt(spotifyId) {
+        let hash = 0;
+        const s = String(spotifyId);
+        for (let i = 0; i < s.length; i++) {
+            hash = (hash * 31 + s.charCodeAt(i)) % 2147483647;
+        }
+        return -(Math.abs(hash) + 1);
+    }
+
+    // SpotifyのトラックオブジェクトをiTunes検索結果と同じ形（groupConsolidatedSongs/loadMoreRender/
+    // openDetailModalがそのまま扱える形）に変換する
+    function mapSpotifyTrackToItunesShape(t) {
+        const artist = (t.artists && t.artists[0]) || {};
+        const album = t.album || {};
+        const img = (album.images && album.images[0] && album.images[0].url) || '';
+        let releaseDate = album.release_date || '';
+        if (releaseDate && releaseDate.length === 4) releaseDate += '-01-01'; // 年のみの場合を補完
+        return {
+            wrapperType: 'track',
+            kind: 'song',
+            trackId: spotifyIdToNegativeInt(t.id),
+            trackName: t.name,
+            artistName: artist.name || '',
+            artistId: artist.id || '',
+            collectionName: album.name || '',
+            collectionId: album.id || '',
+            releaseDate: releaseDate,
+            artworkUrl100: img,
+            previewUrl: t.preview_url || '', // 2024年11月以降、多くの曲でnullになる点に注意（上記コメント参照）
+            trackTimeMillis: t.duration_ms || 0,
+            primaryGenreName: '',
+            _source: 'spotify'
+        };
+    }
+
+    // 曲名・アーティスト名を正規化した重複判定キー（iTunesとSpotifyで同一曲を二重表示しないため）
+    function spotifyDedupKey(artist, title) {
+        const norm = (s) => String(s || '').replace(/[\[\(（【].*?[\]\)）】]/g, '').replace(/[\s　]/g, '').toLowerCase();
+        return norm(artist) + '_' + norm(title);
+    }
+
+    // 「曲名」検索：iTunesの結果に無い曲だけをSpotifyから補って追記する
+    function supplementSongSearchWithSpotify(query, itunesRawTracks) {
+        searchSpotifyTracks(query, 30, (spotifyTracks) => {
+            if (currentMode !== 'song' || currentQuery !== query) return; // 別の検索に切り替え済みなら破棄
+            if (!spotifyTracks || spotifyTracks.length === 0) return;
+
+            const existingKeys = new Set(itunesRawTracks.map(r => spotifyDedupKey(r.artistName, r.trackName)));
+            const newOnes = spotifyTracks
+                .filter(t => t.artists && t.artists[0] && t.name)
+                .map(mapSpotifyTrackToItunesShape)
+                .filter(t => !existingKeys.has(spotifyDedupKey(t.artistName, t.trackName)));
+
+            if (newOnes.length === 0) return;
+            console.log('[Spotify補完] iTunesに無かった曲を' + newOnes.length + '件追加:', newOnes.map(n => n.trackName));
+            allFetchedResults = groupConsolidatedSongs(itunesRawTracks.concat(newOnes));
+            applyFiltersAndRender();
+        });
+    }
+
+    // 「歌手名」検索：iTunesに無いアーティストだけをSpotifyから補って追記する
+    function supplementArtistSearchWithSpotify(query, existingArtistGroups) {
+        searchSpotifyTracks(`artist:${query}`, 30, (spotifyTracks) => {
+            if (currentMode !== 'artist' || currentQuery !== query) return;
+            if (!spotifyTracks || spotifyTracks.length === 0) return;
+
+            const existingIds = new Set(existingArtistGroups.map(a => String(a.artistId)));
+            const mapped = spotifyTracks.filter(t => t.artists && t.artists[0]).map(mapSpotifyTrackToItunesShape);
+            const spotifyArtistGroups = groupToArtists(mapped).filter(a => !existingIds.has(String(a.artistId)));
+
+            if (spotifyArtistGroups.length === 0) return;
+            console.log('[Spotify補完] iTunesに無かったアーティストを' + spotifyArtistGroups.length + '件追加');
+            allFetchedResults = existingArtistGroups.concat(spotifyArtistGroups);
+            applyFiltersAndRender();
+        });
+    }
 
     // -------------------------------------------------------------
     // YouTube Data API v3 認証情報（動画埋め込み検索用）
@@ -740,7 +923,7 @@
         }, { root: document.getElementById('search-results'), threshold: 0.1 });
         observer.observe(sentinel);
         
-        document.getElementById('audio-player').addEventListener('ended', stopAudio);
+        document.getElementById('audio-player').addEventListener('ended', handleAudioEnded);
         
         // LIFFの初期化
         if (typeof liff !== 'undefined') {
@@ -917,6 +1100,30 @@
         toast.classList.remove('opacity-0');
         toast.classList.add('opacity-100');
         setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0'); }, 4000); 
+    }
+
+    // -------------------------------------------------------------
+    // 汎用確認ダイアログ（ファン登録確認・LINEシェア確認などで共用）
+    // -------------------------------------------------------------
+    let pendingConfirmCallback = null;
+    let pendingConfirmNoCallback = null;
+
+    function openConfirmModal(title, message, onYes, onNo) {
+        document.getElementById('confirm-modal-title').textContent = title;
+        document.getElementById('confirm-modal-message').textContent = message;
+        pendingConfirmCallback = onYes;
+        pendingConfirmNoCallback = onNo || null;
+        document.getElementById('modal-confirm').classList.add('active');
+    }
+
+    function closeConfirmModal(result) {
+        document.getElementById('modal-confirm').classList.remove('active');
+        const cbYes = pendingConfirmCallback;
+        const cbNo = pendingConfirmNoCallback;
+        pendingConfirmCallback = null;
+        pendingConfirmNoCallback = null;
+        if (result && typeof cbYes === 'function') cbYes();
+        else if (!result && typeof cbNo === 'function') cbNo();
     }
 
     // -------------------------------------------------------------
@@ -1174,8 +1381,14 @@
 
     // 曲詳細ウィンドウ：アーティスト名の文字列一致でRSS全件から関連ニュースを最大3件表示
     function renderArtistRelatedNews(artistName) {
-        const section = document.getElementById('detail-news-section');
-        const list = document.getElementById('detail-news-list');
+        renderArtistNewsForList('detail-news-section', 'detail-news-list', artistName);
+    }
+
+    // アーティスト名の文字列一致でRSS全件から関連ニュースを最大3件表示する汎用関数
+    // （曲詳細ウィンドウ・アーティスト別ページのどちらからも呼び出す）
+    function renderArtistNewsForList(sectionId, listId, artistName) {
+        const section = document.getElementById(sectionId);
+        const list = document.getElementById(listId);
         if (!section || !list) return;
 
         const name = (artistName || '').trim();
@@ -1196,7 +1409,7 @@
             return;
         }
         section.classList.remove('hidden');
-        renderMusicNewsList('detail-news-list', matched);
+        renderMusicNewsList(listId, matched);
     }
 
     function customShare(title, text, url) {
@@ -1357,8 +1570,21 @@
             return;
         }
 
-        // Web Share API使用時
-        customShare(`${cleanTitle}／${artistName}`, text, liffDeepUrl);
+        // ブラウザ版（LINEミニアプリの外）からの場合：LINEでシェアするかどうかを確認し、
+        // 「はい」ならLINEミニアプリ（該当曲のtrackId付き）をLINEアプリ内で開き、
+        // そこで改めて「友達に教える」を押すとLINE公式の共有パネル（Share Target Picker）が起動する。
+        // ※ブラウザ側からLINEの共有パネルを直接起動することはLINEの仕様上できないため、
+        //   このワンクッションを挟む形になる。
+        openConfirmModal('LINEでシェア', 'LINEアカウントでシェアしますか？\n「はい」を選ぶとLINEアプリでこの曲のページが開きます。', () => {
+            if (typeof liff !== 'undefined' && liff.isInClient() && typeof liff.openWindow === 'function') {
+                liff.openWindow({ url: liffDeepUrl, external: true });
+            } else {
+                window.open(liffDeepUrl, '_blank');
+            }
+        }, () => {
+            // 「いいえ」：従来通りWeb Share API／コピーなど他の方法で共有
+            customShare(`${cleanTitle}／${artistName}`, text, liffDeepUrl);
+        });
     }
 
     function openSearchOptions() {
@@ -1397,6 +1623,8 @@
         
         document.getElementById('page-top').style.display = 'none';
         document.getElementById('page-search').style.display = 'flex';
+        setMemoFabButtons(false);
+        if (mode !== 'artist-songs') hideArtistNewsSection();
         
         const titleEl = document.getElementById('search-title');
         const inputEl = document.getElementById('search-input');
@@ -1455,9 +1683,28 @@
         
         document.getElementById('simple-options-container').style.display = 'none';
         document.getElementById('accordion-options-container').style.display = 'none';
+
+        hideArtistNewsSection();
+        setMemoFabButtons(true);
         
         clearResults();
         showSavedList();
+    }
+
+    // メモ帳専用の左下ボタン（戻る＆一括再生）と、通常の右下戻るボタンの表示切り替え
+    function setMemoFabButtons(isMemoMode) {
+        document.getElementById('btn-memo-back').classList.toggle('hidden', !isMemoMode);
+        document.getElementById('btn-memo-playall').classList.toggle('hidden', !isMemoMode);
+        document.querySelectorAll('.fab-back').forEach(btn => {
+            if (btn.id === 'btn-memo-back' || btn.id === 'btn-memo-playall') return;
+            btn.classList.toggle('hidden', isMemoMode);
+        });
+        if (!isMemoMode) stopMemoPlayAll();
+    }
+
+    function hideArtistNewsSection() {
+        const section = document.getElementById('artist-page-news-section');
+        if (section) section.classList.add('hidden');
     }
 
     function goBackToTop() {
@@ -1467,7 +1714,9 @@
             return;
         }
         stopAudio();
+        stopMemoPlayAll();
         closeSearchOptions();
+        setMemoFabButtons(false);
         document.getElementById('page-search').style.display = 'none';
         document.getElementById('page-top').style.display = 'flex';
     }
@@ -1549,12 +1798,14 @@
         { id: 'youtube_1',    icon: 'smart_display',        name: 'MV鑑賞家',           desc: 'YouTube動画を再生した',      check: (s) => s.youtubePlayCount >= 1 },
         { id: 'lyrics_5',     icon: 'menu_book',            name: '歌詞探偵',           desc: '歌詞検索を5回行った',        check: (s) => s.lyricsSearchCount >= 5 },
         { id: 'share_1',      icon: 'share',                name: 'シェアマスター',      desc: '友達に共有した',            check: (s) => s.shareCount >= 1 },
+        { id: 'fan_1',        icon: 'star',                 name: '推し活デビュー',      desc: 'アーティストをファン登録した', check: (s) => s.fanCount >= 1 },
+        { id: 'fan_5',        icon: 'workspace_premium',    name: '推し活マスター',      desc: 'アーティストを5組ファン登録した', check: (s) => s.fanCount >= 5 },
         { id: 'streak_3',     icon: 'local_fire_department',name: '3日連続ログイン',     desc: '3日連続で利用した',         check: (s) => s.streak >= 3 },
         { id: 'streak_7',     icon: 'workspace_premium',    name: '週間皆勤賞',          desc: '7日連続で利用した',         check: (s) => s.streak >= 7 },
     ];
     const STATS_KEY = 'merodata_stats';
     const UNLOCKED_BADGES_KEY = 'merodata_unlocked_badges';
-    const STATS_DEFAULT = { searchCount: 0, saveCount: 0, newSongViewCount: 0, cdClickCount: 0, youtubePlayCount: 0, lyricsSearchCount: 0, shareCount: 0, visitDates: [], streak: 0 };
+    const STATS_DEFAULT = { searchCount: 0, saveCount: 0, newSongViewCount: 0, cdClickCount: 0, youtubePlayCount: 0, lyricsSearchCount: 0, shareCount: 0, fanCount: 0, visitDates: [], streak: 0 };
 
     function getStats() {
         try {
@@ -1818,12 +2069,19 @@
             if (data && data.results) {
                 if (currentMode === 'artist') {
                     allFetchedResults = groupToArtists(data.results);
+                    applyFiltersAndRender();
+                    supplementArtistSearchWithSpotify(currentQuery, allFetchedResults);
                 } else if (currentMode === 'album') {
                     allFetchedResults = data.results;
+                    applyFiltersAndRender();
                 } else {
-                    allFetchedResults = groupConsolidatedSongs(data.results);
+                    const itunesTracks = data.results.filter(r => r.wrapperType === 'track');
+                    allFetchedResults = groupConsolidatedSongs(itunesTracks);
+                    applyFiltersAndRender();
+                    if (currentMode === 'song') {
+                        supplementSongSearchWithSpotify(currentQuery, itunesTracks);
+                    }
                 }
-                applyFiltersAndRender();
             }
         });
     }
@@ -2097,7 +2355,7 @@
             const title = (isArtist ? item.artistName : (isAlbum ? item.collectionName : item.trackName)) + yearStr;
             
             let subText = '';
-            if(isArtist) subText = `${item.primaryGenreName || 'ジャンル不明'} | 取得: ${item.trackCount}曲`;
+            if(isArtist) subText = item.trackCount ? `${item.primaryGenreName || 'ジャンル不明'} | 取得: ${item.trackCount}曲` : (item.primaryGenreName || 'ジャンル不明');
             else subText = item.artistName || '不明';
 
             const imgUrl = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '200x200bb') : '';
@@ -2108,7 +2366,7 @@
                 const isPlaying = (currentPlayingUrl === item.previewUrl);
                 const durationLabel = formatDurationMMSS(item.trackTimeMillis);
                 rightHtml = `<div class="border-l border-gray-100 pl-2 flex flex-col items-center justify-center w-11 flex-shrink-0">
-                    <button onclick="toggleInlineAudio('${item.previewUrl}', this, event)" class="play-btn-wrapper play-btn-wrapper-sm bg-indigo-50 text-indigo-600 active:bg-indigo-200"><span class="material-icons text-lg">${isPlaying ? 'stop' : 'play_arrow'}</span></button>
+                    <button onclick="toggleInlineAudio('${item.previewUrl}', this, event)" data-preview-url="${item.previewUrl}" class="play-btn-wrapper play-btn-wrapper-sm bg-indigo-50 text-indigo-600 active:bg-indigo-200"><span class="material-icons text-lg">${isPlaying ? 'stop' : 'play_arrow'}</span></button>
                     <span class="text-[10px] text-gray-400 mt-0.5 whitespace-nowrap">${durationLabel}</span>
                 </div>`;
             }
@@ -2124,14 +2382,16 @@
                 ${rightHtml}
             `;
 
-            if (currentMode === 'memo' && currentMemoTab === 'saved') {
+            if ((currentMode === 'memo' && currentMemoTab === 'saved') || (currentMode === 'memo' && currentMemoTab === 'fan')) {
+                const isFanTab = (currentMemoTab === 'fan');
+                const deleteCall = isFanTab ? `removeFanArtist('${String(item.artistId).replace(/'/g, "\\'")}')` : `removeMemo(${item.trackId})`;
                 el.className = 'rounded-lg mb-2 mt-1 overflow-hidden shadow-sm border border-gray-200 bg-white'; 
                 el.innerHTML = `
                     <div class="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full" style="scroll-snap-type: x mandatory;">
                         <div class="w-full shrink-0 snap-start flex items-center bg-white active:bg-gray-50">
                             ${innerContent}
                         </div>
-                        <button onclick="removeMemo(${item.trackId})" class="w-20 shrink-0 snap-start bg-red-500 text-white flex flex-col items-center justify-center active:bg-red-600 transition-colors outline-none">
+                        <button onclick="${deleteCall}" class="w-20 shrink-0 snap-start bg-red-500 text-white flex flex-col items-center justify-center active:bg-red-600 transition-colors outline-none">
                             <span class="material-icons text-2xl pointer-events-none">delete</span>
                             <span class="text-[10px] mt-1 pointer-events-none">削除</span>
                         </button>
@@ -2149,7 +2409,16 @@
 
     function handleItemClick(isArtist, isAlbum, index) {
         const item = displayResults[index];
-        if (isArtist) fetchArtistSongs(item.artistId, item.artistName);
+        if (isArtist) {
+            // 「歌手名」検索からアーティストを選んだ時だけ、ファン登録の確認ダイアログを出す
+            if (currentMode === 'artist' && item.artistId && !isFanArtist(item.artistId)) {
+                openConfirmModal('ファン登録', `「${item.artistName}」をファン登録しますか？\nメモ帳の「ファン」一覧からいつでも見返せます。`, () => {
+                    addFanArtist(item.artistId, item.artistName, item.artworkUrl100, item.primaryGenreName);
+                    showToast(`「${item.artistName}」をファン登録しました`);
+                });
+            }
+            fetchArtistSongs(item.artistId, item.artistName);
+        }
         else if (isAlbum) fetchAlbumTracks(item.collectionId, item.collectionName);
         else openDetailModal(item);
     }
@@ -2158,11 +2427,14 @@
         currentMode = 'artist-songs';
         document.getElementById('search-title').textContent = artistName;
         clearResults();
+        setMemoFabButtons(false);
         
         document.getElementById('simple-options-container').style.display = 'none';
         document.getElementById('accordion-options-container').style.display = 'block';
         openSearchOptions();
         loadSearchHistory();
+
+        renderArtistNewsForList('artist-page-news-section', 'artist-page-news-list', artistName);
         
         document.getElementById('loading-indicator').style.display = 'block';
         fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
@@ -2179,7 +2451,13 @@
         const artistId = currentTrackData.artistId;
         const artistName = currentTrackData.artistName;
         closeDetailModal();
-        fetchArtistSongs(artistId, artistName);
+        // Spotify由来の曲などiTunesの数値アーティストIDを持たない場合は、アーティスト名でのテキスト検索にフォールバック
+        if (artistId && /^\d+$/.test(String(artistId))) {
+            fetchArtistSongs(artistId, artistName);
+        } else {
+            goToSearch('song');
+            executeSearch(true, artistName);
+        }
     }
 
     function fetchAlbumTracks(collectionId, collectionName) {
@@ -2204,6 +2482,7 @@
 
     function toggleInlineAudio(url, btnElement, event) {
         event.stopPropagation();
+        stopMemoPlayAll(); // 個別再生ボタンが押されたら一括再生は止める
         const audio = document.getElementById('audio-player');
         if (currentPlayingUrl === url && !audio.paused) { 
             stopAudio(); 
@@ -2222,6 +2501,94 @@
         currentPlayingUrl = null;
         document.querySelectorAll('.play-btn-wrapper').forEach(btn => btn.querySelector('.material-icons').textContent = 'play_arrow');
         updateModalPlayButton(false);
+    }
+
+    // 再生終了イベントの振り分け：メモ帳の一括再生中なら次の曲へ、そうでなければ通常通り停止
+    function handleAudioEnded() {
+        if (memoPlayAllActive) {
+            advanceMemoPlayAll();
+        } else {
+            stopAudio();
+        }
+    }
+
+    // -------------------------------------------------------------
+    // メモ帳：一括再生（表示中のリストを上から順に30秒ずつ試聴していく）
+    // -------------------------------------------------------------
+    let memoPlayAllActive = false;
+    let memoPlayAllIndex = 0;
+    let memoPlayAllTimer = null;
+
+    function toggleMemoPlayAll() {
+        if (memoPlayAllActive) {
+            stopMemoPlayAll();
+            return;
+        }
+        if (!displayResults || displayResults.length === 0) {
+            showToast('再生できる曲がありません');
+            return;
+        }
+        memoPlayAllActive = true;
+        updateMemoPlayAllButtonIcon();
+        playMemoPlayAllFrom(0);
+    }
+
+    function playMemoPlayAllFrom(startIndex) {
+        let idx = startIndex;
+        while (idx < displayResults.length && !displayResults[idx].previewUrl) idx++;
+        if (idx >= displayResults.length) {
+            stopMemoPlayAll();
+            showToast('リストの最後まで再生しました');
+            return;
+        }
+        memoPlayAllIndex = idx;
+        const item = displayResults[idx];
+        const audio = document.getElementById('audio-player');
+        audio.pause();
+        audio.src = item.previewUrl;
+        audio.play().catch(e => console.log(e));
+        currentPlayingUrl = item.previewUrl;
+        updateInlinePlayIcons();
+
+        clearMemoPlayAllTimer();
+        // previewUrlの試聴クリップは通常30秒だが、万一自動終了しない場合の保険として30秒でも強制的に次へ
+        memoPlayAllTimer = setTimeout(() => { advanceMemoPlayAll(); }, 30000);
+    }
+
+    function advanceMemoPlayAll() {
+        clearMemoPlayAllTimer();
+        if (!memoPlayAllActive) return;
+        playMemoPlayAllFrom(memoPlayAllIndex + 1);
+    }
+
+    function clearMemoPlayAllTimer() {
+        if (memoPlayAllTimer) { clearTimeout(memoPlayAllTimer); memoPlayAllTimer = null; }
+    }
+
+    function stopMemoPlayAll() {
+        if (!memoPlayAllActive) { clearMemoPlayAllTimer(); return; }
+        memoPlayAllActive = false;
+        clearMemoPlayAllTimer();
+        const audio = document.getElementById('audio-player');
+        audio.pause();
+        currentPlayingUrl = null;
+        updateInlinePlayIcons();
+        updateModalPlayButton(false);
+        updateMemoPlayAllButtonIcon();
+    }
+
+    function updateMemoPlayAllButtonIcon() {
+        const icon = document.getElementById('btn-memo-playall-icon');
+        if (icon) icon.textContent = memoPlayAllActive ? 'stop_circle' : 'playlist_play';
+    }
+
+    // 一覧内の各再生ボタンのアイコンを、現在再生中のcurrentPlayingUrlと突き合わせて更新する
+    function updateInlinePlayIcons() {
+        document.querySelectorAll('[data-preview-url]').forEach(btn => {
+            const isPlaying = btn.getAttribute('data-preview-url') === currentPlayingUrl && currentPlayingUrl;
+            const iconEl = btn.querySelector('.material-icons');
+            if (iconEl) iconEl.textContent = isPlaying ? 'stop' : 'play_arrow';
+        });
     }
 
     function playPreviewInModal() {
@@ -2403,7 +2770,7 @@
         });
 
         if (candidates.length === 0) {
-            setRakutenButtonState('notfound');
+            fallbackToAmazonMusic({ title: item.trackName, artist: item.artistName });
             return;
         }
 
@@ -2415,8 +2782,8 @@
         if (myToken !== rakutenSearchToken) return; // 別の曲の詳細に切り替え済みなら破棄
 
         if (index >= candidates.length) {
-            console.log('[楽天CD検索] 用意した候補すべてで該当なし → CD未検出扱いにします');
-            setRakutenButtonState('notfound');
+            console.log('[楽天CD検索] 用意した候補すべてで該当なし → Amazon Musicのフォールバックを試みます');
+            fallbackToAmazonMusic(candidates[0]);
             return;
         }
 
@@ -2496,18 +2863,58 @@
         });
     }
 
+    // -------------------------------------------------------------
+    // Amazon Musicフォールバック（楽天ブックスでCDが見つからなかった場合の代替リンク）
+    // -------------------------------------------------------------
+    // 【重要な注意点】
+    // Amazon商品検索を「アプリ側で本当にヒットしたか確認してからボタンを出す」には、Amazon
+    // Product Advertising API(PA-API 5.0)への正式なアクセスが必要です。しかしPA-APIは、
+    //   ・Amazonアソシエイト・プログラムの承認済みアカウント（かつ直近の紹介実績）が必須
+    //   ・リクエストをAWS Signature V4でサーバー側署名する必要があり、シークレットキーを
+    //     このような静的サイトのJSに埋め込むのは安全上できない
+    //   ・ブラウザから直接fetchしてもCORSで弾かれる
+    // という制約があり、GitHub Pagesのような「サーバーなしの静的サイト単体」からは呼び出せません。
+    // そのため本実装では、「ヒットを検証してから切り替える」のではなく、CDが見つからなかった
+    // 場合に一律で「Amazon Musicで探す」ボタンを表示し、melodata-22のアソシエイトタグ付きの
+    // Amazon検索結果ページへ直接リンクする形にしています（＝クリック後にAmazon側で実際に
+    // 見つかるかはAmazon次第。事前確認はできません）。将来的にPA-APIを正式に使いたい場合は、
+    // Cloudflare Workers等の簡易サーバーレス関数を用意し、署名処理だけそちら側で代行することを
+    // 推奨します。
+    const AMAZON_ASSOCIATE_TAG = 'melodata-22';
+    let currentAmazonUrl = '';
+
+    function buildAmazonMusicSearchUrl(title, artist) {
+        const q = [title, artist].filter(Boolean).join(' ');
+        return 'https://www.amazon.co.jp/s?k=' + encodeURIComponent(q) + '&i=digital-music&tag=' + encodeURIComponent(AMAZON_ASSOCIATE_TAG);
+    }
+
+    function fallbackToAmazonMusic(bestCandidate) {
+        currentAmazonUrl = buildAmazonMusicSearchUrl(
+            bestCandidate ? bestCandidate.title : '',
+            bestCandidate ? bestCandidate.artist : ''
+        );
+        setRakutenButtonState('amazon');
+    }
+
     function setRakutenButtonState(state) {
         const cdButton = document.getElementById('btn-rakuten-cd');
         if (!cdButton) return;
         if (state === 'found') {
+            currentAmazonUrl = '';
             cdButton.className = 'bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] cursor-pointer transition-colors shadow-sm';
             cdButton.disabled = false;
             cdButton.innerHTML = '<span class="material-icons mr-1">album</span>音楽CDを購入';
         } else if (state === 'loading') {
+            currentAmazonUrl = '';
             cdButton.className = 'bg-gray-300 text-gray-500 py-3 rounded-lg font-bold flex items-center justify-center cursor-not-allowed shadow-sm transition-all';
             cdButton.disabled = true;
             cdButton.innerHTML = '<span class="material-icons mr-1 animate-spin text-base">refresh</span>検索中...';
+        } else if (state === 'amazon') {
+            cdButton.className = 'bg-[#ff9900] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#e68a00] cursor-pointer transition-colors shadow-sm';
+            cdButton.disabled = false;
+            cdButton.innerHTML = '<span class="material-icons mr-1">shopping_bag</span>Amazon Musicで探す';
         } else {
+            currentAmazonUrl = '';
             cdButton.className = 'bg-gray-300 text-gray-500 py-3 rounded-lg font-bold flex items-center justify-center cursor-not-allowed shadow-sm transition-all';
             cdButton.disabled = true;
             cdButton.innerHTML = '<span class="material-icons mr-1">album</span>CD未検出';
@@ -2521,6 +2928,13 @@
                 liff.openWindow({ url: currentRakutenUrl, external: true });
             } else {
                 window.open(currentRakutenUrl, '_blank');
+            }
+        } else if (currentAmazonUrl) {
+            recordStat('cdClickCount');
+            if (typeof liff !== 'undefined' && liff.isInClient()) {
+                liff.openWindow({ url: currentAmazonUrl, external: true });
+            } else {
+                window.open(currentAmazonUrl, '_blank');
             }
         }
     }
@@ -2810,10 +3224,41 @@
         localStorage.setItem('merodata_history', JSON.stringify(history));
     }
 
+    // -------------------------------------------------------------
+    // ファン登録（お気に入りアーティスト）
+    // -------------------------------------------------------------
+    function getFanList() { try { return JSON.parse(localStorage.getItem('merodata_fans')) || []; } catch(e) { return []; } }
+    function isFanArtist(artistId) {
+        return getFanList().some(f => String(f.artistId) === String(artistId));
+    }
+    function addFanArtist(artistId, artistName, artworkUrl100, primaryGenreName) {
+        let fans = getFanList();
+        if (fans.some(f => String(f.artistId) === String(artistId))) return;
+        fans.unshift({ artistId, artistName, artworkUrl100: artworkUrl100 || '', primaryGenreName: primaryGenreName || '' });
+        localStorage.setItem('merodata_fans', JSON.stringify(fans));
+        recordStat('fanCount');
+    }
+    function removeFanArtist(artistId) {
+        let fans = getFanList().filter(f => String(f.artistId) !== String(artistId));
+        localStorage.setItem('merodata_fans', JSON.stringify(fans));
+        if (currentMode === 'memo' && currentMemoTab === 'fan') showFanList();
+        showToast("ファン登録を解除しました");
+    }
+
+    function setMemoTabStyle(activeId) {
+        const ids = ['btn-toggle-saved', 'btn-toggle-fan', 'btn-toggle-history'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.className = (id === activeId)
+                ? 'bg-violet-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150'
+                : 'bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150';
+        });
+    }
+
     function showSavedList() {
         currentMemoTab = 'saved';
-        document.getElementById('btn-toggle-saved').className = 'bg-violet-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150';
-        document.getElementById('btn-toggle-history').className = 'bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150';
+        setMemoTabStyle('btn-toggle-saved');
         
         allFetchedResults = getMemoList();
         displayResults = [...allFetchedResults];
@@ -2829,10 +3274,27 @@
         }
     }
 
+    function showFanList() {
+        currentMemoTab = 'fan';
+        setMemoTabStyle('btn-toggle-fan');
+
+        allFetchedResults = getFanList().map(f => ({ isArtistGroup: true, artistId: f.artistId, artistName: f.artistName, artworkUrl100: f.artworkUrl100, primaryGenreName: f.primaryGenreName }));
+        displayResults = [...allFetchedResults];
+
+        document.getElementById('result-count-simple').textContent = `ファン: ${displayResults.length}件`;
+        document.getElementById('result-count-accordion').textContent = `ファン: ${displayResults.length}件`;
+
+        clearResults();
+        if (displayResults.length === 0) {
+            document.getElementById('results-container').innerHTML = '<div class="text-center p-8 text-gray-500">ファン登録したアーティストはいません。</div>';
+        } else {
+            loadMoreRender();
+        }
+    }
+
     function showHistoryList() {
         currentMemoTab = 'history';
-        document.getElementById('btn-toggle-saved').className = 'bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150';
-        document.getElementById('btn-toggle-history').className = 'bg-violet-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-300 flex items-center shadow transition-all duration-150';
+        setMemoTabStyle('btn-toggle-history');
         
         allFetchedResults = getViewHistory();
         displayResults = [...allFetchedResults];
