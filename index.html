@@ -31,9 +31,18 @@
       gtag('config', 'G-FY401ERBMD');
     </script>
 
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2269983310123890" crossorigin="anonymous"></script>
-    <script async custom-element="amp-auto-ads" src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js"></script>
+    <!-- 
+      Google AdSense Auto ads は削除しました。
+      このスクリプトは通常のブラウザ（Chrome等）では自動的にページ内へ広告（画面下部の固定
+      アンカー広告など）を挿入しますが、これがAdMaxの固定バナーと同じ画面下部の領域を取り合って
+      しまい、Chromeでは「PATH TO SUCCESS」のようなGoogle側の広告に上書きされ、AdMaxが
+      表示されない原因になっていました。一方LINEのアプリ内ブラウザ（LIFF）では、Googleの
+      広告ポリシー上、Webview環境での広告表示自体が制限されているため、AdMax側の広告だけが
+      問題なく表示されていた、という状況です。
+      AdMaxを主要な広告枠として使う場合、この2つを同時に有効化すると競合するため、Google
+      AdSenseを併用したい場合は、Auto ads（自動挿入）ではなく特定の広告ユニット(<ins
+      class="adsbygoogle">)を任意の場所に手動で配置する方式に変更することを推奨します。
+    -->
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -126,7 +135,6 @@
     </style>
 </head>
 <body>
-<amp-auto-ads type="adsense" data-ad-client="ca-pub-2269983310123890"></amp-auto-ads>
 
 <div id="page-top" class="screen-container">
     <!-- ホーム画面インストール誘導バナー（LINEミニアプリ版では非表示。一度閉じたら1週間再表示しない） -->
@@ -1164,10 +1172,16 @@
                     if (data && data.results && data.results.length > 0) openDetailModal(data.results[0]);
                 });
             } else if (deepLink.artistId) {
-                fetchJSONP(`https://itunes.apple.com/lookup?id=${deepLink.artistId}&country=jp&lang=ja_jp`, (data) => {
+                fetchJSONP(`https://itunes.apple.com/lookup?id=${deepLink.artistId}&entity=song&limit=1&country=jp&lang=ja_jp`, (data) => {
                     if (data && data.results && data.results.length > 0) {
-                        const a = data.results[0];
-                        openArtistDetailModal({ artistId: a.artistId, artistName: a.artistName, artworkUrl100: a.artworkUrl100, primaryGenreName: a.primaryGenreName });
+                        const artistInfo = data.results.find(r => r.wrapperType === 'artist') || {};
+                        const trackInfo = data.results.find(r => r.wrapperType === 'track') || {};
+                        openArtistDetailModal({
+                            artistId: deepLink.artistId,
+                            artistName: trackInfo.artistName || artistInfo.artistName || '', // trackの方がローカライズされた表記(日本語名)を持つことが多いため優先
+                            artworkUrl100: trackInfo.artworkUrl100 || '',
+                            primaryGenreName: artistInfo.primaryGenreName || trackInfo.primaryGenreName || ''
+                        });
                     }
                 });
             } else if (deepLink.albumId) {
@@ -1233,10 +1247,16 @@
                 }
             });
         } else if (artistId) {
-            fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&country=jp&lang=ja_jp`, (data) => {
+            fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=1&country=jp&lang=ja_jp`, (data) => {
                 if (data && data.results && data.results.length > 0) {
-                    const a = data.results[0];
-                    openArtistDetailModal({ artistId: a.artistId, artistName: a.artistName, artworkUrl100: a.artworkUrl100, primaryGenreName: a.primaryGenreName });
+                    const artistInfo = data.results.find(r => r.wrapperType === 'artist') || {};
+                    const trackInfo = data.results.find(r => r.wrapperType === 'track') || {};
+                    openArtistDetailModal({
+                        artistId: artistId,
+                        artistName: trackInfo.artistName || artistInfo.artistName || '', // trackの方がローカライズされた表記(日本語名)を持つことが多いため優先
+                        artworkUrl100: trackInfo.artworkUrl100 || '',
+                        primaryGenreName: artistInfo.primaryGenreName || trackInfo.primaryGenreName || ''
+                    });
                 }
             });
         } else if (albumId) {
@@ -3593,8 +3613,9 @@
 
     function openArtistDetailModal(item) {
         currentArtistDetailData = item;
-        const img = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '400x400bb') : 'https://placehold.co/400x400/5a5ce6/ffffff?text=Artist';
-        document.getElementById('artist-detail-img').src = img;
+        const fallbackImg = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '400x400bb') : 'https://placehold.co/400x400/5a5ce6/ffffff?text=Artist';
+        currentArtistDetailData.shareImageUrl = fallbackImg; // Wikipedia画像が見つからない場合の共有用フォールバック
+        document.getElementById('artist-detail-img').src = fallbackImg;
         document.getElementById('artist-detail-name').textContent = item.artistName || '';
         updateArtistDetailFanIcon();
 
@@ -3603,6 +3624,15 @@
         if (item.artistName) {
             document.getElementById('artist-detail-wiki-container').style.display = 'block';
             fetchWikipediaGeneric(item.artistName, 'artist-detail-wiki-area', 'artist-detail-wiki-text', 'artist-detail-wiki-more-btn', 'artist-detail-wiki-link');
+
+            // Wikipediaにアーティスト本人の画像があれば、レコードジャケット画像より優先して表示・共有に使う
+            const myArtistName = item.artistName;
+            fetchWikipediaThumbnail(myArtistName, (thumbUrl) => {
+                if (!thumbUrl) return;
+                if (!currentArtistDetailData || currentArtistDetailData.artistName !== myArtistName) return; // 別のアーティストに切り替え済みなら破棄
+                document.getElementById('artist-detail-img').src = thumbUrl;
+                currentArtistDetailData.shareImageUrl = thumbUrl;
+            });
         }
 
         document.getElementById('modal-artist-detail').classList.add('active');
@@ -3632,7 +3662,7 @@
         const artistName = currentArtistDetailData.artistName;
         const text = `${artistName}\n#メロ出〜た`;
         const liffDeepUrl = `https://liff.line.me/2010749970-n0PwMioA?artistId=${encodeURIComponent(currentArtistDetailData.artistId)}`;
-        const artworkUrl = (currentArtistDetailData.artworkUrl100 || '').replace('100x100bb', '400x400bb');
+        const artworkUrl = currentArtistDetailData.shareImageUrl || (currentArtistDetailData.artworkUrl100 || '').replace('100x100bb', '400x400bb');
 
         if (typeof liff !== 'undefined' && liff.isInClient()) {
             if (!isLiffInit) { showToast("LINE共有機能を準備中です。"); return; }
@@ -3795,6 +3825,18 @@
                 const pageId = Object.keys(pages)[0];
                 if (pageId !== "-1" && pages[pageId].extract) callback(pages[pageId].extract);
                 else callback(null);
+            }).catch(() => callback(null));
+    }
+
+    // Wikipediaのページ概要(REST API)からサムネイル画像を取得する。
+    // action=query&prop=extracts（本文取得用）には画像が含まれないため、こちらは別APIを使用する。
+    // アーティストの実際の顔写真等が見つかった場合、レコードジャケット画像より優先して使う。
+    function fetchWikipediaThumbnail(query, callback) {
+        fetch(`https://ja.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}?redirect=true`)
+            .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+            .then(data => {
+                const url = data && data.thumbnail && data.thumbnail.source;
+                callback(url || null);
             }).catch(() => callback(null));
     }
 
