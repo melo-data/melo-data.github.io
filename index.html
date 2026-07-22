@@ -47,13 +47,20 @@
     <style>
         html { font-size: 16px !important; -webkit-text-size-adjust: 100%; }
         body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif; background-color: #f3f4f6; color: #333; overflow: hidden; }
-        .screen-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background-color: #f3f4f6; max-width: 600px; margin: 0 auto; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+        :root { --ad-bar-height: 0px; }
+        /* AdMax(忍者AdMax)はモバイル幅のみに固定表示される設定のため、モバイル幅の時だけ
+           画面下部にその高さぶんの余白を確保する。これにより、画面全体に固定表示される広告バーが
+           戻るボタン・YouTube動画・設定モーダルの下部などに重なって隠れてしまう問題を防ぐ。
+           実際の広告の高さに合わせて調整する場合は、この数値だけを変更すればよい。 */
+        @media (max-width: 767px) {
+            :root { --ad-bar-height: 110px; }
+        }
+        .screen-container, .modal.fixed.inset-0 { bottom: var(--ad-bar-height) !important; }
+
+        .screen-container { position: absolute; top: 0; left: 0; right: 0; display: flex; flex-direction: column; background-color: #f3f4f6; max-width: 600px; margin: 0 auto; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
         .screen-container-white { background-color: #ffffff; }
         .scrollable-content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
 
-        /* 広告枠：AdMax等の広告スクリプトが後から高さを持って描画されても、あらかじめ最低高さを
-           確保しておくことでレイアウトのガタつき（＝戻るボタンやテキストへの重なり）を防ぐ */
-        .ad-slot { min-height: 100px; display: flex; align-items: center; justify-content: center; margin: 16px 0; overflow: hidden; }
         /* 戻る／一括再生ボタンの真下に本文が来ないよう、スクロール領域の最後に常に確保する余白 */
         .fab-safe-spacer { height: 96px; flex-shrink: 0; }
         
@@ -380,11 +387,6 @@
             <span class="material-icons animate-spin">refresh</span> <span id="loading-indicator-text">読み込み中...</span>
         </div>
         <div id="scroll-sentinel" class="h-10"></div>
-
-        <!-- 広告枠（忍者AdMax）：一覧の最後に表示。あらかじめ高さを確保し、下に戻るボタン分の余白を追加 -->
-        <div class="ad-slot">
-            <script src="https://adm.shinobi.jp/s/ff27122d877290e07334a80f369c1b40"></script>
-        </div>
         <div class="fab-safe-spacer"></div>
     </div>
 
@@ -514,11 +516,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- 広告枠（忍者AdMax）：豆知識の下に配置し、テキストと重ならないようにする -->
-            <div class="ad-slot">
-                <script src="https://adm.shinobi.jp/s/ff27122d877290e07334a80f369c1b40"></script>
-            </div>
         </div>
     </div>
 </div>
@@ -586,11 +583,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- 広告枠（忍者AdMax） -->
-            <div class="ad-slot">
-                <script src="https://adm.shinobi.jp/s/ff27122d877290e07334a80f369c1b40"></script>
-            </div>
         </div>
     </div>
 </div>
@@ -653,11 +645,6 @@
                         <a id="album-detail-wiki-artist-link" href="#" target="_blank" class="text-indigo-600 font-bold" style="text-decoration: underline;">＞ 続きはこちら</a>
                     </div>
                 </div>
-            </div>
-
-            <!-- 広告枠（忍者AdMax） -->
-            <div class="ad-slot">
-                <script src="https://adm.shinobi.jp/s/ff27122d877290e07334a80f369c1b40"></script>
             </div>
         </div>
     </div>
@@ -4052,5 +4039,8 @@
         rec.start();
     }
 </script>
+
+<!-- 広告（忍者AdMax）：固定表示のバナーのため、アプリ全体で1回だけ読み込む -->
+<script src="https://adm.shinobi.jp/s/ff27122d877290e07334a80f369c1b40"></script>
 </body>
 </html>
