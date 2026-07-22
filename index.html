@@ -1172,7 +1172,7 @@
                     if (data && data.results && data.results.length > 0) openDetailModal(data.results[0]);
                 });
             } else if (deepLink.artistId) {
-                fetchJSONP(`https://itunes.apple.com/lookup?id=${deepLink.artistId}&entity=song&limit=1&country=jp&lang=ja_jp`, (data) => {
+                fetchJSONP(`https://itunes.apple.com/lookup?id=${deepLink.artistId}&entity=song&limit=5&country=jp&lang=ja_jp`, (data) => {
                     if (data && data.results && data.results.length > 0) {
                         const artistInfo = data.results.find(r => r.wrapperType === 'artist') || {};
                         const trackInfo = data.results.find(r => r.wrapperType === 'track') || {};
@@ -1247,7 +1247,7 @@
                 }
             });
         } else if (artistId) {
-            fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=1&country=jp&lang=ja_jp`, (data) => {
+            fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=5&country=jp&lang=ja_jp`, (data) => {
                 if (data && data.results && data.results.length > 0) {
                     const artistInfo = data.results.find(r => r.wrapperType === 'artist') || {};
                     const trackInfo = data.results.find(r => r.wrapperType === 'track') || {};
@@ -2688,6 +2688,35 @@
         return Object.values(artistMap);
     }
 
+    // -------------------------------------------------------------
+    // アーティスト画像の統一キャッシュ
+    // -------------------------------------------------------------
+    // 「歌手名」検索の一覧サムネイルと、アーティスト詳細ウィンドウの画像が別々に解決されていて
+    // 表示が食い違っていたため、artistIdをキーに一度解決した画像（Wikipediaの本人写真、無ければ
+    // レコードジャケット画像）を共有キャッシュし、一覧・詳細のどちらから開いても同じ画像になるようにする。
+    const artistImageCache = {};       // { [artistId]: resolvedImageUrl }
+    const artistImageResolving = {};   // { [artistId]: true } 二重フェッチ防止用
+
+    function resolveArtistImageForList(artistId, artistName, fallbackImgUrl) {
+        if (!artistId || artistImageCache[artistId] || artistImageResolving[artistId]) return;
+        artistImageResolving[artistId] = true;
+        fetchWikipediaThumbnail(artistName, (thumbUrl) => {
+            const resolved = thumbUrl || fallbackImgUrl;
+            artistImageCache[artistId] = resolved;
+            delete artistImageResolving[artistId];
+            // 現在画面に表示中の同アーティストのサムネイルがあれば、その場で画像を更新する
+            document.querySelectorAll(`img[data-artist-img-id="${CSS.escape(String(artistId))}"]`).forEach(imgEl => {
+                imgEl.src = resolved;
+            });
+            // 詳細ウィンドウが同じアーティストを開いたままの場合もあわせて更新する
+            if (currentArtistDetailData && String(currentArtistDetailData.artistId) === String(artistId)) {
+                currentArtistDetailData.shareImageUrl = resolved;
+                const detailImg = document.getElementById('artist-detail-img');
+                if (detailImg) detailImg.src = resolved;
+            }
+        });
+    }
+
     function loadMoreRender() {
         const container = document.getElementById('results-container');
         const end = Math.min(displayLimit + CHUNK_SIZE, displayResults.length);
@@ -2705,9 +2734,15 @@
             if(isArtist) subText = item.trackCount ? `${item.primaryGenreName || 'ジャンル不明'} | 取得: ${item.trackCount}曲` : (item.primaryGenreName || 'ジャンル不明');
             else subText = item.artistName || '不明';
 
-            const imgUrl = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '200x200bb') : '';
+            const imgUrl = isArtist
+                ? (artistImageCache[item.artistId] || (item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '200x200bb') : ''))
+                : (item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '200x200bb') : '');
             const el = document.createElement('div');
             
+            if (isArtist) {
+                resolveArtistImageForList(item.artistId, item.artistName, item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '400x400bb') : 'https://placehold.co/400x400/5a5ce6/ffffff?text=Artist');
+            }
+
             let rightHtml = '';
             if (!isArtist && !isAlbum && item.previewUrl) {
                 const isPlaying = (currentPlayingUrl === item.previewUrl);
@@ -2720,7 +2755,7 @@
 
             const innerContent = `
                 <div class="flex-1 flex items-center min-w-0 py-2 px-2 cursor-pointer w-full" onclick="handleItemClick(${isArtist ? 'true':'false'}, ${isAlbum ? 'true':'false'}, ${i})">
-                    <img src="${imgUrl}" class="${isArtist ? 'w-16 h-16 object-cover rounded-full' : 'w-16 h-16 object-cover rounded'} mr-3 border border-gray-200" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2280%22 height=%2280%22 bg=%22%23eee%22%3E%3C/svg%3E'">
+                    <img src="${imgUrl}" ${isArtist ? `data-artist-img-id="${item.artistId}"` : ''} class="${isArtist ? 'w-16 h-16 object-cover rounded-full' : 'w-16 h-16 object-cover rounded'} mr-3 border border-gray-200" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2280%22 height=%2280%22 bg=%22%23eee%22%3E%3C/svg%3E'">
                     <div class="flex-1 min-w-0 pr-2">
                         <div class="text-base font-bold text-gray-900 truncate leading-tight">${title}</div>
                         <div class="text-sm text-gray-600 truncate mt-1">${subText}</div>
@@ -3614,8 +3649,12 @@
     function openArtistDetailModal(item) {
         currentArtistDetailData = item;
         const fallbackImg = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '400x400bb') : 'https://placehold.co/400x400/5a5ce6/ffffff?text=Artist';
-        currentArtistDetailData.shareImageUrl = fallbackImg; // Wikipedia画像が見つからない場合の共有用フォールバック
-        document.getElementById('artist-detail-img').src = fallbackImg;
+
+        // 一覧側で既に画像解決済みなら、それと完全に同じ画像を即座に使う（一覧と詳細の食い違い防止）
+        const cachedImg = item.artistId ? artistImageCache[item.artistId] : null;
+        const initialImg = cachedImg || fallbackImg;
+        currentArtistDetailData.shareImageUrl = initialImg;
+        document.getElementById('artist-detail-img').src = initialImg;
         document.getElementById('artist-detail-name').textContent = item.artistName || '';
         updateArtistDetailFanIcon();
 
@@ -3625,14 +3664,19 @@
             document.getElementById('artist-detail-wiki-container').style.display = 'block';
             fetchWikipediaGeneric(item.artistName, 'artist-detail-wiki-area', 'artist-detail-wiki-text', 'artist-detail-wiki-more-btn', 'artist-detail-wiki-link');
 
-            // Wikipediaにアーティスト本人の画像があれば、レコードジャケット画像より優先して表示・共有に使う
-            const myArtistName = item.artistName;
-            fetchWikipediaThumbnail(myArtistName, (thumbUrl) => {
-                if (!thumbUrl) return;
-                if (!currentArtistDetailData || currentArtistDetailData.artistName !== myArtistName) return; // 別のアーティストに切り替え済みなら破棄
-                document.getElementById('artist-detail-img').src = thumbUrl;
-                currentArtistDetailData.shareImageUrl = thumbUrl;
-            });
+            // 画像が未解決の場合のみ、Wikipedia画像を取得してキャッシュに登録する
+            // （一覧のサムネイルもこのキャッシュを見に行くため、ここで解決した画像がそのまま一覧にも反映される）
+            if (!cachedImg && item.artistId) {
+                const myArtistId = item.artistId;
+                const myArtistName = item.artistName;
+                fetchWikipediaThumbnail(myArtistName, (thumbUrl) => {
+                    const resolved = thumbUrl || fallbackImg;
+                    artistImageCache[myArtistId] = resolved;
+                    if (!currentArtistDetailData || currentArtistDetailData.artistId !== myArtistId) return; // 別のアーティストに切り替え済みなら画面反映は破棄
+                    document.getElementById('artist-detail-img').src = resolved;
+                    currentArtistDetailData.shareImageUrl = resolved;
+                });
+            }
         }
 
         document.getElementById('modal-artist-detail').classList.add('active');
