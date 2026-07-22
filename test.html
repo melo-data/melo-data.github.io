@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>よいところ洋 - ♪ ショート動画一覧</title>
+  <!-- Tailwind CSS (デザイン調整用) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800 font-sans">
+
+  <!-- ヘッダー -->
+  <header class="bg-white shadow-sm border-b sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">♪</span>
+        <h1 class="text-xl font-bold text-gray-900">「♪」付きショート動画取得</h1>
+      </div>
+      <button id="fetchBtn" onclick="fetchShorts()" 
+              class="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-full shadow transition duration-200">
+        動画を取得する
+      </button>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    <!-- ステータス表示 -->
+    <div id="status" class="text-center font-medium text-gray-600 mb-6 text-sm md:text-base">
+      「動画を取得する」ボタンを押すとデータの取得を開始します。
+    </div>
+
+    <!-- 結果一覧（カードグリッド） -->
+    <div id="results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+      <!-- 取得した動画カードがここに挿入されます -->
+    </div>
+  </main>
+
+  <script>
+    const API_KEY = 'AIzaSyBjkKWPsZURnPBbzb1RHHiao3mB0EzEYLk';
+    const HANDLE = 'yoidokoroyou';
+
+    // ISO 8601形式の時間を秒数に変換
+    function parseISO8601Duration(durationString) {
+      const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
+      const matches = durationString.match(regex);
+      if (!matches) return 0;
+      
+      const hours = parseInt(matches[1] || '0', 10);
+      const minutes = parseInt(matches[2] || '0', 10);
+      const seconds = parseInt(matches[3] || '0', 10);
+      
+      return hours * 3600 + minutes * 60 + seconds;
+    }
+
+    async function fetchShorts() {
+      const statusEl = document.getElementById('status');
+      const containerEl = document.getElementById('results');
+      const btn = document.getElementById('fetchBtn');
+
+      // 状態リセット＆ローディング表示
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+      statusEl.className = "text-center font-medium text-blue-600 mb-6 text-sm md:text-base";
+      statusEl.textContent = '1/3 チャンネル情報を取得中...';
+      containerEl.innerHTML = '';
+
+      try {
+        // 1. ハンドル名からUploads再生リストIDを取得
+        const channelRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle=${HANDLE}&key=${API_KEY}`);
+        const channelData = await channelRes.json();
+
+        if (channelData.error) throw new Error(channelData.error.message);
+        if (!channelData.items || channelData.items.length === 0) {
+          statusEl.textContent = 'チャンネルが見つかりませんでした。';
+          return;
+        }
+
+        const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
+
+        // 2. プレイリストから動画を取得して「♪」判定
+        statusEl.textContent = '2/3 全動画から「♪」始まりのタイトルを検索中...';
+        const targetVideos = [];
+        let nextPageToken = '';
+
+        do {
+          let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsPlaylistId}&maxResults=50&key=${API_KEY}`;
+          if (nextPageToken) url += `&pageToken=${nextPageToken}`;
+
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.error) throw new Error(data.error.message);
+
+          for (const item of data.items || []) {
+            const title = item.snippet.title;
+            const videoId = item.contentDetails.videoId;
+
+            // 「♪」から始まる動画を抽出
+            if (title.startsWith('♪')) {
+              targetVideos.push({ id: videoId, title });
+            }
+          }
+          nextPageToken = data.nextPageToken;
+        } while (nextPageToken);
+
+        if (targetVideos.length === 0) {
+          statusEl.textContent = '先頭に「♪」が付いた動画は見つかりませんでした。';
+          return;
+        }
+
+        // 3. 動画の再生時間を取得して60秒以下（Shorts）に絞り込み
+        statusEl.textContent = `3/3 該当候補 (${targetVideos.length}件) の動画時間を判定中...`;
+        const shortsList = [];
+
+        for (let i = 0; i < targetVideos.length; i += 50) {
+          const chunk = targetVideos.slice(i, i + 50);
+          const ids = chunk.map(v => v.id).join(',');
+
+          const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${ids}&key=${API_KEY}`);
+          const vData = await vRes.json();
+          if (vData.error) throw new Error(vData.error.message);
+
+          for (const vItem of vData.items || []) {
+            const durationSec = parseISO8601Duration(vItem.contentDetails.duration);
+
+            // 60秒以下をショート動画と判定
+            if (durationSec <= 60) {
+              const orig = chunk.find(c => c.id === vItem.id);
+              shortsList.push({
+                title: orig.title,
+                videoId: vItem.id,
+                durationSec,
+                thumbnail: vItem.snippet.thumbnails?.high?.url || `https://i.ytimg.com/vi/${vItem.id}/hqdefault.jpg`
+              });
+            }
+          }
+        }
+
+        // 完了メッセージ表示
+        statusEl.className = "text-center font-medium text-green-600 mb-6 text-sm md:text-base";
+        statusEl.textContent = `取得完了！ ${shortsList.length} 件のショート動画が見つかりました。`;
+
+        // 画面にカードを表示
+        shortsList.forEach(video => {
+          const card = document.createElement('div');
+          card.className = 'bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition duration-200 flex flex-col';
+          card.innerHTML = `
+            <div class="relative aspect-[9/16] bg-gray-100 overflow-hidden">
+              <img src="${video.thumbnail}" alt="${video.title}" class="w-full h-full object-cover">
+              <span class="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-0.5 rounded font-mono">
+                ${video.durationSec}s
+              </span>
+            </div>
+            <div class="p-3 flex-1 flex flex-col justify-between">
+              <h3 class="font-medium text-gray-800 text-xs sm:text-sm line-clamp-2 mb-3" title="${video.title}">
+                ${video.title}
+              </h3>
+              <a href="https://www.youtube.com/shorts/${video.videoId}" target="_blank" rel="noopener noreferrer" 
+                 class="block text-center bg-red-600 hover:bg-red-700 text-white font-medium text-xs py-2 px-3 rounded-lg transition">
+                YouTubeで開く ↗
+              </a>
+            </div>
+          `;
+          containerEl.appendChild(card);
+        });
+
+      } catch (err) {
+        statusEl.className = "text-center font-medium text-red-600 mb-6 text-sm md:text-base";
+        statusEl.textContent = `エラーが発生しました: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
+  </script>
+</body>
+</html>
