@@ -563,7 +563,7 @@
             <div class="flex flex-col items-center text-center">
                 <img id="artist-detail-img" src="" alt="アーティスト画像" class="w-48 h-48 object-cover rounded-full shadow-lg mb-4 bg-gray-200">
                 <h2 id="artist-detail-name" class="text-2xl font-bold text-gray-900 leading-tight"></h2>
-                <div id="artist-detail-life-info" class="mt-1 space-y-0.5"></div>
+                <div id="artist-detail-life-info" class="mt-1 inline-block text-left mx-auto"></div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -3921,20 +3921,24 @@
         if (info.deathYear) {
             let ageAtDeath = info.deathYear - info.birthYear;
             if (info.deathMonth < info.birthMonth || (info.deathMonth === info.birthMonth && info.deathDay < info.birthDay)) ageAtDeath--;
-            rows.push(`生年月日　${info.birthYear}年${info.birthMonth}月${info.birthDay}日`);
-            rows.push(`没年月日　${info.deathYear}年${info.deathMonth}月${info.deathDay}日（${ageAtDeath}歳没）`);
+            rows.push({ label: '生年月日', value: `${info.birthYear}年${info.birthMonth}月${info.birthDay}日` });
+            rows.push({ label: '没年月日', value: `${info.deathYear}年${info.deathMonth}月${info.deathDay}日（${ageAtDeath}歳没）` });
         } else {
             let age = today.getFullYear() - info.birthYear;
             if ((today.getMonth() + 1) < info.birthMonth || ((today.getMonth() + 1) === info.birthMonth && today.getDate() < info.birthDay)) age--;
-            rows.push(`生年月日　${info.birthYear}年${info.birthMonth}月${info.birthDay}日（${age}歳）`);
+            rows.push({ label: '生年月日', value: `${info.birthYear}年${info.birthMonth}月${info.birthDay}日（${age}歳）` });
         }
 
         if (info.debutYear) {
             const yearsSinceDebut = today.getFullYear() - info.debutYear + 1;
-            rows.push(`デビュー　${info.debutYear}年（${yearsSinceDebut}年目）`);
+            rows.push({ label: 'デビュー', value: `${info.debutYear}年（${yearsSinceDebut}年目）` });
         }
 
-        return rows.map(r => `<div class="text-[13px] text-gray-500">${r}</div>`).join('');
+        return rows.map(r => `
+            <div class="flex items-baseline text-[13px] text-gray-500 leading-relaxed">
+                <span class="inline-block w-[4.5em] shrink-0">${r.label}</span>
+                <span>${r.value}</span>
+            </div>`).join('');
     }
 
     function fetchWikipediaForArtist(artistName) {
