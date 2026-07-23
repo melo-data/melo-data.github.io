@@ -30,70 +30,18 @@
 
     header {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     h1 {
-      font-size: 1.4rem;
+      font-size: 1.3rem;
       color: var(--primary-color);
-      margin-bottom: 6px;
-    }
-
-    p.subtitle {
-      font-size: 0.85rem;
-      color: var(--sub-text);
-    }
-
-    .controls {
-      background: var(--card-bg);
-      padding: 16px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      margin-bottom: 20px;
-    }
-
-    .form-group {
-      margin-bottom: 12px;
-    }
-
-    label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: bold;
-      margin-bottom: 6px;
-    }
-
-    select, button {
-      width: 100%;
-      padding: 12px;
-      font-size: 1rem;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-      outline: none;
-    }
-
-    button {
-      background-color: var(--primary-color);
-      color: #fff;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    button:active {
-      opacity: 0.8;
-    }
-
-    button:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
     }
 
     .status-msg {
       text-align: center;
-      font-size: 0.9rem;
-      margin: 16px 0;
+      font-size: 0.85rem;
+      margin: 12px 0 16px 0;
       color: var(--sub-text);
     }
 
@@ -105,27 +53,29 @@
     .shop-list {
       display: flex;
       flex-direction: column;
-      gap: 16px;
-    }
-
-    .shop-card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .shop-header {
-      display: flex;
-      padding: 12px;
       gap: 12px;
     }
 
+    /* 店舗カード（枠全体をリンク化） */
+    .shop-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      display: flex;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+      transition: background-color 0.15s ease;
+    }
+
+    .shop-card:active {
+      background-color: #f0f0f0;
+    }
+
     .shop-thumb {
-      width: 90px;
-      height: 90px;
+      width: 85px;
+      height: 85px;
       object-fit: cover;
       border-radius: 8px;
       background-color: #eee;
@@ -137,53 +87,40 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
+      min-width: 0; /* テキスト溢れ防止 */
     }
 
     .shop-genre {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--primary-color);
       font-weight: bold;
     }
 
     .shop-name {
-      font-size: 1.05rem;
+      font-size: 0.98rem;
       font-weight: bold;
-      margin: 4px 0;
+      margin: 2px 0 4px 0;
       line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .shop-access {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--sub-text);
+      margin-bottom: 4px;
+      line-height: 1.3;
     }
 
-    .shop-details {
-      padding: 0 12px 12px 12px;
-      font-size: 0.8rem;
+    .shop-desc {
+      font-size: 0.78rem;
       color: #555;
-      border-top: 1px dashed #eee;
-      padding-top: 8px;
-    }
-
-    .shop-badge {
-      display: inline-block;
-      background: #eef9f2;
-      color: #2e7d32;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      margin-bottom: 6px;
-    }
-
-    .btn-detail {
-      display: block;
-      text-align: center;
-      background: #333;
-      color: #fff;
-      text-decoration: none;
-      padding: 10px;
-      font-size: 0.85rem;
-      font-weight: bold;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     footer {
@@ -199,24 +136,9 @@
 
   <header>
     <h1>🎤 近くのカラオケ設置店</h1>
-    <p class="subtitle">ホットペッパーグルメ API 連動</p>
   </header>
 
-  <div class="controls">
-    <div class="form-group">
-      <label for="range">検索範囲</label>
-      <select id="range">
-        <option value="1">300m 以内</option>
-        <option value="2">500m 以内</option>
-        <option value="3" selected>1000m (1km) 以内</option>
-        <option value="4">2000m (2km) 以内</option>
-        <option value="5">3000m (3km) 以内</option>
-      </select>
-    </div>
-    <button id="search-btn" onclick="getLocationAndSearch()">現在地から探す</button>
-  </div>
-
-  <div id="status" class="status-msg">ボタンを押して検索を開始してください。</div>
+  <div id="status" class="status-msg">位置情報を取得中...</div>
 
   <div id="shop-container" class="shop-list"></div>
 
@@ -227,18 +149,21 @@
   <script>
     const API_KEY = '1c29d09807b9c254';
 
+    // 画面読み込み時に自動実行
+    window.addEventListener('DOMContentLoaded', () => {
+      getLocationAndSearch();
+    });
+
     function getLocationAndSearch() {
       const statusEl = document.getElementById('status');
       const containerEl = document.getElementById('shop-container');
-      const btn = document.getElementById('search-btn');
 
       if (!navigator.geolocation) {
         statusEl.innerHTML = '<span class="error-msg">お使いのブラウザは位置情報に対応していません。</span>';
         return;
       }
 
-      statusEl.textContent = '現在地を取得中...';
-      btn.disabled = true;
+      statusEl.textContent = '位置情報を取得中...';
       containerEl.innerHTML = '';
 
       navigator.geolocation.getCurrentPosition(
@@ -249,10 +174,9 @@
           fetchShops(lat, lng);
         },
         (error) => {
-          btn.disabled = false;
           let msg = '位置情報の取得に失敗しました。';
           if (error.code === error.PERMISSION_DENIED) {
-            msg = '位置情報の利用が許可されていません。スマホやブラウザの位置情報設定をご確認ください。';
+            msg = '位置情報の利用が許可されていません。ブラウザの位置情報許可をご確認ください。';
           }
           statusEl.innerHTML = `<span class="error-msg">${msg}</span>`;
         },
@@ -261,14 +185,12 @@
     }
 
     async function fetchShops(lat, lng) {
-      const range = document.getElementById('range').value;
-      const btn = document.getElementById('search-btn');
       const statusEl = document.getElementById('status');
 
-      // 本来のAPIリクエストURL (format=json)
-      const targetApiUrl = `https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?key=${API_KEY}&lat=${lat}&lng=${lng}&range=${range}&karaoke=1&order=4&count=20&format=json`;
-
-      // CORS制限回避用のプロキシURL
+      // range=5: 3000m (3km) 以内
+      // count=10: 最大10件
+      // order=4 : 現在地から近い順
+      const targetApiUrl = `https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?key=${API_KEY}&lat=${lat}&lng=${lng}&range=5&karaoke=1&order=4&count=10&format=json`;
       const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetApiUrl)}`;
 
       try {
@@ -277,11 +199,9 @@
           throw new Error(`HTTP Error: ${response.status}`);
         }
         const data = await response.json();
-        btn.disabled = false;
         renderResults(data);
       } catch (error) {
         console.error(error);
-        btn.disabled = false;
         statusEl.innerHTML = '<span class="error-msg">APIからのデータ取得に失敗しました。</span>';
       }
     }
@@ -291,37 +211,36 @@
       const containerEl = document.getElementById('shop-container');
 
       if (!data.results || !data.results.shop || data.results.shop.length === 0) {
-        statusEl.textContent = '指定された範囲内にカラオケがあるお店は見つかりませんでした。';
+        statusEl.textContent = '3km以内にカラオケがあるお店は見つかりませんでした。';
         return;
       }
 
       const total = data.results.results_returned;
-      statusEl.textContent = `近くて条件に合うお店が ${total} 件見つかりました。`;
+      statusEl.textContent = `近くのカラオケ設置店 (${total}件)`;
 
       data.results.shop.forEach(shop => {
         const photoUrl = shop.photo?.mobile?.l || shop.logo_image || '';
         const genreName = shop.genre?.name || '飲食店';
         const station = shop.station_name ? `${shop.station_name}駅` : '';
         const mobileAccess = shop.mobile_access || shop.address || '';
-        const karaokeInfo = shop.karaoke || 'あり';
+        const catchText = shop.catch || '';
         const url = shop.urls?.pc || '#';
 
-        const card = document.createElement('div');
+        // 枠全体をリンクカード化
+        const card = document.createElement('a');
         card.className = 'shop-card';
+        card.href = url;
+        card.target = '_blank';
+        card.rel = 'noopener';
+
         card.innerHTML = `
-          <div class="shop-header">
-            <img class="shop-thumb" src="${photoUrl}" alt="${shop.name}" onerror="this.src='https://via.placeholder.com/90?text=No+Image'">
-            <div class="shop-info">
-              <span class="shop-genre">${genreName} ${station ? '• ' + station : ''}</span>
-              <h2 class="shop-name">${shop.name}</h2>
-              <p class="shop-access">📍 ${mobileAccess}</p>
-            </div>
+          <img class="shop-thumb" src="${photoUrl}" alt="${shop.name}" onerror="this.src='https://via.placeholder.com/85?text=No+Image'">
+          <div class="shop-info">
+            <span class="shop-genre">${genreName} ${station ? '• ' + station : ''}</span>
+            <h2 class="shop-name">${shop.name}</h2>
+            <p class="shop-access">📍 ${mobileAccess}</p>
+            ${catchText ? `<p class="shop-desc">${catchText}</p>` : ''}
           </div>
-          <div class="shop-details">
-            <span class="shop-badge">🎤 カラオケ: ${karaokeInfo}</span>
-            <p>${shop.catch || ''}</p>
-          </div>
-          <a class="btn-detail" href="${url}" target="_blank" rel="noopener">ホットペッパーで詳細を見る ➔</a>
         `;
         containerEl.appendChild(card);
       });
