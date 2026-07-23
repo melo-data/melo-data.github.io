@@ -14,7 +14,7 @@
     <title>メロ出〜た</title>
     <!-- OGP・共有紹介文の完全同期 -->
     <meta property="og:title" content="メロ出〜た">
-    <meta property="og:description" content="無料で30秒試聴できます！カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。">
+    <meta property="og:description" content="カラオケする時、曲名やアーティスト名が分からない時にカンタンに探してくれて、無料で30秒試聴できます！">
     <meta property="og:image" content="https://melo-data.github.io/img/melodata_opg.png">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
@@ -95,6 +95,12 @@
             z-index: 50; 
         }
         .top-header { background-color: #5a5ce6; color: white; padding: 2rem 1.5rem 2.5rem 1.5rem; text-align: center; border-bottom-left-radius: 1.5rem; border-bottom-right-radius: 1.5rem; margin-bottom: 1.5rem; position: relative; }
+        .ranking-slide { width: 100%; flex-shrink: 0; padding: 0 2px; box-sizing: border-box; }
+        .ranking-dot { width: 6px; height: 6px; border-radius: 50%; background-color: rgba(255,255,255,0.35); transition: background-color 0.2s; }
+        .ranking-dot.active { background-color: #ffffff; }
+        .ranking-row { display: flex; align-items: center; padding: 5px 8px; border-radius: 8px; }
+        .ranking-row:active { background-color: rgba(255,255,255,0.15); }
+        .ranking-rank-badge { width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 8px; }
         .play-btn-wrapper { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; }
         .play-btn-wrapper-sm { width: 32px; height: 32px; }
         
@@ -166,12 +172,14 @@
         <h1 class="text-3xl font-bold tracking-wider flex items-center justify-center mb-1 mt-4 font-sans">
             <span class="material-icons text-3xl mr-2">mic</span> メロ出〜た
         </h1>
-        <div class="text-[11px] text-indigo-100 text-right opacity-80 mb-4 pr-1 tracking-wider">produced by M.Tsuda</div>
-        
-        <!-- アプリ紹介文の完全同期 -->
-        <p class="text-[15px] leading-relaxed text-indigo-100 opacity-90 text-left">
-            無料で30秒試聴できます！カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。
-        </p>
+        <div class="text-[11px] text-indigo-100 text-right opacity-80 mb-1 pr-1 tracking-wider">produced by M.Tsuda</div>
+        <!-- 年間ランキング（カラオケ／売上 × ジャンル別が3秒ごとに横スライド） -->
+        <div id="ranking-widget" class="mt-1">
+            <div class="overflow-hidden rounded-xl" id="ranking-swipe-area" style="touch-action: pan-y;">
+                <div id="ranking-slide-track" class="flex" style="transition: transform 0.35s ease;"></div>
+            </div>
+            <div id="ranking-dots" class="flex items-center justify-center gap-1 mt-2"></div>
+        </div>
     </div>
     
     <div class="scrollable-content px-4 flex flex-col">
@@ -276,14 +284,13 @@
             </div>
         </div>
 
-        <!-- 音楽ニュース（musicman.co.jp RSS。トップページ最下部に配置） -->
-        <div class="mb-4">
-            <div class="flex items-center mb-2 px-1">
-                <span class="material-icons text-indigo-400 text-lg mr-1">campaign</span>
-                <span class="text-sm font-bold text-gray-500">音楽ニュース</span>
-            </div>
-            <div id="top-music-news-list"></div>
+        <!-- 近くのカラオケ設置店を探す（別枠・別ページへの外部リンク） -->
+        <div class="mt-2 pt-4 border-t border-gray-200">
+            <button onclick="location.href='./kararestr.html'" class="w-full bg-white border-2 border-[#ff5a5f] text-[#ff5a5f] rounded-2xl shadow-sm py-4 flex items-center justify-center font-bold text-base active:bg-red-50 transition-colors">
+                <span class="material-icons mr-2">place</span>近くのカラオケ設置店を探す
+            </button>
         </div>
+
     </div>
 </div>
 <div id="page-search" class="screen-container screen-container-white" style="display: none;">
@@ -382,14 +389,6 @@
     </div>
 
     <div id="search-results" class="scrollable-content bg-gray-100 p-2 relative">
-        <!-- アーティスト別ニュース（歌手のページを開いた時のみ表示） -->
-        <div id="artist-page-news-section" class="hidden mb-2 px-1">
-            <div class="flex items-center mb-1 px-1">
-                <span class="material-icons text-indigo-400 text-base mr-1">campaign</span>
-                <span class="text-xs font-bold text-gray-500">関連ニュース</span>
-            </div>
-            <div id="artist-page-news-list"></div>
-        </div>
         <div id="results-container" class="space-y-0"></div>
         <div id="loading-indicator" class="text-center p-4 text-gray-500 hidden">
             <span class="material-icons animate-spin">refresh</span> <span id="loading-indicator-text">読み込み中...</span>
@@ -487,15 +486,6 @@
                         <p class="text-[11px] text-gray-400 whitespace-nowrap">最適な高画質で関連動画を直接起動します</p>
                     </div>
                 </div>
-            </div>
-
-            <!-- 関連ニュース（アーティスト名でRSS全件から検索、最大3件） -->
-            <div id="detail-news-section" class="hidden">
-                <div class="flex items-center mb-2 px-1">
-                    <span class="material-icons text-indigo-400 text-lg mr-1">campaign</span>
-                    <span class="text-sm font-bold text-gray-500">関連ニュース</span>
-                </div>
-                <div id="detail-news-list"></div>
             </div>
 
             <!-- 豆知識/Wikipedia解説エリア -->
@@ -834,6 +824,29 @@
     </div>
 </div>
 
+<!-- ランキング一覧ページ -->
+<div id="page-ranking-list" class="screen-container screen-container-white" style="display: none;">
+    <div class="bg-[#5a5ce6] text-white p-3 shadow-md flex flex-col z-10 shrink-0">
+        <div class="flex justify-between items-center mb-2">
+            <h2 id="ranking-list-title" class="text-lg font-bold">年間ランキング</h2>
+            <button onclick="openHamburgerMenu()" class="text-white p-2 active:opacity-70 transition">
+                <span class="material-icons">menu</span>
+            </button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+            <button id="ranking-type-btn-karaoke" onclick="switchRankingListType('karaoke')" class="py-2 rounded-lg font-bold text-sm transition-colors">カラオケ</button>
+            <button id="ranking-type-btn-sales" onclick="switchRankingListType('sales')" class="py-2 rounded-lg font-bold text-sm transition-colors">売上</button>
+        </div>
+        <div class="flex overflow-x-auto hide-scrollbar space-x-1 genre-tab-container relative pt-1 px-1" id="ranking-genre-tabs"></div>
+    </div>
+    <div class="scrollable-content bg-gray-100 p-2 relative">
+        <div id="ranking-list-container" class="space-y-0"></div>
+    </div>
+    <button onclick="goBackToTop()" class="fab-back">
+        <span class="material-icons text-3xl">arrow_back</span>
+    </button>
+</div>
+
 <!-- 使い方ページ -->
 <div id="page-howto" class="screen-container screen-container-white" style="display: none;">
     <div class="bg-[#5a5ce6] text-white p-4 shadow-md flex items-center justify-between shrink-0">
@@ -1140,6 +1153,17 @@
         observer.observe(sentinel);
         
         document.getElementById('audio-player').addEventListener('ended', handleAudioEnded);
+
+        // スマホの仮想キーボード表示時、予測変換バーがテキスト欄に重ならないよう、
+        // ビューポートが縮んだタイミングでフォーカス中のテキスト欄を画面内に収め直す
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                const active = document.activeElement;
+                if (active && active.tagName === 'INPUT') {
+                    active.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                }
+            });
+        }
         
         // LIFFの初期化
         if (typeof liff !== 'undefined') {
@@ -1196,16 +1220,11 @@
             maybeShowInstallBanner();
         }
 
-        // トップページ：音楽ニュースRSSの取得
-        fetchMusicNews((items) => {
-            const top10 = [...items]
-                .sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate))
-                .slice(0, 10);
-            renderMusicNewsList('top-music-news-list', top10);
-        });
-
         // トップページ：テレビ・ラジオ番組放送通知の開始
         startBroadcastNoticeQueue();
+
+        // トップページ：年間ランキングの表示開始
+        startRankingWidget();
 
         // 達成バッジ：本日の利用記録と連続ログイン日数の更新
         recordDailyVisitAndStreak();
@@ -1417,6 +1436,201 @@
     let broadcastNoticeQueue = [];
     let broadcastNoticeIndex = 0;
     let broadcastNoticeTimer = null;
+
+    // -------------------------------------------------------------
+    // 年間ランキング（カラオケ／売上 × ジャンル別）
+    // -------------------------------------------------------------
+    // 【重要・データソースについて】
+    // 「カラオケでよく歌われている曲」「CD/配信の売上」といった年間ランキングを配信している
+    // 無料の公開APIは現時点(2026年)では存在しません（DAM/JOYSOUNDは自社サイトのみで公開、
+    // 売上ランキングもOricon等のライセンス契約が必要です）。そのため、このRANKING_DATAは
+    // 手動で入力・更新していただく方式にしています。曲名・アーティスト名だけ登録しておけば、
+    // 表示時にiTunesで自動的に検索してジャケット画像・試聴・曲詳細ウィンドウへのリンクを解決します。
+    // 各ジャンル・各タイプ（karaoke/sales）ごとに、1位から最大10位まで配列で登録してください。
+    // 登録が無い（空配列の）項目は「データ未登録」と表示されます。
+    const RANKING_GENRES = [
+        { key: 'all',      label: '総合' },
+        { key: 'enka',     label: '演歌・民謡' },
+        { key: 'kayo',     label: '歌謡曲' },
+        { key: 'folk',     label: 'フォーク' },
+        { key: 'rockpop',  label: 'ロック・ポップ' },
+        { key: 'duet',     label: 'デュエット' },
+        { key: 'anime',    label: 'アニソン' },
+        { key: 'jazz',     label: 'ジャズ等' },
+        { key: 'other',    label: 'その他' },
+    ];
+    const RANKING_TYPE_LABEL = { karaoke: 'カラオケ', sales: '売上' };
+
+    const RANKING_DATA = {
+        karaoke: {
+            all: [
+                // { title: 'TSUNAMI', artist: 'サザンオールスターズ' },
+            ],
+            enka: [], kayo: [], folk: [], rockpop: [], duet: [], anime: [], jazz: [], other: []
+        },
+        sales: {
+            all: [], enka: [], kayo: [], folk: [], rockpop: [], duet: [], anime: [], jazz: [], other: []
+        }
+    };
+
+    let rankingSlideIndex = 0;
+    let rankingAutoTimer = null;
+    let rankingSwipeStartX = null;
+    let rankingSlideCount = 0;
+
+    function buildRankingSlideList() {
+        const slides = [];
+        ['karaoke', 'sales'].forEach((type) => {
+            RANKING_GENRES.forEach((g) => {
+                slides.push({ type, genreKey: g.key, genreLabel: g.label, title: `${g.label}年間ランキング（${RANKING_TYPE_LABEL[type]}）` });
+            });
+        });
+        return slides;
+    }
+
+    function startRankingWidget() {
+        const track = document.getElementById('ranking-slide-track');
+        const dotsWrap = document.getElementById('ranking-dots');
+        if (!track || !dotsWrap) return;
+
+        const slides = buildRankingSlideList();
+        rankingSlideCount = slides.length;
+
+        track.innerHTML = slides.map((s) => {
+            const list = (RANKING_DATA[s.type][s.genreKey] || []).slice(0, 3);
+            const rows = list.length > 0 ? list.map((song, idx) => `
+                <button onclick="event.stopPropagation(); openRankingSong('${(song.title||'').replace(/'/g,"\\'")}', '${(song.artist||'').replace(/'/g,"\\'")}')" class="ranking-row w-full text-left">
+                    <span class="ranking-rank-badge ${idx === 0 ? 'bg-yellow-400 text-yellow-900' : idx === 1 ? 'bg-gray-200 text-gray-700' : 'bg-orange-300 text-orange-900'}">${idx + 1}</span>
+                    <span class="flex-1 min-w-0 truncate text-white text-sm font-bold">${song.title || ''}</span>
+                    <span class="text-indigo-100 text-xs ml-2 truncate max-w-[35%]">${song.artist || ''}</span>
+                </button>
+            `).join('') : `<div class="text-center text-indigo-200 text-xs py-3">データ未登録</div>`;
+
+            return `
+                <div class="ranking-slide">
+                    <button onclick="goToRankingList('${s.type}', '${s.genreKey}')" class="w-full text-left bg-white/10 hover:bg-white/15 rounded-lg px-3 py-1.5 mb-1 flex items-center justify-between transition-colors">
+                        <span class="text-sm font-bold text-white truncate">${s.title}</span>
+                        <span class="material-icons text-white/70 text-base flex-shrink-0">chevron_right</span>
+                    </button>
+                    <div>${rows}</div>
+                </div>
+            `;
+        }).join('');
+
+        dotsWrap.innerHTML = slides.map((_, i) => `<span class="ranking-dot" id="ranking-dot-${i}"></span>`).join('');
+
+        rankingSlideIndex = 0;
+        applyRankingSlidePosition(false);
+        setupRankingSwipeHandlers();
+        startRankingAutoTimer();
+    }
+
+    function applyRankingSlidePosition(animate) {
+        const track = document.getElementById('ranking-slide-track');
+        if (!track) return;
+        track.style.transition = animate ? 'transform 0.35s ease' : 'none';
+        track.style.transform = `translateX(-${rankingSlideIndex * 100}%)`;
+        document.querySelectorAll('.ranking-dot').forEach((d, i) => d.classList.toggle('active', i === rankingSlideIndex));
+    }
+
+    function startRankingAutoTimer() {
+        clearInterval(rankingAutoTimer);
+        rankingAutoTimer = setInterval(() => {
+            rankingSlideIndex = (rankingSlideIndex + 1) % rankingSlideCount;
+            applyRankingSlidePosition(true);
+        }, 3000);
+    }
+
+    function setupRankingSwipeHandlers() {
+        const area = document.getElementById('ranking-swipe-area');
+        if (!area || area.dataset.swipeBound) return;
+        area.dataset.swipeBound = '1';
+        area.addEventListener('touchstart', (e) => { rankingSwipeStartX = e.touches[0].clientX; }, { passive: true });
+        area.addEventListener('touchend', (e) => {
+            if (rankingSwipeStartX === null) return;
+            const dx = e.changedTouches[0].clientX - rankingSwipeStartX;
+            rankingSwipeStartX = null;
+            if (Math.abs(dx) < 30) return; // タップ扱い
+            if (dx < 0) rankingSlideIndex = (rankingSlideIndex + 1) % rankingSlideCount; // 左スワイプ→次へ（早送り）
+            else rankingSlideIndex = (rankingSlideIndex - 1 + rankingSlideCount) % rankingSlideCount; // 右スワイプ→前へ（巻き戻し）
+            applyRankingSlidePosition(true);
+            startRankingAutoTimer(); // 手動操作後はタイマーをリセット
+        });
+    }
+
+    // ランキング内の曲をタップ：iTunesでタイトル＋アーティスト名を検索し、見つかった曲の詳細ウィンドウを開く
+    function openRankingSong(title, artist) {
+        if (!title) return;
+        const term = artist ? `${title} ${artist}` : title;
+        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&country=jp&lang=ja_jp&limit=1&entity=song`;
+        fetchJSONP(url, (data) => {
+            if (data && data.results && data.results.length > 0) {
+                openDetailModal(data.results[0]);
+            } else {
+                showToast('この曲の情報が見つかりませんでした');
+            }
+        });
+    }
+
+    let currentRankingListType = 'karaoke';
+    let currentRankingListGenre = 'all';
+
+    function goToRankingList(type, genreKey) {
+        currentRankingListType = type || 'karaoke';
+        currentRankingListGenre = genreKey || 'all';
+        document.getElementById('page-top').style.display = 'none';
+        document.getElementById('page-ranking-list').style.display = 'flex';
+
+        const tabsWrap = document.getElementById('ranking-genre-tabs');
+        tabsWrap.innerHTML = RANKING_GENRES.map((g) => `
+            <button onclick="switchRankingListGenre('${g.key}', this)" class="genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors" data-genre="${g.key}">${g.label}</button>
+        `).join('');
+
+        renderRankingList();
+    }
+
+    function switchRankingListType(type) {
+        currentRankingListType = type;
+        renderRankingList();
+    }
+
+    function switchRankingListGenre(genreKey, btnEl) {
+        currentRankingListGenre = genreKey;
+        renderRankingList();
+    }
+
+    function renderRankingList() {
+        document.getElementById('ranking-type-btn-karaoke').className = 'py-2 rounded-lg font-bold text-sm transition-colors ' + (currentRankingListType === 'karaoke' ? 'bg-white text-indigo-700' : 'bg-white/15 text-indigo-100');
+        document.getElementById('ranking-type-btn-sales').className = 'py-2 rounded-lg font-bold text-sm transition-colors ' + (currentRankingListType === 'sales' ? 'bg-white text-indigo-700' : 'bg-white/15 text-indigo-100');
+
+        document.querySelectorAll('#ranking-genre-tabs .genre-tab').forEach((btn) => {
+            const active = btn.dataset.genre === currentRankingListGenre;
+            btn.className = 'genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors ' + (active
+                ? 'active bg-violet-50 text-indigo-700 border-2 border-indigo-300 relative z-10'
+                : 'bg-white/15 text-indigo-100 border-2 border-transparent');
+        });
+
+        const genreLabel = (RANKING_GENRES.find(g => g.key === currentRankingListGenre) || {}).label || '';
+        document.getElementById('ranking-list-title').textContent = `${genreLabel}年間ランキング（${RANKING_TYPE_LABEL[currentRankingListType]}）`;
+
+        const list = (RANKING_DATA[currentRankingListType][currentRankingListGenre] || []).slice(0, 10);
+        const container = document.getElementById('ranking-list-container');
+        if (list.length === 0) {
+            container.innerHTML = '<div class="text-center p-8 text-gray-500">データ未登録です。</div>';
+            return;
+        }
+        container.innerHTML = list.map((song, idx) => `
+            <button onclick="openRankingSong('${(song.title||'').replace(/'/g,"\\'")}', '${(song.artist||'').replace(/'/g,"\\'")}')" class="w-full bg-white rounded-lg shadow-sm flex items-center mb-2 mt-1 active:bg-gray-50 border border-gray-200 px-3 py-3 text-left">
+                <span class="ranking-rank-badge ${idx === 0 ? 'bg-yellow-400 text-yellow-900' : idx === 1 ? 'bg-gray-200 text-gray-700' : idx === 2 ? 'bg-orange-300 text-orange-900' : 'bg-gray-100 text-gray-500'}" style="width:28px;height:28px;font-size:13px;">${idx + 1}</span>
+                <div class="flex-1 min-w-0 ml-2">
+                    <div class="text-base font-bold text-gray-900 truncate">${song.title || ''}</div>
+                    <div class="text-sm text-gray-600 truncate">${song.artist || ''}</div>
+                </div>
+            </button>
+        `).join('');
+    }
+
+
     let broadcastNoticeSwipeStartX = null;
 
     function formatBroadcastMessage(entry) {
@@ -1428,37 +1642,6 @@
         return `${ts}に「${entry.program}（${entry.song}）」（${entry.channel}）があります`;
     }
 
-    // musicman.co.jpニュースから「本日〜時」「出演」「放送」等を含む記事をベストエフォートで拾う補助関数
-    // （正式な番組表データではないため、抽出できないことの方が多い点に留意）
-    function extractBestEffortBroadcastFromNews(newsItems) {
-        if (!newsItems || newsItems.length === 0) return [];
-        const keywordPattern = /(放送|出演|生放送|オンエア|テレビ|ラジオ)/;
-        const timePattern = /(\d{1,2})[時:：](\d{2})?/;
-        const results = [];
-        const now = new Date();
-        newsItems.forEach((item) => {
-            const text = stripHtml(item.title + ' ' + (item.description || ''));
-            if (!keywordPattern.test(text)) return;
-            const timeMatch = text.match(timePattern);
-            if (!timeMatch) return; // 時刻らしき記述が無ければ通知にはしない
-            const pub = new Date(item.pubDate);
-            if (isNaN(pub.getTime())) return;
-            // 記事公開日を基準日とし、記載の時刻を組み合わせて推定（あくまで目安）
-            const guess = new Date(pub);
-            guess.setHours(parseInt(timeMatch[1], 10), parseInt(timeMatch[2] || '0', 10), 0, 0);
-            const diffHours = (guess - now) / (1000 * 60 * 60);
-            if (diffHours < 0 || diffHours > 24) return; // 24時間以内のみ
-            results.push({
-                datetime: guess.toISOString(),
-                program: item.title,
-                song: 'アーティスト情報を参照',
-                channel: /ラジオ/.test(text) ? 'ラジオ' : '地上波',
-                url: item.link
-            });
-        });
-        return results;
-    }
-
     function startBroadcastNoticeQueue() {
         const now = new Date();
         const within24h = BROADCAST_SCHEDULE.filter((e) => {
@@ -1468,10 +1651,7 @@
             return diffHours >= 0 && diffHours <= 24;
         });
 
-        // musicman.co.jpのニュースが取得済みならベストエフォート抽出も合流させる
-        const supplement = extractBestEffortBroadcastFromNews(musicNewsCache);
-
-        broadcastNoticeQueue = within24h.concat(supplement).sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+        broadcastNoticeQueue = within24h.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
         broadcastNoticeIndex = 0;
         if (broadcastNoticeQueue.length > 0) showNextBroadcastNotice();
     }
@@ -1549,125 +1729,6 @@
         });
     })();
 
-    // -------------------------------------------------------------
-    // 音楽ニュースRSS（musicman.co.jp/feed/）取得・表示
-    // -------------------------------------------------------------
-    // GitHub Pages（静的サイト）からRSS(XML)を直接fetchするとCORSで失敗するため、
-    // RSSをJSONに変換して返す rss2json.com の無料APIを経由している。
-    // 無料枠は低頻度アクセス向けのレート制限があるため、本番運用では
-    // https://rss2json.com/ で無料APIキーを取得し、下記 RSS2JSON_API_KEY に設定することを推奨。
-    const MUSIC_NEWS_RSS_URL = 'https://www.musicman.co.jp/feed/';
-    const RSS2JSON_API_KEY = ''; // 例: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'（未設定でも低頻度なら動作する）
-    let musicNewsCache = []; // トップページで取得したRSS全件。曲詳細の関連ニュース検索にも再利用する
-
-    function stripHtml(html) {
-        return String(html || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-    }
-
-    function fetchMusicNews(callback) {
-        let url = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(MUSIC_NEWS_RSS_URL) + '&count=50';
-        if (RSS2JSON_API_KEY) url += '&api_key=' + encodeURIComponent(RSS2JSON_API_KEY);
-        fetch(url).then((res) => {
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            return res.json();
-        }).then((data) => {
-            if (data && data.status === 'ok' && Array.isArray(data.items)) {
-                musicNewsCache = data.items;
-                if (callback) callback(musicNewsCache);
-            } else {
-                console.warn('[音楽ニュース] 取得失敗:', data && data.message);
-                if (callback) callback([]);
-            }
-        }).catch((err) => {
-            console.warn('[音楽ニュース] 通信エラー:', err);
-            if (callback) callback([]);
-        });
-    }
-
-    // 2行に収まらない場合、末尾のタイムスタンプと重ならないよう本文を「…」で切り詰めて表示する
-    // （実際のDOM上で折返し状態を判定しながら2分探索で文字数を詰める方式）
-    function fitTextWithTrailingSuffix(el, fullText, suffixHtml) {
-        const trailer = suffixHtml ? ('\u00A0' + suffixHtml) : '';
-        el.innerHTML = fullText + trailer;
-        if (el.scrollHeight <= el.clientHeight + 1) return; // 2行以内に収まっている
-
-        let lo = 0, hi = fullText.length;
-        while (lo < hi) {
-            const mid = Math.ceil((lo + hi) / 2);
-            el.innerHTML = fullText.slice(0, mid) + '…' + trailer;
-            if (el.scrollHeight <= el.clientHeight + 1) {
-                lo = mid;
-            } else {
-                hi = mid - 1;
-            }
-        }
-        el.innerHTML = fullText.slice(0, lo) + '…' + trailer;
-    }
-
-    function formatNewsTimestamp(dateObj) {
-        if (isNaN(dateObj.getTime())) return '';
-        const w = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()];
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${pad(dateObj.getMonth() + 1)}/${pad(dateObj.getDate())}(${w}) ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
-    }
-
-    function renderMusicNewsList(containerId, items) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        if (!items || items.length === 0) {
-            container.innerHTML = '';
-            return;
-        }
-        container.innerHTML = items.map((item, idx) => `
-            <button onclick="window.open('${(item.link || '').replace(/'/g, "&#39;")}', '_blank')" class="w-full text-left bg-white rounded-xl shadow-sm px-3 py-2 mb-2 active:bg-gray-50 border border-gray-100 transition-all block">
-                <div class="news-row-text text-[13px] text-gray-700" id="${containerId}-row-${idx}" style="line-height:1.4;max-height:2.82em;overflow:hidden;"></div>
-            </button>
-        `).join('');
-
-        items.forEach((item, idx) => {
-            const el = document.getElementById(`${containerId}-row-${idx}`);
-            if (!el) return;
-            const dateObj = new Date(item.pubDate);
-            const ts = formatNewsTimestamp(dateObj);
-            const tsHtml = ts ? `<span class="text-[11px] text-gray-400 whitespace-nowrap">${ts}</span>` : '';
-            const title = stripHtml(item.title).replace(/\s+/g, ' ').trim();
-            fitTextWithTrailingSuffix(el, title, tsHtml);
-        });
-    }
-
-    // 曲詳細ウィンドウ：アーティスト名の文字列一致でRSS全件から関連ニュースを最大3件表示
-    function renderArtistRelatedNews(artistName) {
-        renderArtistNewsForList('detail-news-section', 'detail-news-list', artistName);
-    }
-
-    // アーティスト名の文字列一致でRSS全件から関連ニュースを最大3件表示する汎用関数
-    // （曲詳細ウィンドウ・アーティスト別ページのどちらからも呼び出す）
-    function renderArtistNewsForList(sectionId, listId, artistName) {
-        const section = document.getElementById(sectionId);
-        const list = document.getElementById(listId);
-        if (!section || !list) return;
-
-        const name = (artistName || '').trim();
-        if (!name || musicNewsCache.length === 0) {
-            section.classList.add('hidden');
-            list.innerHTML = '';
-            return;
-        }
-
-        const matched = musicNewsCache.filter((item) => {
-            const hay = stripHtml(item.title) + ' ' + stripHtml(item.description || '');
-            return hay.includes(name);
-        }).sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate)).slice(0, 3);
-
-        if (matched.length === 0) {
-            section.classList.add('hidden');
-            list.innerHTML = '';
-            return;
-        }
-        section.classList.remove('hidden');
-        renderMusicNewsList(listId, matched);
-    }
-
     function customShare(title, text, url) {
         const fullShareText = text + "\n" + url;
         const shareData = { title, text: fullShareText, url };
@@ -1708,7 +1769,7 @@
 
     // アプリ自体の紹介共有機能 (説明文を完全同期)
     function shareApp() {
-        const text = "メロ出〜た\n無料で30秒試聴できます！カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。";
+        const text = "メロ出〜た\nカラオケする時、曲名やアーティスト名が分からない時にカンタンに探してくれて、無料で30秒試聴できます！";
         const url = "https://liff.line.me/2010749970-n0PwMioA";
 
         if (typeof liff !== 'undefined' && liff.isInClient()) {
@@ -1853,10 +1914,11 @@
     }
 
     function openSearchOptions() {
-        // 'new-song'（新曲）はアコーディオン検索オプション（年代・ジャンル）を使うモードなので、
-        // ここから除外しないこと。以前はここに含まれていたため、新曲モードで「検索オプション」を
-        // タップしても年代・ジャンルタブが一切開かない不具合が起きていました。
-        if (currentMode === 'memo' || currentMode === 'artist' || currentMode === 'album' || currentMode === 'artist-songs' || currentMode === 'album-tracks') return;
+        // 'new-song'（新曲）・'artist-songs'（歌手の曲一覧）・'album-tracks'（アルバムの曲一覧）は
+        // いずれもアコーディオン検索オプション（年代・ジャンル）を使うモードなので、ここから除外しないこと。
+        // 以前はこれらも除外リストに含まれてしまっており、「検索オプション」をタップしても
+        // 年代・ジャンルタブが一切開かない不具合の原因になっていました。
+        if (currentMode === 'memo' || currentMode === 'artist' || currentMode === 'album') return;
         const acc = document.getElementById('search-options-accordion');
         const icon = document.getElementById('accordion-icon');
         if (!acc) return;
@@ -1889,7 +1951,6 @@
         document.getElementById('page-top').style.display = 'none';
         document.getElementById('page-search').style.display = 'flex';
         setMemoFabButtons(false);
-        if (mode !== 'artist-songs') hideArtistNewsSection();
         
         const titleEl = document.getElementById('search-title');
         const inputEl = document.getElementById('search-input');
@@ -1926,6 +1987,17 @@
         
         loadSearchHistory();
 
+        // 「歌手名」「曲名」「アルバム名」「歌詞ワード」はテキスト欄にカーソルを合わせておく。
+        // 「新曲」は最初から新曲一覧が表示されるためカーソル指定は不要。
+        // スマホの予測変換バーが入力欄に重なる問題への対策として、キーボードが開くアニメーションが
+        // 終わったタイミングで改めてテキスト欄を画面内へスクロールし直す（block:'center'で余裕を持たせる）。
+        if (!isSameMode && (mode === 'artist' || mode === 'song' || mode === 'album' || mode === 'lyrics')) {
+            setTimeout(() => {
+                inputEl.focus();
+                setTimeout(() => { inputEl.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 300);
+            }, 150);
+        }
+
         // 【2026年最新仕様】新曲ボタンから遷移した場合：Apple Music公式新着・トレンドフィードを直接並行取得し lookup にかけて100件以上の豊かな最新リストを出力
         if (mode === 'new-song' && !isSameMode && allFetchedResults.length === 0) {
             executeNewSongSearch();
@@ -1948,7 +2020,6 @@
         document.getElementById('simple-options-container').style.display = 'none';
         document.getElementById('accordion-options-container').style.display = 'none';
 
-        hideArtistNewsSection();
         setMemoFabButtons(true);
         
         clearResults();
@@ -1977,11 +2048,6 @@
         const shouldShow = inMemoMode && currentMemoTab === 'saved';
         btn.classList.toggle('hidden', !shouldShow);
         if (!shouldShow) stopMemoPlayAll();
-    }
-
-    function hideArtistNewsSection() {
-        const section = document.getElementById('artist-page-news-section');
-        if (section) section.classList.add('hidden');
     }
 
     function goBackToTop() {
@@ -2107,8 +2173,8 @@
     // 友達に共有（ハンバーガーメニュー専用。従来の shareApp() と異なりPWAインストール導線は含めない）
     // -------------------------------------------------------------
     function shareAppOnly() {
-        const text = "メロ出〜た\n無料で30秒試聴できます！カラオケの曲を探そうにもタイトルも分からず、アーティスト名も分からず、聴きたくてもすぐに出てこずといった時に。";
-        const url = "https://liff.line.me/2010749970-n0PwMioA";
+        const text = "メロ出〜た\nカラオケする時、曲名やアーティスト名が分からない時にカンタンに探してくれて、無料で30秒試聴できます！";
+        const url = "https://lin.ee/ZzsmZxk";
 
         recordStat('shareCount');
 
@@ -2289,17 +2355,20 @@
 
         // ジャンル別の補完検索：公式チャート（新着・よく再生）にはJ-POP/K-POP系が多く乗りがちで、
         // 演歌・民謡・歌謡曲等はタイトル文字列に手掛かりが無いと従来の曖昧キーワード検索
-        // （2026／2025／最新）ではほぼヒットしなかった。attribute=genreIndexを使うことで、
-        // 曲名ではなく「ジャンル名」そのものに対して一致検索を行い、各ジャンルの新しめの曲を拾う。
+        // （2026／2025／最新）ではほぼヒットしなかった。
+        // 【重要】以前はattribute=genreIndexを指定していたが、これはジャンル名の"文字列"では
+        // なくApple側が管理する"数値のジャンルID"を渡すための属性だったため、"演歌"等の日本語
+        // 文字列を渡しても常に0件になっていた（表示されなかった直接の原因）。
+        // 属性指定を外し、他の語（新曲／年号）と同じ無制限テキスト検索に変更して修正。
         const runGenreSupplementSearch = (rssSongs) => {
             const searchQueries = [
-                { term: '演歌',     attribute: 'genreIndex', limit: 100 },
-                { term: '歌謡曲',   attribute: 'genreIndex', limit: 100 },
-                { term: '民謡',     attribute: 'genreIndex', limit: 60 },
-                { term: 'フォーク', attribute: 'genreIndex', limit: 60 },
-                { term: 'アニメ',   attribute: 'genreIndex', limit: 60 },
-                { term: 'ジャズ',   attribute: 'genreIndex', limit: 60 },
-                { term: '新曲',     attribute: null,         limit: 100 },
+                { term: '演歌',     attribute: null, limit: 100 },
+                { term: '歌謡曲',   attribute: null, limit: 100 },
+                { term: '民謡',     attribute: null, limit: 60 },
+                { term: 'フォーク', attribute: null, limit: 60 },
+                { term: 'アニソン', attribute: null, limit: 60 },
+                { term: 'ジャズ',   attribute: null, limit: 60 },
+                { term: '新曲',     attribute: null, limit: 100 },
                 { term: String(new Date().getFullYear()), attribute: null, limit: 60 }
             ];
             let searchCompleted = 0;
@@ -2383,10 +2452,21 @@
             currentQuery = overrideQuery || document.getElementById('search-input').value.trim();
             if (!currentQuery) return;
             document.getElementById('search-input').value = currentQuery;
-            
+
+            // 「歌手名」から開いた曲名検索・アルバム内の曲名検索は、その歌手／アルバムの曲だけに
+            // 絞り込む（他の歌手の曲が紛れ込まないようにする）。以前はここで検索モードを「曲名」に
+            // 切り替えて全アーティスト対象の検索を行ってしまっていたため、絶対条件だったはずの
+            // 歌手・アルバムの範囲が外れてしまっていた。
             if (currentMode === 'artist-songs' || currentMode === 'album-tracks') {
-                currentMode = 'song';
-                document.getElementById('search-title').textContent = '曲名で探す';
+                const q = currentQuery.toLowerCase();
+                allFetchedResults = scopedMasterResults.filter(item => (item.trackName || '').toLowerCase().includes(q));
+                clearResults();
+                saveSearchHistory(currentQuery);
+                loadSearchHistory();
+                closeSearchOptions();
+                recordStat('searchCount');
+                applyFiltersAndRender();
+                return;
             }
             
             allFetchedResults = [];
@@ -2800,6 +2880,8 @@
         else openDetailModal(item);
     }
 
+    let scopedMasterResults = []; // 「歌手名」「アルバム名」内の曲名検索を、その歌手/アルバムの曲だけに限定するための元データ
+
     function fetchArtistSongs(artistId, artistName) {
         currentMode = 'artist-songs';
         document.getElementById('search-title').textContent = artistName;
@@ -2810,16 +2892,37 @@
         document.getElementById('accordion-options-container').style.display = 'block';
         openSearchOptions();
         loadSearchHistory();
+        document.getElementById('sort-select-accordion').value = 'aiueo'; // ご要望により五十音順をデフォルトに
 
-        renderArtistNewsForList('artist-page-news-section', 'artist-page-news-list', artistName);
-        
         document.getElementById('loading-indicator').style.display = 'block';
-        fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
+
+        // 【重要】iTunesのLookup/Search APIは1回の呼び出しにつき最大200件までしか返せない
+        // （公式の上限で、offset等による追加ページ取得もできない）。有名アーティストで200曲を
+        // 超えるケースを取りこぼさないよう、Lookup(entity=song)とSearch(attribute=artistTerm)の
+        // 2種類のAPIを並行して呼び、それぞれ最大200件ずつ取得してから重複除去して合算する。
+        // （2つのAPIは内部の並び順が異なるため、単純に同じ200件を2回取るのではなく、互いに
+        //   足りない分を補い合う形になり、実質的に200件超のカバー率を狙える）
+        let lookupDone = false, searchDone = false;
+        let lookupResults = [], searchResults = [];
+
+        const finalize = () => {
+            if (!lookupDone || !searchDone) return;
             document.getElementById('loading-indicator').style.display = 'none';
-            if (data && data.results) { 
-                allFetchedResults = groupConsolidatedSongs(data.results.filter(item => item.wrapperType === 'track')); 
-                applyFiltersAndRender(); 
-            }
+            const merged = groupConsolidatedSongs(lookupResults.concat(searchResults));
+            scopedMasterResults = merged;
+            allFetchedResults = merged;
+            applyFiltersAndRender();
+        };
+
+        fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
+            if (data && data.results) lookupResults = data.results.filter(item => item.wrapperType === 'track');
+            lookupDone = true;
+            finalize();
+        });
+        fetchJSONP(`https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&attribute=artistTerm&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
+            if (data && data.results) searchResults = data.results.filter(item => item.wrapperType === 'track' && item.artistName === artistName);
+            searchDone = true;
+            finalize();
         });
     }
 
@@ -2851,7 +2954,9 @@
         fetchJSONP(`https://itunes.apple.com/lookup?id=${collectionId}&entity=song&country=jp&lang=ja_jp`, (data) => {
             document.getElementById('loading-indicator').style.display = 'none';
             if (data && data.results) { 
-                allFetchedResults = groupConsolidatedSongs(data.results.filter(item => item.wrapperType === 'track').sort((a,b)=>a.trackNumber - b.trackNumber)); 
+                const merged = groupConsolidatedSongs(data.results.filter(item => item.wrapperType === 'track').sort((a,b)=>a.trackNumber - b.trackNumber)); 
+                scopedMasterResults = merged;
+                allFetchedResults = merged;
                 applyFiltersAndRender(); 
             }
         });
@@ -3039,8 +3144,6 @@
         const durationEl = document.getElementById('detail-duration-text');
         if (durationEl) durationEl.textContent = formatDurationMMSS(item.trackTimeMillis);
 
-        renderArtistRelatedNews(item.artistName);
-        
         let ogImage = document.querySelector('meta[property="og:image"]');
         if (ogImage) ogImage.setAttribute('content', imgUrl);
 
