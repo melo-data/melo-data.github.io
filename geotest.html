@@ -56,7 +56,6 @@
       gap: 12px;
     }
 
-    /* 店舗カード（枠全体をリンク化） */
     .shop-card {
       background: var(--card-bg);
       border-radius: 12px;
@@ -87,7 +86,7 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      min-width: 0; /* テキスト溢れ防止 */
+      min-width: 0;
     }
 
     .shop-genre {
@@ -149,7 +148,6 @@
   <script>
     const API_KEY = '1c29d09807b9c254';
 
-    // 画面読み込み時に自動実行
     window.addEventListener('DOMContentLoaded', () => {
       getLocationAndSearch();
     });
@@ -170,13 +168,13 @@
         (position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
-          statusEl.textContent = '近くの店舗を検索中...';
+          statusEl.textContent = '近くの店舗を検索・並び替え中...';
           fetchShops(lat, lng);
         },
         (error) => {
           let msg = '位置情報の取得に失敗しました。';
           if (error.code === error.PERMISSION_DENIED) {
-            msg = '位置情報の利用が許可されていません。ブラウザの位置情報許可をご確認ください。';
+            msg = '位置情報の利用が許可されていません。設定をご確認ください。';
           }
           statusEl.innerHTML = `<span class="error-msg">${msg}</span>`;
         },
@@ -184,13 +182,24 @@
       );
     }
 
-    async function fetchShops(lat, lng) {
+    // 2点間の直線距離（メートル）を計算する関数
+    function calculateDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371000; // 地球の半径(m)
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return Math.round(R * c); // メートル単位で四捨五入
+    }
+
+    async function fetchShops(userLat, userLng) {
       const statusEl = document.getElementById('status');
 
-      // range=5: 3000m (3km) 以内
-      // count=10: 最大10件
-      // order=4 : 現在地から近い順
-      const targetApiUrl = `https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?key=${API_KEY}&lat=${lat}&lng=${lng}&range=5&karaoke=1&order=4&count=10&format=json`;
+      // 距離順ソートのため、まず3km以内（range=5）の店舗を多め（count=100）に取得
+      const targetApiUrl = `https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?key=${API_KEY}&lat=${userLat}&lng=${userLng}&range=5&karaoke=1&count=100&format=json`;
       const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetApiUrl)}`;
 
       try {
@@ -199,26 +208,38 @@
           throw new Error(`HTTP Error: ${response.status}`);
         }
         const data = await response.json();
-        renderResults(data);
+        
+        if (!data.results || !data.results.shop || data.results.shop.length === 0) {
+          statusEl.textContent = '3km以内にカラオケがあるお店は見つかりませんでした。';
+          return;
+        }
+
+        // 各店舗の距離を計算してプロパティに追加
+        const shops = data.results.shop.map(shop => {
+          const distance = calculateDistance(userLat, userLng, shop.lat, shop.lng);
+          return { ...shop, distance };
+        });
+
+        // 距離が短い順（近い順）に並び替え
+        shops.sort((a, b) => a.distance - b.distance);
+
+        // 先頭10件のみ切り出して表示
+        const top10Shops = shops.slice(0, 10);
+        renderResults(top10Shops, shops.length);
+
       } catch (error) {
         console.error(error);
         statusEl.innerHTML = '<span class="error-msg">APIからのデータ取得に失敗しました。</span>';
       }
     }
 
-    function renderResults(data) {
+    function renderResults(shops, totalFound) {
       const statusEl = document.getElementById('status');
       const containerEl = document.getElementById('shop-container');
 
-      if (!data.results || !data.results.shop || data.results.shop.length === 0) {
-        statusEl.textContent = '3km以内にカラオケがあるお店は見つかりませんでした。';
-        return;
-      }
+      statusEl.textContent = `近くのカラオケ設置店 (${shops.length}件表示 / 全${totalFound}件)`;
 
-      const total = data.results.results_returned;
-      statusEl.textContent = `近くのカラオケ設置店 (${total}件)`;
-
-      data.results.shop.forEach(shop => {
+      shops.forEach(shop => {
         const photoUrl = shop.photo?.mobile?.l || shop.logo_image || '';
         const genreName = shop.genre?.name || '飲食店';
         const station = shop.station_name ? `${shop.station_name}駅` : '';
@@ -226,7 +247,11 @@
         const catchText = shop.catch || '';
         const url = shop.urls?.pc || '#';
 
-        // 枠全体をリンクカード化
+        // 距離の表示テキスト（1000m未満はm表記、1km以上はkm表記）
+        const distanceStr = shop.distance < 1000 
+          ? `現在地から約${shop.distance}m` 
+          : `現在地から約${(shop.distance / 1000).toFixed(1)}km`;
+
         const card = document.createElement('a');
         card.className = 'shop-card';
         card.href = url;
@@ -236,7 +261,7 @@
         card.innerHTML = `
           <img class="shop-thumb" src="${photoUrl}" alt="${shop.name}" onerror="this.src='https://via.placeholder.com/85?text=No+Image'">
           <div class="shop-info">
-            <span class="shop-genre">${genreName} ${station ? '• ' + station : ''}</span>
+            <span class="shop-genre">${genreName} ${station ? '• ' + station : ''}（${distanceStr}）</span>
             <h2 class="shop-name">${shop.name}</h2>
             <p class="shop-access">📍 ${mobileAccess}</p>
             ${catchText ? `<p class="shop-desc">${catchText}</p>` : ''}
