@@ -829,16 +829,12 @@
                 <span class="material-icons">menu</span>
             </button>
         </div>
-        <div class="grid grid-cols-2 gap-2 mb-2">
-            <button id="ranking-type-btn-karaoke" onclick="switchRankingListType('karaoke')" class="py-2 rounded-lg font-bold text-sm transition-colors">カラオケ</button>
-            <button id="ranking-type-btn-sales" onclick="switchRankingListType('sales')" class="py-2 rounded-lg font-bold text-sm transition-colors">売上</button>
-        </div>
         <div class="flex overflow-x-auto hide-scrollbar space-x-1 genre-tab-container relative pt-1 px-1" id="ranking-genre-tabs"></div>
     </div>
     <div class="scrollable-content bg-gray-100 p-2 relative">
         <div id="ranking-list-container" class="space-y-0"></div>
     </div>
-    <button onclick="goBackToTop()" class="fab-back">
+    <button onclick="goBackFromRankingList()" class="fab-back">
         <span class="material-icons text-3xl">arrow_back</span>
     </button>
 </div>
@@ -1638,26 +1634,32 @@
         });
     }
 
-    let currentRankingListType = 'karaoke';
+    let currentRankingListType = 'sales';
     let currentRankingListGenre = 'all';
 
+    // トップページのウィジェットと同じく、実データがある「総合」「演歌・歌謡曲」のみを対象にする
+    const RANKING_LIST_GENRES = [
+        { key: 'all',  label: '総合' },
+        { key: 'enka', label: '演歌・歌謡曲' },
+    ];
+
     function goToRankingList(type, genreKey) {
-        currentRankingListType = type || 'karaoke';
+        currentRankingListType = 'sales'; // カラオケ側は実データが無いため、常に売上のみ表示
         currentRankingListGenre = genreKey || 'all';
         document.getElementById('page-top').style.display = 'none';
         document.getElementById('page-ranking-list').style.display = 'flex';
 
         const tabsWrap = document.getElementById('ranking-genre-tabs');
-        tabsWrap.innerHTML = RANKING_GENRES.map((g) => `
+        tabsWrap.innerHTML = RANKING_LIST_GENRES.map((g) => `
             <button onclick="switchRankingListGenre('${g.key}', this)" class="genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors" data-genre="${g.key}">${g.label}</button>
         `).join('');
 
         renderRankingList();
     }
 
-    function switchRankingListType(type) {
-        currentRankingListType = type;
-        renderRankingList();
+    function goBackFromRankingList() {
+        document.getElementById('page-ranking-list').style.display = 'none';
+        document.getElementById('page-top').style.display = 'flex';
     }
 
     function switchRankingListGenre(genreKey, btnEl) {
@@ -1666,9 +1668,6 @@
     }
 
     function renderRankingList() {
-        document.getElementById('ranking-type-btn-karaoke').className = 'py-2 rounded-lg font-bold text-sm transition-colors ' + (currentRankingListType === 'karaoke' ? 'bg-white text-indigo-700' : 'bg-white/15 text-indigo-100');
-        document.getElementById('ranking-type-btn-sales').className = 'py-2 rounded-lg font-bold text-sm transition-colors ' + (currentRankingListType === 'sales' ? 'bg-white text-indigo-700' : 'bg-white/15 text-indigo-100');
-
         document.querySelectorAll('#ranking-genre-tabs .genre-tab').forEach((btn) => {
             const active = btn.dataset.genre === currentRankingListGenre;
             btn.className = 'genre-tab shrink-0 px-4 py-1.5 rounded-t-lg text-sm font-bold transition-colors ' + (active
@@ -1676,8 +1675,8 @@
                 : 'bg-white/15 text-indigo-100 border-2 border-transparent');
         });
 
-        const genreLabel = (RANKING_GENRES.find(g => g.key === currentRankingListGenre) || {}).label || '';
-        document.getElementById('ranking-list-title').textContent = `${genreLabel}年間ランキング（${RANKING_TYPE_LABEL[currentRankingListType]}）`;
+        const genreLabel = (RANKING_LIST_GENRES.find(g => g.key === currentRankingListGenre) || {}).label || '';
+        document.getElementById('ranking-list-title').textContent = `${genreLabel}年間ランキング（売上）`;
 
         const list = (RANKING_DATA[currentRankingListType][currentRankingListGenre] || []).slice(0, 10);
         const container = document.getElementById('ranking-list-container');
@@ -2987,18 +2986,35 @@
             if (!lookupDone || !searchDone) return;
             document.getElementById('loading-indicator').style.display = 'none';
             const merged = groupConsolidatedSongs(lookupResults.concat(searchResults));
+            console.log('[歌手の曲一覧] 合算・重複除去後の最終曲数:', merged.length);
             scopedMasterResults = merged;
             allFetchedResults = merged;
             applyFiltersAndRender();
         };
 
-        fetchJSONP(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
+        fetchJSONPSilent(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
             if (data && data.results) lookupResults = data.results.filter(item => item.wrapperType === 'track');
+            console.log('[歌手の曲一覧] Lookup API結果:', lookupResults.length, '件');
+            lookupDone = true;
+            finalize();
+        }, () => {
+            console.warn('[歌手の曲一覧] Lookup APIの取得に失敗しました');
             lookupDone = true;
             finalize();
         });
-        fetchJSONP(`https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&attribute=artistTerm&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
-            if (data && data.results) searchResults = data.results.filter(item => item.wrapperType === 'track' && item.artistName === artistName);
+        fetchJSONPSilent(`https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&attribute=artistTerm&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
+            if (data && data.results) {
+                // 前後の空白や全角/半角スペースの違いなどで完全一致にならず、Search側の結果が
+                // 常に0件に絞り込まれてしまっていた可能性があるため、正規化した上で比較する
+                const normalize = (s) => String(s || '').replace(/[\s　]/g, '').toLowerCase();
+                const targetNorm = normalize(artistName);
+                searchResults = data.results.filter(item => item.wrapperType === 'track' && normalize(item.artistName) === targetNorm);
+                console.log('[歌手の曲一覧] Search API結果:', data.results.length, '件中、一致:', searchResults.length, '件');
+            }
+            searchDone = true;
+            finalize();
+        }, () => {
+            console.warn('[歌手の曲一覧] Search APIの取得に失敗しました');
             searchDone = true;
             finalize();
         });
