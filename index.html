@@ -429,6 +429,10 @@
                     <span class="material-icons text-2xl">mic</span>
                     <span class="text-[10px] mt-1">DAM</span>
                 </button>
+                <button onclick="searchJOYSOUNDDirect()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
+                    <span class="material-icons text-2xl">mic</span>
+                    <span class="text-[10px] mt-1">JOY</span>
+                </button>
             </div>
             <button onclick="closeDetailModal()" class="p-2 bg-gray-200 rounded-full text-gray-600 active:bg-gray-300">
                 <span class="material-icons">close</span>
@@ -543,10 +547,6 @@
                     <span class="material-icons text-2xl">share</span>
                     <span class="text-[10px] mt-1">共有</span>
                 </button>
-                <button onclick="searchDAMFromArtistDetail()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
-                    <span class="material-icons text-2xl">mic</span>
-                    <span class="text-[10px] mt-1">DAM</span>
-                </button>
             </div>
             <button onclick="closeArtistDetailModal()" class="p-2 bg-gray-200 rounded-full text-gray-600 active:bg-gray-300">
                 <span class="material-icons">close</span>
@@ -593,10 +593,6 @@
                 <button onclick="shareAlbumFromDetail()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
                     <span class="material-icons text-2xl">share</span>
                     <span class="text-[10px] mt-1">共有</span>
-                </button>
-                <button onclick="searchDAMFromAlbumDetail()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
-                    <span class="material-icons text-2xl">mic</span>
-                    <span class="text-[10px] mt-1">DAM</span>
                 </button>
             </div>
             <button onclick="closeAlbumDetailModal()" class="p-2 bg-gray-200 rounded-full text-gray-600 active:bg-gray-300">
@@ -1225,6 +1221,7 @@
 
         // トップページ：年間ランキングの表示開始
         startRankingWidget();
+        fetchLiveSalesRanking();
 
         // 達成バッジ：本日の利用記録と連続ログイン日数の更新
         recordDailyVisitAndStreak();
@@ -1473,6 +1470,62 @@
         }
     };
 
+    // -------------------------------------------------------------
+    // 「売上」ランキングのうち、総合と演歌・民謡／歌謡曲は、Appleが無料公開している
+    // iTunes Top Songs RSSフィード（実際の売上・再生数ベースの公式チャート）からリアルタイムで
+    // 取得する。曲ごとに本物のtrackId・アートワークが含まれるため、検索に頼らず正確に
+    // 曲詳細ウィンドウへリンクできる。
+    // 【注意】フォーク・ロック/ポップ・デュエット・アニソン・ジャズ・その他については、
+    // このRSSフィードのジャンル絞り込みパラメータで確実に動作するジャンルIDが確認できな
+    // かったため、誤ったジャンルを表示するリスクを避けて手動登録（RANKING_DATA）のままに
+    // しています。またDAM/JOYSOUNDの「カラオケでよく歌われている曲」ランキングは無料の
+    // 公開APIが存在しないため、そちらは全ジャンル手動登録のままです。
+    function fetchLiveSalesRanking() {
+        const parseFeedEntries = (data) => {
+            const entries = (data && data.feed && data.feed.entry) || [];
+            return entries.map((e) => {
+                const trackId = e.id && e.id.attributes && e.id.attributes['im:id'];
+                const images = e['im:image'] || [];
+                const artwork = images.length > 0 ? images[images.length - 1].label : '';
+                return {
+                    title: e['im:name'] ? e['im:name'].label : '',
+                    artist: e['im:artist'] ? e['im:artist'].label : '',
+                    trackId: trackId || null,
+                    artworkUrl100: artwork
+                };
+            }).filter(x => x.title);
+        };
+
+        fetch('https://itunes.apple.com/jp/rss/topsongs/limit=10/json')
+            .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+            .then(data => {
+                RANKING_DATA.sales.all = parseFeedEntries(data);
+                refreshRankingDisplays();
+            }).catch(err => console.warn('[年間ランキング] 総合(売上)の取得に失敗:', err));
+
+        // Appleの iTunes Store では「演歌／歌謡曲」がgenre=30として一つのチャートにまとめられている
+        // ため、演歌・民謡と歌謡曲の両方に同じ結果を反映する（個別に分けて配信されていないため）
+        fetch('https://itunes.apple.com/jp/rss/topsongs/limit=10/genre=30/json')
+            .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+            .then(data => {
+                const parsed = parseFeedEntries(data);
+                RANKING_DATA.sales.enka = parsed;
+                RANKING_DATA.sales.kayo = parsed;
+                refreshRankingDisplays();
+            }).catch(err => console.warn('[年間ランキング] 演歌・歌謡曲(売上)の取得に失敗:', err));
+    }
+
+    // ランキングデータが非同期で更新された際、表示中の画面（トップページのウィジェット／
+    // ランキング一覧ページ）を再描画する
+    function refreshRankingDisplays() {
+        if (document.getElementById('page-top').style.display !== 'none') {
+            startRankingWidget();
+        }
+        if (document.getElementById('page-ranking-list').style.display !== 'none') {
+            renderRankingList();
+        }
+    }
+
     let rankingSlideIndex = 0;
     let rankingAutoTimer = null;
     let rankingSwipeStartX = null;
@@ -1494,12 +1547,14 @@
         if (!track || !dotsWrap) return;
 
         const slides = buildRankingSlideList();
+        const previousIndex = rankingSlideIndex;
+        const isFirstBuild = (rankingSlideCount === 0);
         rankingSlideCount = slides.length;
 
         track.innerHTML = slides.map((s) => {
             const list = (RANKING_DATA[s.type][s.genreKey] || []).slice(0, 3);
             const rows = list.length > 0 ? list.map((song, idx) => `
-                <button onclick="event.stopPropagation(); openRankingSong('${(song.title||'').replace(/'/g,"\\'")}', '${(song.artist||'').replace(/'/g,"\\'")}')" class="ranking-row w-full text-left">
+                <button onclick="event.stopPropagation(); openRankingSong(${song.trackId ? song.trackId : "null"}, '${(song.title||'').replace(/'/g,"\\'")}', '${(song.artist||'').replace(/'/g,"\\'")}')" class="ranking-row w-full text-left">
                     <span class="ranking-rank-badge ${idx === 0 ? 'bg-yellow-400 text-yellow-900' : idx === 1 ? 'bg-gray-200 text-gray-700' : 'bg-orange-300 text-orange-900'}">${idx + 1}</span>
                     <span class="flex-1 min-w-0 truncate text-white text-sm font-bold">${song.title || ''}</span>
                     <span class="text-indigo-100 text-xs ml-2 truncate max-w-[35%]">${song.artist || ''}</span>
@@ -1519,10 +1574,10 @@
 
         dotsWrap.innerHTML = slides.map((_, i) => `<span class="ranking-dot" id="ranking-dot-${i}"></span>`).join('');
 
-        rankingSlideIndex = 0;
+        rankingSlideIndex = isFirstBuild ? 0 : Math.min(previousIndex, rankingSlideCount - 1);
         applyRankingSlidePosition(false);
         setupRankingSwipeHandlers();
-        startRankingAutoTimer();
+        if (isFirstBuild) startRankingAutoTimer();
     }
 
     function applyRankingSlidePosition(animate) {
@@ -1558,8 +1613,18 @@
         });
     }
 
-    // ランキング内の曲をタップ：iTunesでタイトル＋アーティスト名を検索し、見つかった曲の詳細ウィンドウを開く
-    function openRankingSong(title, artist) {
+    // ランキング内の曲をタップ：trackIdが分かっていれば直接lookup、無ければタイトル＋アーティスト名で検索
+    function openRankingSong(trackId, title, artist) {
+        if (trackId) {
+            fetchJSONP(`https://itunes.apple.com/lookup?id=${trackId}&country=jp&lang=ja_jp`, (data) => {
+                if (data && data.results && data.results.length > 0) {
+                    openDetailModal(data.results[0]);
+                } else {
+                    showToast('この曲の情報が見つかりませんでした');
+                }
+            });
+            return;
+        }
         if (!title) return;
         const term = artist ? `${title} ${artist}` : title;
         const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&country=jp&lang=ja_jp&limit=1&entity=song`;
@@ -1620,7 +1685,7 @@
             return;
         }
         container.innerHTML = list.map((song, idx) => `
-            <button onclick="openRankingSong('${(song.title||'').replace(/'/g,"\\'")}', '${(song.artist||'').replace(/'/g,"\\'")}')" class="w-full bg-white rounded-lg shadow-sm flex items-center mb-2 mt-1 active:bg-gray-50 border border-gray-200 px-3 py-3 text-left">
+            <button onclick="openRankingSong(${song.trackId ? song.trackId : "null"}, '${(song.title||'').replace(/'/g,"\\'")}', '${(song.artist||'').replace(/'/g,"\\'")}')" class="w-full bg-white rounded-lg shadow-sm flex items-center mb-2 mt-1 active:bg-gray-50 border border-gray-200 px-3 py-3 text-left">
                 <span class="ranking-rank-badge ${idx === 0 ? 'bg-yellow-400 text-yellow-900' : idx === 1 ? 'bg-gray-200 text-gray-700' : idx === 2 ? 'bg-orange-300 text-orange-900' : 'bg-gray-100 text-gray-500'}" style="width:28px;height:28px;font-size:13px;">${idx + 1}</span>
                 <div class="flex-1 min-w-0 ml-2">
                     <div class="text-base font-bold text-gray-900 truncate">${song.title || ''}</div>
@@ -3702,6 +3767,19 @@
         }
     }
 
+    // JOYSOUND検索：歌手名を含めると該当曲がヒットしなくなるため、曲名のみで検索する
+    function searchJOYSOUNDDirect() {
+        if (!currentTrackData) return;
+        const cleanTitle = getCleanTitle(currentTrackData.trackName);
+        const targetUrl = `https://www.joysound.com/web/search/cross?match=1&keyword=${encodeURIComponent(cleanTitle)}`;
+
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
+            liff.openWindow({ url: targetUrl, external: true });
+        } else {
+            window.open(targetUrl, '_blank');
+        }
+    }
+
     function fetchWikipediaForSong(title) {
         document.getElementById('wiki-song-area').classList.remove('hidden');
         document.getElementById('wiki-song-text').textContent = '読み込み中...';
@@ -3843,12 +3921,6 @@
             customShare(artistName, text, liffDeepUrl);
         });
     }
-    function searchDAMFromArtistDetail() {
-        if (!currentArtistDetailData) return;
-        const targetUrl = `https://www.clubdam.com/karaokesearch/?keyword=${encodeURIComponent(currentArtistDetailData.artistName)}&type=keyword`;
-        if (typeof liff !== 'undefined' && liff.isInClient()) liff.openWindow({ url: targetUrl, external: true });
-        else window.open(targetUrl, '_blank');
-    }
     function proceedToArtistSongs() {
         if (!currentArtistDetailData) return;
         const { artistId, artistName } = currentArtistDetailData;
@@ -3950,12 +4022,6 @@
         }, () => {
             customShare(albumName, text, liffDeepUrl);
         });
-    }
-    function searchDAMFromAlbumDetail() {
-        if (!currentAlbumDetailData) return;
-        const targetUrl = `https://www.clubdam.com/karaokesearch/?keyword=${encodeURIComponent(currentAlbumDetailData.collectionName + ' ' + currentAlbumDetailData.artistName)}&type=keyword`;
-        if (typeof liff !== 'undefined' && liff.isInClient()) liff.openWindow({ url: targetUrl, external: true });
-        else window.open(targetUrl, '_blank');
     }
     function proceedToAlbumTracks() {
         if (!currentAlbumDetailData) return;
