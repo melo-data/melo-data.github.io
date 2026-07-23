@@ -173,7 +173,7 @@
             <span class="material-icons text-3xl mr-2">mic</span> メロ出〜た
         </h1>
         <div class="text-[11px] text-indigo-100 text-right opacity-80 mb-1 pr-1 tracking-wider">produced by M.Tsuda</div>
-        <!-- 年間ランキング（カラオケ／売上 × ジャンル別が3秒ごとに横スライド） -->
+        <!-- 年間ランキング（総合／演歌・歌謡曲の売上ランキングが5秒ごとに横スライド） -->
         <div id="ranking-widget" class="mt-1">
             <div class="overflow-hidden rounded-xl" id="ranking-swipe-area" style="touch-action: pan-y;">
                 <div id="ranking-slide-track" class="flex" style="transition: transform 0.35s ease;"></div>
@@ -1219,7 +1219,7 @@
         // トップページ：テレビ・ラジオ番組放送通知の開始
         startBroadcastNoticeQueue();
 
-        // トップページ：年間ランキングの表示開始
+        // トップページ：年間ランキングの表示開始（総合／演歌・歌謡曲の売上ランキングのみ）
         startRankingWidget();
         fetchLiveSalesRanking();
 
@@ -1532,13 +1532,14 @@
     let rankingSlideCount = 0;
 
     function buildRankingSlideList() {
-        const slides = [];
-        ['karaoke', 'sales'].forEach((type) => {
-            RANKING_GENRES.forEach((g) => {
-                slides.push({ type, genreKey: g.key, genreLabel: g.label, title: `${g.label}年間ランキング（${RANKING_TYPE_LABEL[type]}）` });
-            });
-        });
-        return slides;
+        // 現状、実データ（Apple公式のiTunes Top Songsフィード）が入っているのは
+        // 「総合」と「演歌・歌謡曲」の売上ランキングのみのため、トップページの表示もこの2つに限定する。
+        // 他のジャンル・カラオケ側は確実に動作するデータ源が無いため非表示にしている
+        // （データが用意でき次第、buildRankingSlideListの対象を増やせば表示できる）。
+        return [
+            { type: 'sales', genreKey: 'all',  genreLabel: '総合',      title: '総合年間ランキング（売上）' },
+            { type: 'sales', genreKey: 'enka', genreLabel: '演歌・歌謡曲', title: '演歌・歌謡曲年間ランキング（売上）' },
+        ];
     }
 
     function startRankingWidget() {
@@ -1593,7 +1594,7 @@
         rankingAutoTimer = setInterval(() => {
             rankingSlideIndex = (rankingSlideIndex + 1) % rankingSlideCount;
             applyRankingSlidePosition(true);
-        }, 3000);
+        }, 5000);
     }
 
     function setupRankingSwipeHandlers() {
@@ -2427,14 +2428,14 @@
         // 属性指定を外し、他の語（新曲／年号）と同じ無制限テキスト検索に変更して修正。
         const runGenreSupplementSearch = (rssSongs) => {
             const searchQueries = [
-                { term: '演歌',     attribute: null, limit: 100 },
-                { term: '歌謡曲',   attribute: null, limit: 100 },
-                { term: '民謡',     attribute: null, limit: 60 },
-                { term: 'フォーク', attribute: null, limit: 60 },
-                { term: 'アニソン', attribute: null, limit: 60 },
-                { term: 'ジャズ',   attribute: null, limit: 60 },
-                { term: '新曲',     attribute: null, limit: 100 },
-                { term: String(new Date().getFullYear()), attribute: null, limit: 60 }
+                { term: '演歌',     attribute: null, limit: 100, isGenreQuery: true },
+                { term: '歌謡曲',   attribute: null, limit: 100, isGenreQuery: true },
+                { term: '民謡',     attribute: null, limit: 60,  isGenreQuery: true },
+                { term: 'フォーク', attribute: null, limit: 60,  isGenreQuery: true },
+                { term: 'アニソン', attribute: null, limit: 60,  isGenreQuery: true },
+                { term: 'ジャズ',   attribute: null, limit: 60,  isGenreQuery: true },
+                { term: '新曲',     attribute: null, limit: 100, isGenreQuery: false },
+                { term: String(new Date().getFullYear()), attribute: null, limit: 60, isGenreQuery: false }
             ];
             let searchCompleted = 0;
             let searchResults = [];
@@ -2452,7 +2453,11 @@
                 if (q.attribute) url += `&attribute=${q.attribute}`;
                 fetchJSONPSilent(url, (data) => {
                     if (data && data.results) {
-                        searchResults = searchResults.concat(data.results);
+                        // 演歌・民謡・歌謡曲・フォーク・アニソン・ジャズの補完検索結果だけに、
+                        // 「1年以内の新曲」フィルターの対象外にするための目印を付ける
+                        // （「新曲」「年号」の一般検索は引き続き新しさを厳密にチェックする）
+                        const tagged = q.isGenreQuery ? data.results.map(item => ({ ...item, _genreSupplement: true })) : data.results;
+                        searchResults = searchResults.concat(tagged);
                     }
                     searchCompleted++;
                     if (searchCompleted === searchQueries.length) finalize();
@@ -2646,11 +2651,13 @@
             });
             
             const finalDisplayYear = minYear === 9999 ? '不明' : minYear.toString();
+            const anySupplementTagged = group.versions.some(v => v._genreSupplement); // どのバージョンか1つでも補完検索由来なら引き継ぐ
             
             map[key] = { 
                 ...bestVersion, 
                 displayYear: finalDisplayYear,
-                versions: group.versions 
+                versions: group.versions,
+                _genreSupplement: bestVersion._genreSupplement || anySupplementTagged
             };
         });
 
@@ -2735,7 +2742,7 @@
                 }
 
                 const cutoffYear = new Date().getFullYear() - 1;
-                if (!isNaN(songYear) && songYear < cutoffYear) {
+                if (!item._genreSupplement && !isNaN(songYear) && songYear < cutoffYear) {
                     return false;
                 }
                 
@@ -2951,6 +2958,7 @@
         currentMode = 'artist-songs';
         document.getElementById('search-title').textContent = artistName;
         clearResults();
+        allFetchedResults = [];
         setMemoFabButtons(false);
         
         document.getElementById('simple-options-container').style.display = 'none';
@@ -2958,6 +2966,11 @@
         openSearchOptions();
         loadSearchHistory();
         document.getElementById('sort-select-accordion').value = 'aiueo'; // ご要望により五十音順をデフォルトに
+
+        // 前のモード（新曲等）で選んだジャンル・年代の絞り込みが残ったままだと、この歌手の曲の
+        // ほとんどが該当しなくなり「少ししか表示されない」不具合になるため、ここで必ず「すべて」に戻す
+        document.getElementById('decade-select').value = 'all';
+        selectGenre('all', document.querySelector('.genre-tab'));
 
         document.getElementById('loading-indicator').style.display = 'block';
 
@@ -3009,11 +3022,15 @@
         currentMode = 'album-tracks';
         document.getElementById('search-title').textContent = collectionName;
         clearResults();
+        allFetchedResults = [];
         
         document.getElementById('simple-options-container').style.display = 'none';
         document.getElementById('accordion-options-container').style.display = 'block';
         openSearchOptions();
         loadSearchHistory();
+        document.getElementById('sort-select-accordion').value = 'default';
+        document.getElementById('decade-select').value = 'all';
+        selectGenre('all', document.querySelector('.genre-tab'));
         
         document.getElementById('loading-indicator').style.display = 'block';
         fetchJSONP(`https://itunes.apple.com/lookup?id=${collectionId}&entity=song&country=jp&lang=ja_jp`, (data) => {
