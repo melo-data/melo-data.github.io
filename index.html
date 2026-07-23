@@ -173,12 +173,18 @@
             <span class="material-icons text-3xl mr-2">mic</span> メロ出〜た
         </h1>
         <div class="text-[11px] text-indigo-100 text-right opacity-80 mb-1 pr-1 tracking-wider">produced by M.Tsuda</div>
-        <!-- 年間ランキング（総合／演歌・歌謡曲の売上ランキングが5秒ごとに横スライド） -->
+        <!-- 年間ランキング（総合／演歌・歌謡曲の売上ランキングが5秒ごとに横スライド）：開閉式アコーディオン -->
         <div id="ranking-widget" class="mt-1">
-            <div class="overflow-hidden rounded-xl" id="ranking-swipe-area" style="touch-action: pan-y;">
-                <div id="ranking-slide-track" class="flex" style="transition: transform 0.35s ease;"></div>
+            <button onclick="toggleRankingWidget()" class="w-full flex items-center justify-between px-1 py-1.5 text-white/90 active:opacity-70 transition">
+                <span class="text-[12px] font-bold flex items-center tracking-wide"><span class="material-icons text-sm mr-1">leaderboard</span>年間ランキング</span>
+                <span id="ranking-widget-chevron" class="material-icons text-lg transition-transform duration-300">expand_less</span>
+            </button>
+            <div id="ranking-widget-collapsible" class="overflow-hidden transition-all duration-300">
+                <div class="overflow-hidden rounded-xl" id="ranking-swipe-area" style="touch-action: pan-y;">
+                    <div id="ranking-slide-track" class="flex" style="transition: transform 0.35s ease;"></div>
+                </div>
+                <div id="ranking-dots" class="flex items-center justify-center gap-1 mt-2"></div>
             </div>
-            <div id="ranking-dots" class="flex items-center justify-center gap-1 mt-2"></div>
         </div>
     </div>
     
@@ -557,6 +563,7 @@
             <div class="flex flex-col items-center text-center">
                 <img id="artist-detail-img" src="" alt="アーティスト画像" class="w-48 h-48 object-cover rounded-full shadow-lg mb-4 bg-gray-200">
                 <h2 id="artist-detail-name" class="text-2xl font-bold text-gray-900 leading-tight"></h2>
+                <div id="artist-detail-life-info" class="mt-1 space-y-0.5"></div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -1538,6 +1545,35 @@
         ];
     }
 
+    // ランキングウィジェットの開閉状態：初回表示はデフォルトで開いた状態、
+    // 一度どこかへ遷移してトップページに戻ってきた時は閉じた状態にする
+    let rankingWidgetExpanded = true;
+
+    function toggleRankingWidget() {
+        rankingWidgetExpanded = !rankingWidgetExpanded;
+        applyRankingWidgetState();
+    }
+
+    function applyRankingWidgetState() {
+        const box = document.getElementById('ranking-widget-collapsible');
+        const chevron = document.getElementById('ranking-widget-chevron');
+        if (!box) return;
+        if (rankingWidgetExpanded) {
+            box.style.maxHeight = '500px';
+            box.style.opacity = '1';
+        } else {
+            box.style.maxHeight = '0px';
+            box.style.opacity = '0';
+        }
+        if (chevron) chevron.style.transform = rankingWidgetExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
+    }
+
+    // トップページへの「戻る」操作からのみ呼び出す（初回表示では呼ばないため開いたまま維持される）
+    function collapseRankingWidgetOnReturn() {
+        rankingWidgetExpanded = false;
+        applyRankingWidgetState();
+    }
+
     function startRankingWidget() {
         const track = document.getElementById('ranking-slide-track');
         const dotsWrap = document.getElementById('ranking-dots');
@@ -1575,6 +1611,7 @@
         applyRankingSlidePosition(false);
         setupRankingSwipeHandlers();
         if (isFirstBuild) startRankingAutoTimer();
+        applyRankingWidgetState();
     }
 
     function applyRankingSlidePosition(animate) {
@@ -1660,6 +1697,7 @@
     function goBackFromRankingList() {
         document.getElementById('page-ranking-list').style.display = 'none';
         document.getElementById('page-top').style.display = 'flex';
+        collapseRankingWidgetOnReturn();
     }
 
     function switchRankingListGenre(genreKey, btnEl) {
@@ -2127,6 +2165,7 @@
         setMemoFabButtons(false);
         document.getElementById('page-search').style.display = 'none';
         document.getElementById('page-top').style.display = 'flex';
+        collapseRankingWidgetOnReturn();
     }
 
     // -------------------------------------------------------------
@@ -2232,6 +2271,7 @@
     function goBackFromSubPage(page) {
         document.getElementById('page-' + page).style.display = 'none';
         document.getElementById('page-top').style.display = 'flex';
+        collapseRankingWidgetOnReturn();
     }
 
     // -------------------------------------------------------------
@@ -3830,6 +3870,73 @@
         });
     }
 
+    // -------------------------------------------------------------
+    // アーティストの生年月日／没年月日／デビュー年（Wikipedia記事のプレーンテキストから抽出）
+    // -------------------------------------------------------------
+    // 日本語Wikipediaの人物記事は、存命なら冒頭が
+    //   「○○（○○、1956年〈昭和31年〉2月26日 - ）は、...」
+    // 故人なら
+    //   「○○（○○、1956年2月26日 - 2020年3月1日）は、...」
+    // という定型文で始まる強い慣習があるため、これを正規表現で抽出する。
+    // グループ名や、この定型文に一致しない記事の場合は何も取得できない（＝安全側に倒し、
+    // 生年月日等は表示しない）。
+    // デビュー年については構造化されたデータが無いため、本文中の「YYYY年◯◯デビュー」に
+    // 近いパターンをベストエフォートで拾う（見つからない場合や表記揺れがある場合は非表示）。
+    function fetchArtistLifeInfo(artistName, callback) {
+        fetch(`https://ja.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&explaintext&redirects=1&titles=${encodeURIComponent(artistName)}&origin=*&exchars=1500`)
+            .then(res => res.json())
+            .then(data => {
+                const pages = data.query.pages;
+                const pageId = Object.keys(pages)[0];
+                const extract = (pageId !== "-1" && pages[pageId].extract) ? pages[pageId].extract : '';
+                callback(parseArtistLifeInfo(extract));
+            }).catch(() => callback(null));
+    }
+
+    function parseArtistLifeInfo(text) {
+        if (!text) return null;
+        const dateRe = /(\d{4})年(?:[〈（(][^〉）)]*[〉）)])?(\d{1,2})月(\d{1,2})日\s*[-–—−ー]\s*(?:(\d{4})年(?:[〈（(][^〉）)]*[〉）)])?(\d{1,2})月(\d{1,2})日)?/;
+        const m = text.match(dateRe);
+        if (!m) return null; // パターン不一致＝グループ名等とみなす
+
+        const info = {
+            birthYear: parseInt(m[1]), birthMonth: parseInt(m[2]), birthDay: parseInt(m[3]),
+            deathYear: m[4] ? parseInt(m[4]) : null,
+            deathMonth: m[5] ? parseInt(m[5]) : null,
+            deathDay: m[6] ? parseInt(m[6]) : null,
+            debutYear: null
+        };
+
+        const debutMatches = [...text.matchAll(/(\d{4})年[^。、]{0,12}デビュー/g)];
+        if (debutMatches.length > 0) info.debutYear = parseInt(debutMatches[0][1]);
+
+        return info;
+    }
+
+    function formatLifeInfoHtml(info) {
+        if (!info) return '';
+        const today = new Date();
+        const rows = [];
+
+        if (info.deathYear) {
+            let ageAtDeath = info.deathYear - info.birthYear;
+            if (info.deathMonth < info.birthMonth || (info.deathMonth === info.birthMonth && info.deathDay < info.birthDay)) ageAtDeath--;
+            rows.push(`生年月日　${info.birthYear}年${info.birthMonth}月${info.birthDay}日`);
+            rows.push(`没年月日　${info.deathYear}年${info.deathMonth}月${info.deathDay}日（${ageAtDeath}歳没）`);
+        } else {
+            let age = today.getFullYear() - info.birthYear;
+            if ((today.getMonth() + 1) < info.birthMonth || ((today.getMonth() + 1) === info.birthMonth && today.getDate() < info.birthDay)) age--;
+            rows.push(`生年月日　${info.birthYear}年${info.birthMonth}月${info.birthDay}日（${age}歳）`);
+        }
+
+        if (info.debutYear) {
+            const yearsSinceDebut = today.getFullYear() - info.debutYear + 1;
+            rows.push(`デビュー　${info.debutYear}年（${yearsSinceDebut}年目）`);
+        }
+
+        return rows.map(r => `<div class="text-[13px] text-gray-500">${r}</div>`).join('');
+    }
+
     function fetchWikipediaForArtist(artistName) {
         fetchWikipediaGeneric(artistName, 'wiki-artist-area', 'wiki-text', 'wiki-more-btn', 'wiki-link');
     }
@@ -3871,6 +3978,17 @@
         document.getElementById('artist-detail-img').src = initialImg;
         document.getElementById('artist-detail-name').textContent = item.artistName || '';
         updateArtistDetailFanIcon();
+
+        // 生年月日・デビュー年（Wikipediaの記事冒頭の定型文から抽出。グループ名などパターンに
+        // 一致しない場合は何も表示しない＝安全側に倒す）
+        document.getElementById('artist-detail-life-info').innerHTML = '';
+        if (item.artistName) {
+            const myArtistNameForLifeInfo = item.artistName;
+            fetchArtistLifeInfo(item.artistName, (info) => {
+                if (!currentArtistDetailData || currentArtistDetailData.artistName !== myArtistNameForLifeInfo) return;
+                document.getElementById('artist-detail-life-info').innerHTML = formatLifeInfoHtml(info);
+            });
+        }
 
         document.getElementById('artist-detail-wiki-container').style.display = 'none';
         document.getElementById('artist-detail-wiki-area').classList.add('hidden');
