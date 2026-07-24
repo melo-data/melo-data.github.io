@@ -680,6 +680,11 @@
             <button onclick="closeHamburgerMenu()" class="p-1 text-white/80 active:text-white"><span class="material-icons">close</span></button>
         </div>
         <div class="flex-1 overflow-y-auto py-2">
+            <button onclick="closeHamburgerMenu(); openOfficialLineFriend();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-green-600 mr-3">chat</span>
+                <span class="flex-1 font-bold text-gray-800">メロ出～たとお友達</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
             <button onclick="closeHamburgerMenu(); openSettingsModal();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
                 <span class="material-icons text-gray-600 mr-3">settings</span>
                 <span class="flex-1 font-bold text-gray-800">設定</span>
@@ -2253,6 +2258,16 @@
     }
     function closeHamburgerMenu() {
         document.getElementById('hamburger-overlay').classList.remove('active');
+    }
+
+    // LINE公式アカウント「メロ出〜た」の友だち追加ページを開く
+    function openOfficialLineFriend() {
+        const targetUrl = 'https://lin.ee/ZzsmZxk';
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
+            liff.openWindow({ url: targetUrl, external: true });
+        } else {
+            window.open(targetUrl, '_blank');
+        }
     }
 
     // -------------------------------------------------------------
