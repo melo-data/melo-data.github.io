@@ -328,7 +328,7 @@
         </div>
         
         <div id="search-input-container" class="flex items-center bg-white rounded-lg p-1 shadow-inner border border-gray-200 relative z-20">
-            <input type="text" id="search-input" placeholder="ここに入力..." class="flex-1 p-2 text-black text-lg outline-none rounded-l-lg bg-transparent w-full" onkeypress="if(event.key === 'Enter') executeSearch(true)" onfocus="openSearchOptions(); scrollSearchInputIntoView();">
+            <input type="text" id="search-input" name="melodata-search-query" placeholder="ここに入力..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" inputmode="search" class="flex-1 p-2 text-black text-lg outline-none rounded-l-lg bg-transparent w-full" onkeypress="if(event.key === 'Enter') executeSearch(true)" onfocus="openSearchOptions(); scrollSearchInputIntoView();">
             
             <div class="flex space-x-1 pl-1">
                 <button id="btn-voice-input" onclick="startVoiceInput()" class="flex items-center justify-center bg-pink-50 text-pink-600 px-3 py-2 rounded-md font-bold text-sm active:bg-pink-100 transition-colors border border-pink-200 whitespace-nowrap">
@@ -1164,26 +1164,14 @@
         
         document.getElementById('audio-player').addEventListener('ended', handleAudioEnded);
 
-        // スマホの仮想キーボード表示時、予測変換バーがテキスト欄に重ならないよう、
-        // ビューポートが縮んだタイミングでフォーカス中のテキスト欄を画面内に収め直す
+        // スマホの仮想キーボード表示時、フォーカス中のテキスト欄を画面内に収め直す（保険的な処理）
         if (window.visualViewport) {
-            const correctViewportForKeyboard = () => {
-                // 【重要・PWA/ホーム画面起動時の追加対策】
-                // 通常のブラウザタブでは interactive-widget=resizes-content によりキーボード表示時に
-                // レイアウトビューポート自体が縮んでくれるが、PWA/ホーム画面から起動した場合
-                // （standaloneモード）は、Android端末の一部でこのヒントが効かず、見た目の
-                // ビューポート(visualViewport)だけが縮んで、documentのレイアウト自体は縮まない
-                // ことがある。これが、position:fixedの修正だけではPWA起動時にIME予測変換バーの
-                // 重なりが再現していた原因と考えられる。ここでvisualViewportの実際の高さを
-                // documentのルート要素に明示的に反映し、強制的に正しいサイズへ合わせる。
-                document.documentElement.style.height = window.visualViewport.height + 'px';
+            window.visualViewport.addEventListener('resize', () => {
                 const active = document.activeElement;
                 if (active && active.tagName === 'INPUT') {
                     active.scrollIntoView({ block: 'center', behavior: 'smooth' });
                 }
-            };
-            window.visualViewport.addEventListener('resize', correctViewportForKeyboard);
-            window.visualViewport.addEventListener('scroll', correctViewportForKeyboard);
+            });
         }
         
         // LIFFの初期化
