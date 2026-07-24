@@ -52,6 +52,12 @@
 
     <!-- YouTube IFrame Player API（動画埋め込み検索用） -->
     <script src="https://www.youtube.com/iframe_api"></script>
+
+    <!-- QRコード生成ライブラリ（曲・アーティスト・アルバムの共有QR、機種変バックアップとは無関係） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Google Identity Services（機種変バックアップ：Googleドライブ連携用） -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <style>
         html { font-size: 16px !important; -webkit-text-size-adjust: 100%; height: 100%; }
@@ -437,6 +443,10 @@
                     <span class="material-icons text-2xl">share</span>
                     <span class="text-[10px] mt-1">共有</span>
                 </button>
+                <button onclick="openQRShareForSong()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
+                    <span class="material-icons text-2xl">qr_code_2</span>
+                    <span class="text-[10px] mt-1">QR</span>
+                </button>
                 <button onclick="searchDAMDirect()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
                     <span class="material-icons text-2xl">mic</span>
                     <span class="text-[10px] mt-1">DAM</span>
@@ -559,6 +569,10 @@
                     <span class="material-icons text-2xl">share</span>
                     <span class="text-[10px] mt-1">共有</span>
                 </button>
+                <button onclick="openQRShareForArtist()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
+                    <span class="material-icons text-2xl">qr_code_2</span>
+                    <span class="text-[10px] mt-1">QR</span>
+                </button>
             </div>
             <button onclick="closeArtistDetailModal()" class="p-2 bg-gray-200 rounded-full text-gray-600 active:bg-gray-300">
                 <span class="material-icons">close</span>
@@ -606,6 +620,10 @@
                 <button onclick="shareAlbumFromDetail()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
                     <span class="material-icons text-2xl">share</span>
                     <span class="text-[10px] mt-1">共有</span>
+                </button>
+                <button onclick="openQRShareForAlbum()" class="flex flex-col items-center justify-center p-2 text-gray-600 active:bg-gray-200 rounded">
+                    <span class="material-icons text-2xl">qr_code_2</span>
+                    <span class="text-[10px] mt-1">QR</span>
                 </button>
             </div>
             <button onclick="closeAlbumDetailModal()" class="p-2 bg-gray-200 rounded-full text-gray-600 active:bg-gray-300">
@@ -701,9 +719,19 @@
                 <span class="flex-1 font-bold text-gray-800">アプリインストール</span>
                 <span class="material-icons text-gray-300 text-lg">chevron_right</span>
             </button>
+            <button onclick="closeHamburgerMenu(); openBackupModal();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-teal-600 mr-3">cloud_sync</span>
+                <span class="flex-1 font-bold text-gray-800">機種変バックアップ</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
             <button onclick="closeHamburgerMenu(); shareAppOnly();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
                 <span class="material-icons text-pink-500 mr-3">share</span>
                 <span class="flex-1 font-bold text-gray-800">友達に共有</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
+            <button onclick="closeHamburgerMenu(); openLineQRModal();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-green-600 mr-3">qr_code_2</span>
+                <span class="flex-1 font-bold text-gray-800">QRコード</span>
                 <span class="material-icons text-gray-300 text-lg">chevron_right</span>
             </button>
             <button onclick="closeHamburgerMenu(); goToHowto();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
@@ -835,6 +863,55 @@
             <div class="flex justify-between"><span class="text-gray-400">バージョン</span><span class="font-bold">1.0.0</span></div>
         </div>
         <button onclick="closeAboutModal()" class="mt-5 w-full bg-gray-100 text-gray-700 font-bold py-2.5 rounded-lg active:bg-gray-200">閉じる</button>
+    </div>
+</div>
+
+<!-- QR共有モーダル（曲・アーティスト・アルバム共通） -->
+<div id="modal-qr-share" class="modal fixed inset-0 z-50 flex items-center justify-center px-6" onclick="if(event.target===this) closeQRShareModal()">
+    <div class="modal-content bg-white w-full max-w-[360px] rounded-2xl shadow-2xl p-6 text-center">
+        <div class="flex items-center justify-between mb-1">
+            <h2 class="text-lg font-bold text-gray-800 flex items-center"><span class="material-icons text-indigo-500 mr-1">qr_code_2</span>QRコードでシェア</h2>
+            <button onclick="closeQRShareModal()" class="p-1 text-gray-400 active:text-gray-700"><span class="material-icons">close</span></button>
+        </div>
+        <p id="qr-share-title" class="font-bold text-gray-800 my-3 leading-snug text-sm"></p>
+        <div id="qr-share-code-container" class="flex justify-center items-center bg-white p-3 rounded-lg border border-gray-200 mx-auto" style="width: 206px; height: 206px;"></div>
+        <p class="text-[11px] text-gray-400 mt-3 leading-relaxed">このQRコードを友達に読み取ってもらうと、このページがそのまま開きます</p>
+        <button onclick="scanQRCode()" class="mt-4 w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-2.5 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
+            <span class="material-icons mr-1 text-lg">qr_code_scanner</span>QRコードを撮影する
+        </button>
+    </div>
+</div>
+
+<!-- LINE公式アカウント友だち追加 QRモーダル -->
+<div id="modal-line-qr" class="modal fixed inset-0 z-50 flex items-center justify-center px-6" onclick="if(event.target===this) closeLineQRModal()">
+    <div class="modal-content bg-white w-full max-w-[360px] rounded-2xl shadow-2xl p-6 text-center">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-bold text-gray-800 flex items-center"><span class="material-icons text-green-600 mr-1">qr_code_2</span>友だち追加QRコード</h2>
+            <button onclick="closeLineQRModal()" class="p-1 text-gray-400 active:text-gray-700"><span class="material-icons">close</span></button>
+        </div>
+        <img src="https://qr-official.line.me/gs/M_521vnfrw_GW.png" alt="メロ出〜た 友だち追加QRコード" class="w-52 h-52 object-contain mx-auto rounded-lg border border-gray-200 p-2">
+        <p class="text-[11px] text-gray-400 mt-3 leading-relaxed">このQRコードをLINEのカメラで読み取ると、公式アカウント「メロ出〜た」を友だち追加できます</p>
+    </div>
+</div>
+
+<!-- 機種変バックアップモーダル -->
+<div id="modal-backup" class="modal fixed inset-0 z-50 flex items-end justify-center" onclick="if(event.target===this) closeBackupModal()">
+    <div class="modal-content bg-white w-full max-w-[600px] rounded-t-2xl shadow-2xl p-5">
+        <div class="flex items-center justify-between mb-1">
+            <h2 class="text-lg font-bold text-gray-800 flex items-center"><span class="material-icons text-teal-600 mr-1">cloud_sync</span>機種変バックアップ</h2>
+            <button onclick="closeBackupModal()" class="p-1 text-gray-400 active:text-gray-700"><span class="material-icons">close</span></button>
+        </div>
+        <p class="text-[12px] text-gray-500 mb-4 leading-relaxed">保存した曲・ファン・履歴・達成バッジ・設定などを、Googleドライブ（あなた専用の非公開領域）に保存／復元できます。機種変更の際にご利用ください。</p>
+
+        <button onclick="backupToGoogleDrive()" id="btn-backup-save" class="w-full bg-teal-50 text-teal-700 border border-teal-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-teal-100 transition-colors mb-3">
+            <span class="material-icons mr-2">backup</span>Googleドライブにバックアップ
+        </button>
+        <button onclick="restoreFromGoogleDrive()" id="btn-backup-restore" class="w-full bg-gray-50 text-gray-700 border border-gray-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-gray-100 transition-colors">
+            <span class="material-icons mr-2">cloud_download</span>Googleドライブから復元する
+        </button>
+
+        <p id="backup-status-text" class="text-[12px] text-center text-gray-500 mt-3 min-h-[1.2em]"></p>
+        <p class="text-[10px] text-gray-400 mt-3 leading-relaxed">※Googleアカウントへのログインが必要です。データはお使いのGoogleドライブ内の、このアプリ専用の非公開領域に保存され、他のファイルと混ざったり公開されたりすることはありません。</p>
     </div>
 </div>
 
@@ -2305,6 +2382,256 @@
     // -------------------------------------------------------------
     function openAboutModal() { document.getElementById('modal-about').classList.add('active'); }
     function closeAboutModal() { document.getElementById('modal-about').classList.remove('active'); }
+
+    // -------------------------------------------------------------
+    // QRコードでシェア（曲・アーティスト・アルバム共通）
+    // 通常ブラウザは https://melo-data.github.io/ 、LINE起動時は https://liff.line.me/2010749970-n0PwMioA を
+    // ベースURLとし、trackId/artistId/albumId パラメーターを付与する（checkDeepLink()が対応済みの
+    // パラメーター名と揃えることで、QRコードを読み取るとそのままその曲/アーティスト/アルバムの
+    // 詳細ウィンドウが自動で開く）
+    // -------------------------------------------------------------
+    function openQRShareModal(title, paramName, paramValue) {
+        if (!paramValue) return;
+        document.getElementById('qr-share-title').textContent = title || '';
+
+        const baseUrl = (typeof liff !== 'undefined' && liff.isInClient())
+            ? 'https://liff.line.me/2010749970-n0PwMioA'
+            : 'https://melo-data.github.io/';
+        const url = baseUrl + '?' + paramName + '=' + encodeURIComponent(paramValue);
+
+        const container = document.getElementById('qr-share-code-container');
+        container.innerHTML = '';
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(container, {
+                text: url,
+                width: 190,
+                height: 190,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } else {
+            container.innerHTML = '<span class="text-xs text-gray-400 p-4">QRコードを生成できませんでした</span>';
+        }
+
+        document.getElementById('modal-qr-share').classList.add('active');
+    }
+    function closeQRShareModal() {
+        document.getElementById('modal-qr-share').classList.remove('active');
+    }
+    function openQRShareForSong() {
+        if (!currentTrackData) return;
+        openQRShareModal(currentTrackData.trackName + ' / ' + currentTrackData.artistName, 'trackId', currentTrackData.trackId);
+    }
+    function openQRShareForArtist() {
+        if (!currentArtistDetailData) return;
+        openQRShareModal(currentArtistDetailData.artistName, 'artistId', currentArtistDetailData.artistId);
+    }
+    function openQRShareForAlbum() {
+        if (!currentAlbumDetailData) return;
+        openQRShareModal(currentAlbumDetailData.collectionName + ' / ' + currentAlbumDetailData.artistName, 'albumId', currentAlbumDetailData.collectionId);
+    }
+
+    // QRコードを撮影する：LIFFの2次元コードリーダー（内部でjsQRを使用）を起動する。
+    // 事前にLINE Developers ConsoleのLIFFタブで「Scan QR」をONにし、Sizeを「Full」にしておく必要がある。
+    // liff.scanCodeV2()はLINEアプリ内だけでなく、WebRTC対応の外部ブラウザでも動作する。
+    function scanQRCode() {
+        if (typeof liff === 'undefined' || !isLiffInit) {
+            showToast('QRコード撮影機能を準備中です。少し待ってから再度お試しください。');
+            return;
+        }
+        if (typeof liff.scanCodeV2 !== 'function') {
+            showToast('この環境ではQRコード撮影に対応していません。');
+            return;
+        }
+        liff.scanCodeV2().then((result) => {
+            const value = result && result.value;
+            if (!value) return;
+            closeQRShareModal();
+            try {
+                const scannedUrl = new URL(value);
+                // 自サイト・LIFF URLのQRコードならアプリ内でそのまま該当ウィンドウを開く
+                if (/melo-data\.github\.io$/.test(scannedUrl.hostname) || /liff\.line\.me$/.test(scannedUrl.hostname)) {
+                    const p = new URLSearchParams(scannedUrl.search);
+                    if (p.get('trackId')) {
+                        fetchJSONP(`https://itunes.apple.com/lookup?id=${p.get('trackId')}&country=jp&lang=ja_jp`, (data) => {
+                            if (data && data.results && data.results.length > 0) openDetailModal(data.results[0]);
+                        });
+                        return;
+                    } else if (p.get('artistId')) {
+                        fetchJSONP(`https://itunes.apple.com/lookup?id=${p.get('artistId')}&entity=song&limit=5&country=jp&lang=ja_jp`, (data) => {
+                            if (data && data.results && data.results.length > 0) {
+                                const artistInfo = data.results.find(r => r.wrapperType === 'artist') || {};
+                                const trackInfo = data.results.find(r => r.wrapperType === 'track') || {};
+                                openArtistDetailModal({ artistId: p.get('artistId'), artistName: trackInfo.artistName || artistInfo.artistName || '', artworkUrl100: trackInfo.artworkUrl100 || '', primaryGenreName: artistInfo.primaryGenreName || trackInfo.primaryGenreName || '' });
+                            }
+                        });
+                        return;
+                    } else if (p.get('albumId')) {
+                        fetchJSONP(`https://itunes.apple.com/lookup?id=${p.get('albumId')}&country=jp&lang=ja_jp`, (data) => {
+                            if (data && data.results && data.results.length > 0) openAlbumDetailModal(data.results[0]);
+                        });
+                        return;
+                    }
+                }
+                // それ以外のURLは外部で開く
+                if (liff.isInClient()) liff.openWindow({ url: value, external: true });
+                else window.open(value, '_blank');
+            } catch (e) {
+                // URLでない文字列が読み取られた場合はそのままトースト表示
+                showToast('読み取り結果：' + value);
+            }
+        }).catch((err) => {
+            console.warn('[QRスキャン] エラー:', err);
+        });
+    }
+
+    // -------------------------------------------------------------
+    // LINE公式アカウント 友だち追加QRモーダル
+    // -------------------------------------------------------------
+    function openLineQRModal() { document.getElementById('modal-line-qr').classList.add('active'); }
+    function closeLineQRModal() { document.getElementById('modal-line-qr').classList.remove('active'); }
+
+    // -------------------------------------------------------------
+    // 機種変バックアップ（Googleドライブの「アプリ専用データフォルダ」に保存／復元）
+    // ⚠️ ご利用にはGoogle Cloud ConsoleでOAuthクライアントID（GOOGLE_CLIENT_ID）の発行と、
+    //    承認済みJavaScript生成元へのこのサイトのドメイン登録が必要です。詳細はチャット回答を参照。
+    // -------------------------------------------------------------
+    const GOOGLE_CLIENT_ID = 'AIzaSyBjkKWPsZURnPBbzb1RHHiao3mB0EzEYLk';
+    const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+    const BACKUP_FILE_NAME = 'melodata_backup.json';
+    let googleTokenClient = null;
+    let googleAccessToken = null;
+
+    function openBackupModal() {
+        document.getElementById('backup-status-text').textContent = '';
+        document.getElementById('modal-backup').classList.add('active');
+    }
+    function closeBackupModal() { document.getElementById('modal-backup').classList.remove('active'); }
+
+    function isGoogleBackupConfigured() {
+        return GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.indexOf('YOUR_') !== 0;
+    }
+
+    // Googleのアクセストークンを取得する（未取得・期限切れの場合はサインイン画面を表示）
+    function getGoogleAccessToken(callback) {
+        if (!isGoogleBackupConfigured()) {
+            document.getElementById('backup-status-text').textContent = '現在この機能は準備中です（管理者向け設定が未完了です）';
+            return;
+        }
+        if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+            document.getElementById('backup-status-text').textContent = 'Googleログイン機能の読み込みに失敗しました。通信環境をご確認のうえ再度お試しください。';
+            return;
+        }
+        if (googleAccessToken) { callback(googleAccessToken); return; }
+
+        if (!googleTokenClient) {
+            googleTokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: GOOGLE_DRIVE_SCOPE,
+                callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        googleAccessToken = tokenResponse.access_token;
+                        callback(googleAccessToken);
+                    } else {
+                        document.getElementById('backup-status-text').textContent = 'Googleログインに失敗しました。';
+                    }
+                }
+            });
+        }
+        googleTokenClient.requestAccessToken();
+    }
+
+    // バックアップ対象：merodata_ で始まる全localStorageキー（保存曲・ファン・履歴・検索履歴・
+    // 達成バッジ・利用統計・設定など）をまとめて1つのJSONにする
+    function collectBackupData() {
+        const data = {};
+        Object.keys(localStorage).forEach(key => {
+            if (key.indexOf('merodata_') === 0) data[key] = localStorage.getItem(key);
+        });
+        return data;
+    }
+
+    function findBackupFileId(accessToken, callback) {
+        fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%27${BACKUP_FILE_NAME}%27&fields=files(id,modifiedTime)`, {
+            headers: { 'Authorization': 'Bearer ' + accessToken }
+        }).then(res => res.json()).then(data => {
+            const file = data && data.files && data.files[0];
+            callback(file ? file.id : null);
+        }).catch(() => callback(null));
+    }
+
+    function backupToGoogleDrive() {
+        const statusEl = document.getElementById('backup-status-text');
+        statusEl.textContent = 'Googleにログイン中...';
+        getGoogleAccessToken((accessToken) => {
+            statusEl.textContent = 'バックアップ中...';
+            findBackupFileId(accessToken, (existingFileId) => {
+                const backupPayload = { savedAt: new Date().toISOString(), data: collectBackupData() };
+                const metadata = existingFileId
+                    ? { name: BACKUP_FILE_NAME, mimeType: 'application/json' }
+                    : { name: BACKUP_FILE_NAME, mimeType: 'application/json', parents: ['appDataFolder'] };
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', new Blob([JSON.stringify(backupPayload)], { type: 'application/json' }));
+
+                const uploadUrl = existingFileId
+                    ? `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart`
+                    : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+
+                fetch(uploadUrl, {
+                    method: existingFileId ? 'PATCH' : 'POST',
+                    headers: { 'Authorization': 'Bearer ' + accessToken },
+                    body: form
+                }).then(res => res.json()).then(res => {
+                    if (res && res.id) {
+                        statusEl.textContent = '✓ バックアップが完了しました';
+                        showToast('Googleドライブにバックアップしました');
+                    } else {
+                        console.warn('[機種変バックアップ] アップロード応答:', res);
+                        statusEl.textContent = 'バックアップに失敗しました。時間をおいて再度お試しください。';
+                    }
+                }).catch((err) => {
+                    console.warn('[機種変バックアップ] エラー:', err);
+                    statusEl.textContent = 'バックアップに失敗しました。通信環境をご確認ください。';
+                });
+            });
+        });
+    }
+
+    function restoreFromGoogleDrive() {
+        const statusEl = document.getElementById('backup-status-text');
+        statusEl.textContent = 'Googleにログイン中...';
+        getGoogleAccessToken((accessToken) => {
+            statusEl.textContent = 'バックアップを検索中...';
+            findBackupFileId(accessToken, (fileId) => {
+                if (!fileId) {
+                    statusEl.textContent = 'このGoogleアカウントにバックアップが見つかりませんでした。';
+                    return;
+                }
+                fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                }).then(res => res.json()).then(backupPayload => {
+                    const data = backupPayload && backupPayload.data;
+                    if (!data) { statusEl.textContent = 'バックアップデータの読み込みに失敗しました。'; return; }
+
+                    const savedAtText = backupPayload.savedAt ? new Date(backupPayload.savedAt).toLocaleString('ja-JP') : '不明';
+                    openConfirmModal('復元の確認', `${savedAtText} 時点のバックアップが見つかりました。\n復元すると、現在この端末に保存されている曲・ファン・履歴・設定などは上書きされます。よろしいですか？`, () => {
+                        Object.keys(localStorage).forEach(key => {
+                            if (key.indexOf('merodata_') === 0) localStorage.removeItem(key);
+                        });
+                        Object.keys(data).forEach(key => localStorage.setItem(key, data[key]));
+                        statusEl.textContent = '✓ 復元が完了しました';
+                        showToast('データを復元しました。アプリを再読み込みします');
+                        setTimeout(() => window.location.reload(), 1200);
+                    });
+                }).catch((err) => {
+                    console.warn('[機種変バックアップ] 復元エラー:', err);
+                    statusEl.textContent = '復元に失敗しました。通信環境をご確認ください。';
+                });
+            });
+        });
+    }
 
     // -------------------------------------------------------------
     // 使い方・利用規約（別ページ遷移。トップ／検索画面のどちらから開いても「戻る」でトップへ）
