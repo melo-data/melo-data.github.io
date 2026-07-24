@@ -1164,12 +1164,43 @@
         
         document.getElementById('audio-player').addEventListener('ended', handleAudioEnded);
 
-        // スマホの仮想キーボード表示時、フォーカス中のテキスト欄を画面内に収め直す（保険的な処理）
+        // 【最優先・スマホの仮想キーボード対策】
+        // CSSのposition:fixedは仕様上「レイアウトビューポート」を基準に固定されるが、キーボードが
+        // 開いた時に実際に見えている範囲は「ビジュアルビューポート」であり、この2つはPWA(ホーム画面
+        // から起動するstandaloneモード)のAndroid Chromeで一致しないことがある。
+        // interactive-widget=resizes-contentがこの環境で正しく効かない場合、レイアウトビューポート
+        // 側は縮まないままキーボードだけが出てくるため、固定表示の要素とキーボード付属バー
+        // （オートフィル候補など）の表示位置がズレて重なって見えてしまう。
+        // ここではCSSの自動追従を信用せず、JavaScriptでビジュアルビューポートの実寸・実位置を
+        // 監視し、画面を構成する要素（.screen-container・各モーダル）の高さと位置を都度、
+        // 強制的に正しい値へ同期させることで、ブラウザ側の挙動に依存せず確実に対処する。
+        function syncLayoutToVisualViewport() {
+            const vv = window.visualViewport;
+            if (!vv) return;
+            const adBarHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ad-bar-height')) || 0;
+            const height = Math.max(0, vv.height - adBarHeight) + 'px';
+            const top = vv.offsetTop + 'px';
+            document.querySelectorAll('.screen-container').forEach(el => {
+                el.style.height = height;
+                el.style.top = top;
+            });
+            document.querySelectorAll('.modal.fixed.inset-0').forEach(el => {
+                el.style.height = height;
+                el.style.top = top;
+            });
+        }
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', syncLayoutToVisualViewport);
+            window.visualViewport.addEventListener('scroll', syncLayoutToVisualViewport);
+            syncLayoutToVisualViewport();
+        }
+
+        // キーボード表示時、フォーカス中のテキスト欄を画面内に収め直す（保険的な処理）
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
                 const active = document.activeElement;
                 if (active && active.tagName === 'INPUT') {
-                    active.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    setTimeout(() => active.scrollIntoView({ block: 'center', behavior: 'smooth' }), 50);
                 }
             });
         }
