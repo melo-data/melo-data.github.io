@@ -54,8 +54,8 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     
     <style>
-        html { font-size: 16px !important; -webkit-text-size-adjust: 100%; height: 100%; }
-        body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif; background-color: #f3f4f6; color: #333; overflow: hidden; height: 100%; margin: 0; }
+        html { font-size: 16px !important; -webkit-text-size-adjust: 100%; }
+        body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif; background-color: #f3f4f6; color: #333; overflow: hidden; }
         :root { --ad-bar-height: 0px; }
         /* AdMax(忍者AdMax)はモバイル幅のみに固定表示される設定のため、モバイル幅の時だけ
            画面下部にその高さぶんの余白を確保する。これにより、画面全体に固定表示される広告バーが
@@ -66,13 +66,7 @@
         }
         .screen-container, .modal.fixed.inset-0 { bottom: var(--ad-bar-height) !important; }
 
-        /* 【重要】以前はposition: absoluteだったため、広告スクリプトが<body>直下に通常フロー
-           の要素を挿入して文書全体の高さがビューポートより大きくなると、その分だけこのコンテナ
-           も一緒にズレて表示される不具合があった（スマホでキーボードを開いた際、IMEの予測変換
-           バーが入力欄に重なって文字が見えなくなる致命的な不具合、および広告が上部に移動して
-           見える不具合の主因）。position: fixed に変更し、文書の高さや広告の挿入位置に関係なく、
-           常に画面（ビューポート）そのものに対して固定されるようにした。 */
-        .screen-container { position: fixed; top: 0; left: 0; right: 0; display: flex; flex-direction: column; background-color: #f3f4f6; max-width: 600px; margin: 0 auto; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+        .screen-container { position: absolute; top: 0; left: 0; right: 0; display: flex; flex-direction: column; background-color: #f3f4f6; max-width: 600px; margin: 0 auto; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
         .screen-container-white { background-color: #ffffff; }
         .scrollable-content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
 
@@ -2471,23 +2465,6 @@
         // なくApple側が管理する"数値のジャンルID"を渡すための属性だったため、"演歌"等の日本語
         // 文字列を渡しても常に0件になっていた（表示されなかった直接の原因）。
         // 属性指定を外し、他の語（新曲／年号）と同じ無制限テキスト検索に変更して修正。
-        //
-        // 【追加調査】それでも伍代夏子さんのような個々の演歌歌手の新曲シングルが出てこない
-        // 問題が残っていました。原因は、"演歌"という一般語での検索は関連度の高い順に並ぶため、
-        // 何十年分もの往年の名曲・編集盤に埋もれてしまい、個々の新曲まで到達できないことでした。
-        // Apple公式の「新着リリース」フィードにはジャンル絞り込みパラメータが存在する一方、
-        // 開発者コミュニティでの報告によると新着リリース側のジャンル絞り込みは正しく機能しない
-        // （常に絞り込まれずに返ってくる）ことが分かっているため、ここでは使用していません。
-        // 代わりに、①ランキング機能で実績のある「ジャンル別 人気チャート」フィード(genre=30)と、
-        // ②主要な演歌・歌謡曲アーティストを名前で直接検索する方式を追加し、個々の新曲を確実に
-        // 拾えるようにしました。②のアーティスト一覧は手動管理のため、表示されてほしい演歌歌手が
-        // いれば ENKA_KAYO_ARTISTS 配列に追加してください。
-        const ENKA_KAYO_ARTISTS = [
-            '伍代夏子', '石川さゆり', '北島三郎', '五木ひろし', '氷川きよし',
-            '天童よしみ', '坂本冬美', '細川たかし', '八代亜紀', '山内惠介',
-            '福田こうへい', '香西かおり', '大月みやこ', '水森かおり', '長山洋子'
-        ];
-
         const runGenreSupplementSearch = (rssSongs) => {
             const searchQueries = [
                 { term: '演歌',     attribute: null, limit: 100, isGenreQuery: true },
@@ -2501,48 +2478,14 @@
             ];
             let searchCompleted = 0;
             let searchResults = [];
-            let extraSourcesDone = 0;
-            const totalExtraSources = 1 + ENKA_KAYO_ARTISTS.length; // genre=30チャート + 主要アーティスト個別検索
 
             const finalize = () => {
                 if (searchToken !== newSongSearchToken) return; // 別の新曲検索に切り替え済みなら破棄
-                if (searchCompleted !== searchQueries.length || extraSourcesDone !== totalExtraSources) return;
                 const combined = rssSongs.concat(searchResults);
                 allFetchedResults = groupConsolidatedSongs(combined);
                 finishLoading();
                 if (currentMode === 'new-song') applyFiltersAndRender();
             };
-
-            // ① 演歌・歌謡曲ジャンルの人気チャート（ランキング機能で実績のあるgenre=30を流用）
-            fetch('https://itunes.apple.com/jp/rss/topsongs/limit=30/genre=30/json')
-                .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-                .then(data => {
-                    const entries = (data && data.feed && data.feed.entry) || [];
-                    const ids = entries.map(e => e.id && e.id.attributes && e.id.attributes['im:id']).filter(Boolean);
-                    if (ids.length === 0) { extraSourcesDone++; finalize(); return; }
-                    fetchJSONPSilent(`https://itunes.apple.com/lookup?id=${ids.join(',')}&country=jp&lang=ja_jp`, (lookupData) => {
-                        if (lookupData && lookupData.results) {
-                            const tagged = lookupData.results.filter(item => item.wrapperType === 'track').map(item => ({ ...item, _genreSupplement: true }));
-                            searchResults = searchResults.concat(tagged);
-                        }
-                        extraSourcesDone++;
-                        finalize();
-                    }, () => { extraSourcesDone++; finalize(); });
-                })
-                .catch(() => { extraSourcesDone++; finalize(); });
-
-            // ② 主要な演歌・歌謡曲アーティストを名前で直接検索し、個々の新曲を確実に拾う
-            ENKA_KAYO_ARTISTS.forEach(artistName => {
-                const url = `https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&attribute=artistTerm&country=jp&lang=ja_jp&limit=30&entity=song`;
-                fetchJSONPSilent(url, (data) => {
-                    if (data && data.results) {
-                        const tagged = data.results.filter(item => item.wrapperType === 'track').map(item => ({ ...item, _genreSupplement: true }));
-                        searchResults = searchResults.concat(tagged);
-                    }
-                    extraSourcesDone++;
-                    finalize();
-                }, () => { extraSourcesDone++; finalize(); });
-            });
 
             searchQueries.forEach(q => {
                 let url = `https://itunes.apple.com/search?term=${encodeURIComponent(q.term)}&country=jp&lang=ja_jp&limit=${q.limit}&entity=song`;
@@ -3068,88 +3011,14 @@
         document.getElementById('decade-select').value = 'all';
         selectGenre('all', document.querySelector('.genre-tab'));
 
-        const loadingText = document.getElementById('loading-indicator-text');
         document.getElementById('loading-indicator').style.display = 'block';
-        if (loadingText) loadingText.textContent = '読み込み中...';
 
-        // 【重要・iTunes APIの根本的な制約について】
-        // iTunesのSearch/Lookup APIは、1回の呼び出しにつき最大200件までしか結果を返さず、
-        // 公式には次ページを取得する手段（offset等）が一切ありません。フラットな曲検索を複数回
-        // 行って合算するだけでは、実際には内部的にほぼ同じ上位200件を取得しているだけで、
-        // 300〜400曲規模のカタログを持つ大御所アーティストの場合、合算後も150〜200件程度で
-        // 頭打ちになってしまうことが分かりました。
-        // そこで、まずそのアーティストの「アルバム一覧」を取得し（アルバム数が200を大きく
-        // 超えることは通常ないため、ここは1回の呼び出しでほぼ全件取れる）、次に各アルバムご
-        // とに収録曲を個別に取得して合算する方式に変更。アルバム単位のlookupには200件の上限が
-        // 実質関係なくなるため、大御所アーティストでも本来のカタログ規模に近い曲数を集められる。
-        fetchJSONPSilent(`https://itunes.apple.com/lookup?id=${artistId}&entity=album&limit=200&country=jp&lang=ja_jp`, (albumData) => {
-            const albums = (albumData && albumData.results ? albumData.results : []).filter(item => item.wrapperType === 'collection' && item.collectionId);
-            
-            // 万一アルバムが1件も取れなかった場合は、以前からのフラット検索方式にフォールバック
-            if (albums.length === 0) {
-                fetchArtistSongsFlatFallback(artistId, artistName);
-                return;
-            }
-
-            const uniqueAlbumIds = [...new Set(albums.map(a => a.collectionId))];
-            let completedCount = 0;
-            let allTracks = [];
-            const totalAlbums = uniqueAlbumIds.length;
-
-            const onOneAlbumDone = () => {
-                completedCount++;
-                if (loadingText) loadingText.textContent = `曲情報を取得中... (${completedCount}/${totalAlbums}枚)`;
-                if (completedCount === totalAlbums) {
-                    // 仕上げに、アルバムに紐付いていない単独曲（シングル等）を拾うためのフラット検索も
-                    // 追加で合算する（アルバム一覧に出てこない楽曲の取りこぼしを防ぐ保険）
-                    fetchJSONPSilent(`https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&attribute=artistTerm&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
-                        if (data && data.results) {
-                            const normalize = (s) => String(s || '').replace(/[\s　]/g, '').toLowerCase();
-                            const targetNorm = normalize(artistName);
-                            const extra = data.results.filter(item => item.wrapperType === 'track' && normalize(item.artistName) === targetNorm);
-                            allTracks = allTracks.concat(extra);
-                        }
-                        finalizeArtistSongs(allTracks);
-                    }, () => finalizeArtistSongs(allTracks));
-                }
-            };
-
-            const finalizeArtistSongs = (tracks) => {
-                document.getElementById('loading-indicator').style.display = 'none';
-                if (loadingText) loadingText.textContent = '読み込み中...';
-                const merged = groupConsolidatedSongs(tracks);
-                console.log('[歌手の曲一覧] アルバム' + totalAlbums + '枚から合算・重複除去後の最終曲数:', merged.length);
-                scopedMasterResults = merged;
-                allFetchedResults = merged;
-                applyFiltersAndRender();
-            };
-
-            // 同時に投げすぎるとレート制限にかかる恐れがあるため、5件ずつのバッチに分けて実行
-            const BATCH_SIZE = 5;
-            let nextIndex = 0;
-            const runNextBatch = () => {
-                const batch = uniqueAlbumIds.slice(nextIndex, nextIndex + BATCH_SIZE);
-                nextIndex += BATCH_SIZE;
-                if (batch.length === 0) return;
-                batch.forEach(albumId => {
-                    fetchJSONPSilent(`https://itunes.apple.com/lookup?id=${albumId}&entity=song&country=jp&lang=ja_jp`, (data) => {
-                        if (data && data.results) allTracks = allTracks.concat(data.results.filter(item => item.wrapperType === 'track'));
-                        onOneAlbumDone();
-                        if (completedCount % BATCH_SIZE === 0) runNextBatch();
-                    }, () => {
-                        onOneAlbumDone();
-                        if (completedCount % BATCH_SIZE === 0) runNextBatch();
-                    });
-                });
-            };
-            runNextBatch();
-        }, () => {
-            fetchArtistSongsFlatFallback(artistId, artistName);
-        });
-    }
-
-    // アルバム一覧の取得自体に失敗した場合の、以前からのフラット検索方式（保険）
-    function fetchArtistSongsFlatFallback(artistId, artistName) {
+        // 【重要】iTunesのLookup/Search APIは1回の呼び出しにつき最大200件までしか返せない
+        // （公式の上限で、offset等による追加ページ取得もできない）。有名アーティストで200曲を
+        // 超えるケースを取りこぼさないよう、Lookup(entity=song)とSearch(attribute=artistTerm)の
+        // 2種類のAPIを並行して呼び、それぞれ最大200件ずつ取得してから重複除去して合算する。
+        // （2つのAPIは内部の並び順が異なるため、単純に同じ200件を2回取るのではなく、互いに
+        //   足りない分を補い合う形になり、実質的に200件超のカバー率を狙える）
         let lookupDone = false, searchDone = false;
         let lookupResults = [], searchResults = [];
 
@@ -3157,6 +3026,7 @@
             if (!lookupDone || !searchDone) return;
             document.getElementById('loading-indicator').style.display = 'none';
             const merged = groupConsolidatedSongs(lookupResults.concat(searchResults));
+            console.log('[歌手の曲一覧] 合算・重複除去後の最終曲数:', merged.length);
             scopedMasterResults = merged;
             allFetchedResults = merged;
             applyFiltersAndRender();
@@ -3164,19 +3034,30 @@
 
         fetchJSONPSilent(`https://itunes.apple.com/lookup?id=${artistId}&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
             if (data && data.results) lookupResults = data.results.filter(item => item.wrapperType === 'track');
+            console.log('[歌手の曲一覧] Lookup API結果:', lookupResults.length, '件');
             lookupDone = true;
             finalize();
-        }, () => { lookupDone = true; finalize(); });
-
+        }, () => {
+            console.warn('[歌手の曲一覧] Lookup APIの取得に失敗しました');
+            lookupDone = true;
+            finalize();
+        });
         fetchJSONPSilent(`https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&attribute=artistTerm&entity=song&limit=200&country=jp&lang=ja_jp`, (data) => {
             if (data && data.results) {
+                // 前後の空白や全角/半角スペースの違いなどで完全一致にならず、Search側の結果が
+                // 常に0件に絞り込まれてしまっていた可能性があるため、正規化した上で比較する
                 const normalize = (s) => String(s || '').replace(/[\s　]/g, '').toLowerCase();
                 const targetNorm = normalize(artistName);
                 searchResults = data.results.filter(item => item.wrapperType === 'track' && normalize(item.artistName) === targetNorm);
+                console.log('[歌手の曲一覧] Search API結果:', data.results.length, '件中、一致:', searchResults.length, '件');
             }
             searchDone = true;
             finalize();
-        }, () => { searchDone = true; finalize(); });
+        }, () => {
+            console.warn('[歌手の曲一覧] Search APIの取得に失敗しました');
+            searchDone = true;
+            finalize();
+        });
     }
 
     function searchArtistFromDetail() {
