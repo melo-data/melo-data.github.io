@@ -97,7 +97,8 @@
             left: 20px; 
             width: 60px; 
             height: 60px; 
-            background-color: #ff9999;
+            background-color: #C00000;
+            border: 3px solid white;
             color: white; 
             border-radius: 50%; 
             display: flex; 
@@ -304,7 +305,7 @@
 
         <!-- 近くのカラオケ設置店を探す（別枠・別ページへの外部リンク） -->
         <div class="mt-2 pt-4 border-t border-gray-200">
-            <button onclick="location.href='./kararestr.html'" class="w-full bg-white border-2 border-[#ff5a5f] text-[#ff5a5f] rounded-2xl shadow-sm py-4 flex items-center justify-center font-bold text-base active:bg-red-50 transition-colors">
+            <button onclick="location.href='./kararestr.html'" class="w-full bg-white border-2 border-[#1e3a8a] text-[#1e3a8a] rounded-2xl shadow-sm py-4 flex items-center justify-center font-bold text-base active:bg-blue-50 transition-colors">
                 <span class="material-icons mr-2">place</span>近くのカラオケ設置店を探す
             </button>
         </div>
@@ -312,7 +313,7 @@
     </div>
 </div>
 <div id="page-search" class="screen-container screen-container-white" style="display: none;">
-    <div class="bg-[#5a5ce6] text-white p-3 shadow-md flex flex-col z-10 shrink-0">
+    <div id="page-search-header" class="bg-[#5a5ce6] text-white p-3 shadow-md flex flex-col z-10 shrink-0">
         <div class="flex justify-between items-center mb-2">
             <h2 id="search-title" class="text-xl font-bold">検索</h2>
             <button onclick="openHamburgerMenu()" class="text-white p-2 active:opacity-70 transition">
@@ -340,7 +341,7 @@
                 <button id="btn-voice-input" onclick="startVoiceInput()" class="flex items-center justify-center bg-pink-50 text-pink-600 px-3 py-2 rounded-md font-bold text-sm active:bg-pink-100 transition-colors border border-pink-200 whitespace-nowrap">
                     <span class="material-icons mr-1 text-base">mic</span>音声
                 </button>
-                <button onclick="executeSearch(true)" class="flex items-center justify-center bg-[#5a5ce6] text-white px-3 py-2 rounded-md font-bold text-sm active:bg-indigo-700 transition-colors whitespace-nowrap">
+                <button id="btn-execute-search" onclick="executeSearch(true)" class="flex items-center justify-center bg-[#5a5ce6] text-white px-3 py-2 rounded-md font-bold text-sm active:bg-indigo-700 transition-colors whitespace-nowrap">
                     <span class="material-icons mr-1 text-base">search</span>検索
                 </button>
             </div>
@@ -409,7 +410,7 @@
     <div id="search-results" class="scrollable-content bg-gray-100 p-2 relative">
         <div id="results-container" class="space-y-0"></div>
         <div id="loading-indicator" class="text-center p-4 text-gray-500 hidden">
-            <span class="material-icons animate-spin">refresh</span> <span id="loading-indicator-text">読み込み中...</span>
+            <span class="material-icons animate-spin">refresh</span> <span id="loading-indicator-text">曲情報を取得中...</span>
         </div>
         <div id="scroll-sentinel" class="h-10"></div>
         <div class="fab-safe-spacer"></div>
@@ -587,7 +588,7 @@
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <button onclick="proceedToArtistSongs()" class="w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
+                <button id="btn-goto-artist-songs" onclick="proceedToArtistSongs()" class="w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
                     <span class="material-icons mr-1">search</span>曲名を探す
                 </button>
                 <button onclick="shareArtistFromDetail()" class="w-full bg-[#ff9999] text-white py-3 rounded-lg font-bold flex items-center justify-center active:bg-[#ff8080] transition-colors shadow-sm">
@@ -638,7 +639,7 @@
                 <button id="album-detail-artist-btn" class="text-lg text-indigo-600 mt-2 font-bold cursor-pointer active:text-indigo-800 underline decoration-indigo-300 underline-offset-4 outline-none"></button>
             </div>
 
-            <button onclick="proceedToAlbumTracks()" class="w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
+            <button id="btn-goto-album-tracks" onclick="proceedToAlbumTracks()" class="w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
                 <span class="material-icons mr-1">search</span>曲名を探す
             </button>
 
@@ -2147,11 +2148,54 @@
         else closeSearchOptions();
     }
 
+    // -------------------------------------------------------------
+    // モード別カラーリング：トップページの各ボタンの色（歌手名=青、曲名=緑、
+    // アルバム名=黄、歌詞ワード=紫、新曲=ピンク）を、検索結果画面・詳細ウィンドウの
+    // 該当パーツにもそのまま反映する。
+    // -------------------------------------------------------------
+    const MODE_COLORS = {
+        artist:          { main: '#3b82f6', border: '#60a5fa', accordion: 'rgba(59,130,246,0.5)' },  // blue-500
+        'artist-songs':  { main: '#3b82f6', border: '#60a5fa', accordion: 'rgba(59,130,246,0.5)' },
+        song:            { main: '#22c55e', border: '#4ade80', accordion: 'rgba(34,197,94,0.5)' },   // green-500
+        album:           { main: '#ca8a04', border: '#eab308', accordion: 'rgba(202,138,4,0.5)' },   // yellow-600
+        'album-tracks':  { main: '#ca8a04', border: '#eab308', accordion: 'rgba(202,138,4,0.5)' },
+        lyrics:          { main: '#8b5cf6', border: '#a78bfa', accordion: 'rgba(139,92,246,0.5)' },  // violet-500
+        'new-song':      { main: '#ec4899', border: '#f472b6', accordion: 'rgba(236,72,153,0.5)' },  // pink-500
+        memo:            { main: '#5a5ce6', border: '#818cf8', accordion: 'rgba(90,92,230,0.5)' }    // 既定（アプリ基本色）
+    };
+
+    function applyModeColor(mode) {
+        const c = MODE_COLORS[mode] || MODE_COLORS.memo;
+
+        const header = document.getElementById('page-search-header');
+        if (header) header.style.backgroundColor = c.main;
+
+        const searchBtn = document.getElementById('btn-execute-search');
+        if (searchBtn) searchBtn.style.backgroundColor = c.main;
+
+        ['sort-select-simple', 'sort-select-accordion', 'decade-select'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.style.backgroundColor = c.main; el.style.borderColor = c.border; }
+        });
+
+        const accordionBtn = document.getElementById('accordion-toggle-btn');
+        if (accordionBtn) accordionBtn.style.backgroundColor = c.accordion;
+
+        // アーティスト詳細／アルバム詳細の「曲名を探す」ボタンも、遷移先の一覧色に揃える
+        [document.getElementById('btn-goto-artist-songs'), document.getElementById('btn-goto-album-tracks')].forEach(btn => {
+            if (!btn) return;
+            btn.style.backgroundColor = c.main + '1a'; // 薄い背景（約10%不透明度）
+            btn.style.color = c.main;
+            btn.style.borderColor = c.border;
+        });
+    }
+
     function goToSearch(mode) {
         tryFullScreen();
         const isSameMode = (currentMode === mode);
         if (mode === 'new-song' && !isSameMode) recordStat('newSongViewCount');
         currentMode = mode;
+        applyModeColor(mode);
         clearInterval(rankingAutoTimer); // トップページを離れる間、ランキングの自動スライドタイマーを止める
         
         document.getElementById('page-top').style.display = 'none';
@@ -2489,7 +2533,7 @@
     //    APIキーではユーザー本人のドライブへの読み書き認可ができないため、この機能には使えません。
     //    詳細はチャット回答を参照。
     // -------------------------------------------------------------
-    const GOOGLE_CLIENT_ID = '126516487758-e1ofp8omub0udn12ne9rqt2qc2oadkt2.apps.googleusercontent.com';
+    const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
     const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
     const BACKUP_FILE_NAME = 'melodata_backup.json';
     let googleTokenClient = null;
@@ -2816,7 +2860,7 @@
         const searchToken = ++newSongSearchToken;
         const loadingText = document.getElementById('loading-indicator-text');
         document.getElementById('loading-indicator').style.display = 'block';
-        if (loadingText) loadingText.textContent = '新曲を検索中...';
+        if (loadingText) loadingText.textContent = '曲情報を取得中...';
 
         // 2026年に rss.applemarketingtools.com は rss.marketingtools.apple.com へ移行済み。
         // 旧ドメインのままだと取得に失敗し、以降は精度の低いキーワード検索頼みになってしまうため、
@@ -2844,7 +2888,7 @@
         const finishLoading = () => {
             isFetching = false;
             document.getElementById('loading-indicator').style.display = 'none';
-            if (loadingText) loadingText.textContent = '読み込み中...';
+            if (loadingText) loadingText.textContent = '曲情報を取得中...';
         };
 
         // ジャンル別の補完検索：公式チャート（新着・よく再生）にはJ-POP/K-POP系が多く乗りがちで、
@@ -2984,7 +3028,7 @@
                     if (searchToken === newSongSearchToken && rssSongs.length > 0 && currentMode === 'new-song') {
                         allFetchedResults = groupConsolidatedSongs(rssSongs);
                         applyFiltersAndRender();
-                        if (loadingText) loadingText.textContent = '演歌・歌謡曲など他ジャンルも検索中...';
+                        if (loadingText) loadingText.textContent = '曲情報を取得中...';
                     }
                     runGenreSupplementSearch(rssSongs);
                 }, () => {
@@ -3488,7 +3532,7 @@
 
         const loadingText = document.getElementById('loading-indicator-text');
         document.getElementById('loading-indicator').style.display = 'block';
-        if (loadingText) loadingText.textContent = '読み込み中...';
+        if (loadingText) loadingText.textContent = '曲情報を取得中...';
 
         // 【重要・iTunes APIの根本的な制約について】
         // iTunesのSearch/Lookup APIは、1回の呼び出しにつき最大200件までしか結果を返さず、
@@ -3537,7 +3581,7 @@
 
             const finalizeArtistSongs = (tracks) => {
                 document.getElementById('loading-indicator').style.display = 'none';
-                if (loadingText) loadingText.textContent = '読み込み中...';
+                if (loadingText) loadingText.textContent = '曲情報を取得中...';
                 const merged = groupConsolidatedSongs(tracks);
                 console.log('[歌手の曲一覧] アルバム' + totalAlbums + '枚から合算・重複除去後の最終曲数:', merged.length);
                 scopedMasterResults = merged;
@@ -4513,6 +4557,7 @@
 
     function openArtistDetailModal(item) {
         currentArtistDetailData = item;
+        applyModeColor('artist'); // QR・ディープリンク等、goToSearchを経由せずに開かれた場合の保険
         const fallbackImg = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '400x400bb') : 'https://placehold.co/400x400/5a5ce6/ffffff?text=Artist';
 
         // 一覧側で既に画像解決済みなら、それと完全に同じ画像を即座に使う（一覧と詳細の食い違い防止）
@@ -4630,6 +4675,7 @@
 
     function openAlbumDetailModal(item) {
         currentAlbumDetailData = item;
+        applyModeColor('album'); // QR・ディープリンク等、goToSearchを経由せずに開かれた場合の保険
         const img = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '400x400bb') : 'https://placehold.co/400x400/5a5ce6/ffffff?text=Album';
         document.getElementById('album-detail-img').src = img;
         document.getElementById('album-detail-name').textContent = item.collectionName || '';
