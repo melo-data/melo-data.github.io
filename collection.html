@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+<title>Shoot-Movie Collection | メロ出〜た</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+    html, body { margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", "Yu Gothic", sans-serif; }
+    .screen-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background-color: #f3f4f6; max-width: 600px; margin: 0 auto; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+    .top-header { background-color: #5a5ce6; color: white; padding: 1.75rem 1.5rem 1.5rem 1.5rem; text-align: center; border-bottom-left-radius: 1.5rem; border-bottom-right-radius: 1.5rem; margin-bottom: 1rem; position: relative; flex-shrink: 0; }
+    .scrollable-content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 100px; }
+    .fab-back { position: absolute; bottom: 20px; left: 20px; width: 60px; height: 60px; background-color: #C00000; border: 3px solid white; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 50; }
+    .thumb-card { position: relative; aspect-ratio: 9 / 16; background-color: #e5e7eb; border-radius: 0.85rem; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .thumb-card:active { opacity: 0.8; }
+    .thumb-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    #fullscreen-player-overlay { position: fixed; inset: 0; background-color: #000; z-index: 100; display: none; align-items: center; justify-content: center; }
+    #fullscreen-player-overlay.active { display: flex; }
+    #fullscreen-player-frame-wrap { width: 100%; height: 100%; max-width: 500px; margin: 0 auto; aspect-ratio: 9 / 16; }
+    @media (min-height: 1px) { #fullscreen-player-frame-wrap { height: 100vh; width: calc(100vh * 9 / 16); max-width: 100vw; } }
+</style>
+</head>
+<body>
+
+<div class="screen-container">
+    <div class="top-header shadow-md">
+        <h1 class="text-xl font-bold tracking-wider flex items-center justify-center mb-1 mt-2 font-sans">
+            <span class="material-icons text-2xl mr-2">movie</span>Shoot-Movie Collection
+        </h1>
+        <div class="text-[11px] text-indigo-100 opacity-80 tracking-wider">produced by M.Tsuda</div>
+        <button onclick="fetchShorts()" id="refreshBtn" class="absolute top-4 right-4 text-white p-2 rounded-full bg-white/20 active:bg-white/30 backdrop-blur-sm transition">
+            <span class="material-icons text-xl">refresh</span>
+        </button>
+    </div>
+
+    <div class="scrollable-content px-3">
+        <!-- ステータス表示 -->
+        <div id="status" class="flex items-center justify-center text-gray-500 text-sm py-6">
+            <span class="material-icons animate-spin mr-2 text-base">refresh</span>
+            <span id="status-text">動画情報を取得中...</span>
+        </div>
+
+        <!-- 結果一覧（サムネイルのみのグリッド） -->
+        <div id="results" class="grid grid-cols-3 gap-2"></div>
+    </div>
+
+    <!-- 左下の戻るボタン（トップページへ） -->
+    <button onclick="location.href='./index.html'" class="fab-back">
+        <span class="material-icons text-3xl">arrow_back</span>
+    </button>
+</div>
+
+<!-- フルスクリーン動画プレーヤー -->
+<div id="fullscreen-player-overlay">
+    <button onclick="closeFullscreenPlayer()" class="absolute top-4 right-4 z-10 text-white bg-black/50 rounded-full p-2 active:bg-black/70 transition">
+        <span class="material-icons">close</span>
+    </button>
+    <div id="fullscreen-player-frame-wrap"></div>
+</div>
+
+<script>
+    const API_KEY = 'AIzaSyBjkKWPsZURnPBbzb1RHHiao3mB0EzEYLk';
+    const HANDLE = 'yoidokoroyou';
+
+    // ページを開いたら自動で動画リストを取得する
+    window.addEventListener('DOMContentLoaded', () => {
+        fetchShorts();
+    });
+
+    // ISO 8601形式の時間を秒数に変換
+    function parseISO8601Duration(durationString) {
+        const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
+        const matches = durationString.match(regex);
+        if (!matches) return 0;
+
+        const hours = parseInt(matches[1] || '0', 10);
+        const minutes = parseInt(matches[2] || '0', 10);
+        const seconds = parseInt(matches[3] || '0', 10);
+
+        return hours * 3600 + minutes * 60 + seconds;
+    }
+
+    function setStatus(text, colorClass) {
+        const statusEl = document.getElementById('status');
+        statusEl.className = `flex items-center justify-center text-sm py-6 ${colorClass || 'text-gray-500'}`;
+        statusEl.innerHTML = text;
+    }
+
+    const SPINNER_HTML = (text) => `<span class="material-icons animate-spin mr-2 text-base">refresh</span><span>${text}</span>`;
+
+    async function fetchShorts() {
+        const containerEl = document.getElementById('results');
+        const refreshBtn = document.getElementById('refreshBtn');
+
+        refreshBtn.disabled = true;
+        refreshBtn.classList.add('opacity-50');
+        setStatus(SPINNER_HTML('動画情報を取得中...'));
+        containerEl.innerHTML = '';
+
+        try {
+            // 1. ハンドル名からUploads再生リストIDを取得
+            const channelRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle=${HANDLE}&key=${API_KEY}`);
+            const channelData = await channelRes.json();
+
+            if (channelData.error) throw new Error(channelData.error.message);
+            if (!channelData.items || channelData.items.length === 0) {
+                setStatus('チャンネルが見つかりませんでした。', 'text-red-600');
+                return;
+            }
+
+            const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
+
+            // 2. プレイリストから動画を取得して「♪」判定
+            setStatus(SPINNER_HTML('動画情報を取得中...'));
+            const targetVideos = [];
+            let nextPageToken = '';
+
+            do {
+                let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsPlaylistId}&maxResults=50&key=${API_KEY}`;
+                if (nextPageToken) url += `&pageToken=${nextPageToken}`;
+
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message);
+
+                for (const item of data.items || []) {
+                    const title = item.snippet.title;
+                    const videoId = item.contentDetails.videoId;
+
+                    // 「♪」から始まる動画を抽出
+                    if (title.startsWith('♪')) {
+                        targetVideos.push({ id: videoId, title });
+                    }
+                }
+                nextPageToken = data.nextPageToken;
+            } while (nextPageToken);
+
+            if (targetVideos.length === 0) {
+                setStatus('動画は見つかりませんでした。', 'text-gray-500');
+                return;
+            }
+
+            // 3. 動画の再生時間を取得して60秒以下（Shorts）に絞り込み
+            setStatus(SPINNER_HTML('動画情報を取得中...'));
+            const shortsList = [];
+
+            for (let i = 0; i < targetVideos.length; i += 50) {
+                const chunk = targetVideos.slice(i, i + 50);
+                const ids = chunk.map(v => v.id).join(',');
+
+                const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${ids}&key=${API_KEY}`);
+                const vData = await vRes.json();
+                if (vData.error) throw new Error(vData.error.message);
+
+                for (const vItem of vData.items || []) {
+                    const durationSec = parseISO8601Duration(vItem.contentDetails.duration);
+
+                    // 60秒以下をショート動画と判定
+                    if (durationSec <= 60) {
+                        const orig = chunk.find(c => c.id === vItem.id);
+                        shortsList.push({
+                            title: orig.title,
+                            videoId: vItem.id,
+                            durationSec,
+                            thumbnail: vItem.snippet.thumbnails?.high?.url || `https://i.ytimg.com/vi/${vItem.id}/hqdefault.jpg`
+                        });
+                    }
+                }
+            }
+
+            // 完了メッセージ表示
+            setStatus(`${shortsList.length} 件のショート動画`, 'text-gray-500');
+
+            // 画面にサムネイルのみのカードを表示（タップでフルスクリーン再生）
+            shortsList.forEach(video => {
+                const card = document.createElement('div');
+                card.className = 'thumb-card cursor-pointer';
+                card.innerHTML = `
+                    <img src="${video.thumbnail}" alt="${video.title}" loading="lazy">
+                    <span class="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">${video.durationSec}s</span>
+                    <div class="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/10 transition">
+                        <span class="material-icons text-white text-4xl" style="text-shadow: 0 1px 6px rgba(0,0,0,0.6);">play_circle</span>
+                    </div>
+                `;
+                card.onclick = () => openFullscreenPlayer(video.videoId);
+                containerEl.appendChild(card);
+            });
+
+        } catch (err) {
+            setStatus(`エラーが発生しました: ${err.message}`, 'text-red-600');
+        } finally {
+            refreshBtn.disabled = false;
+            refreshBtn.classList.remove('opacity-50');
+        }
+    }
+
+    // -------------------------------------------------------------
+    // フルスクリーン動画プレーヤー
+    // -------------------------------------------------------------
+    function openFullscreenPlayer(videoId) {
+        const wrap = document.getElementById('fullscreen-player-frame-wrap');
+        wrap.innerHTML = `
+            <iframe
+                src="https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0"
+                style="width:100%; height:100%; border:0;"
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen>
+            </iframe>`;
+        document.getElementById('fullscreen-player-overlay').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeFullscreenPlayer() {
+        document.getElementById('fullscreen-player-frame-wrap').innerHTML = ''; // iframeを破棄して再生停止
+        document.getElementById('fullscreen-player-overlay').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+</script>
+</body>
+</html>
