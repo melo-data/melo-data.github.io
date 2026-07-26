@@ -55,6 +55,7 @@
 
     <!-- QRコード生成ライブラリ（曲・アーティスト・アルバムの共有QR用） -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 
     <!-- Google Identity Services（機種変バックアップ：Googleドライブ連携用） -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -543,6 +544,9 @@
             </div>
         </div>
     </div>
+    <button onclick="closeDetailModal()" class="fab-back">
+        <span class="material-icons text-3xl">arrow_back</span>
+    </button>
 </div>
 
 <!-- 汎用確認ダイアログ（ファン登録・LINEシェア確認などで共用） -->
@@ -611,6 +615,9 @@
             </div>
         </div>
     </div>
+    <button onclick="closeArtistDetailModal()" class="fab-back">
+        <span class="material-icons text-3xl">arrow_back</span>
+    </button>
 </div>
 
 <!-- アルバム詳細ウィンドウ -->
@@ -674,6 +681,9 @@
             </div>
         </div>
     </div>
+    <button onclick="closeAlbumDetailModal()" class="fab-back">
+        <span class="material-icons text-3xl">arrow_back</span>
+    </button>
 </div>
 
 <!-- トースト -->
@@ -733,6 +743,11 @@
             <button onclick="closeHamburgerMenu(); goToHowto();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
                 <span class="material-icons text-green-500 mr-3">help_outline</span>
                 <span class="flex-1 font-bold text-gray-800">使い方</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
+            <button onclick="closeHamburgerMenu(); goToPrivacy();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-sky-500 mr-3">privacy_tip</span>
+                <span class="flex-1 font-bold text-gray-800">プライバシーポリシー</span>
                 <span class="material-icons text-gray-300 text-lg">chevron_right</span>
             </button>
             <button onclick="closeHamburgerMenu(); goToTerms();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
@@ -878,6 +893,22 @@
     </div>
 </div>
 
+<!-- 通常ブラウザ用カメラQRスキャナー（LINEミニアプリの外ではliff.scanCodeV2()が使えないための代替） -->
+<div id="modal-qr-scanner" class="modal fixed inset-0 z-[60] flex flex-col bg-black">
+    <div class="flex items-center justify-between p-4 text-white shrink-0">
+        <h2 class="font-bold flex items-center"><span class="material-icons mr-1">qr_code_scanner</span>QRコードを読み取り</h2>
+        <button onclick="closeBrowserQRScanner()" class="p-1"><span class="material-icons">close</span></button>
+    </div>
+    <div class="flex-1 relative overflow-hidden flex items-center justify-center">
+        <video id="qr-scanner-video" class="w-full h-full object-cover" playsinline autoplay muted></video>
+        <canvas id="qr-scanner-canvas" class="hidden"></canvas>
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-64 h-64 border-4 border-white/70 rounded-2xl"></div>
+        </div>
+        <p id="qr-scanner-status" class="absolute bottom-6 left-0 right-0 text-center text-white text-sm px-6"></p>
+    </div>
+</div>
+
 <!-- 機種変バックアップモーダル -->
 <div id="modal-backup" class="modal fixed inset-0 z-50 flex items-end justify-center" onclick="if(event.target===this) closeBackupModal()">
     <div class="modal-content bg-white w-full max-w-[600px] rounded-t-2xl shadow-2xl p-5">
@@ -934,29 +965,99 @@
     <div class="scrollable-content px-5 py-5 text-[14px] leading-relaxed text-gray-700">
         <section class="mb-6">
             <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-indigo-400 mr-1 text-lg">search</span>曲を探す</h3>
-            <p>トップ画面の「歌手名」「曲名」「アルバム名」「歌詞ワード」のいずれかをタップして、分かる情報を入力・検索してください。うろ覚えでも一部が合っていればヒットします。</p>
+            <p>トップ画面の「歌手名」「曲名」「アルバム名」「歌詞ワード」のいずれかをタップして、分かる情報を入力・検索してください。うろ覚えでも一部が合っていればヒットします。「歌手名」から特定の歌手を選ぶと、その歌手の曲だけを五十音順で一覧表示します。</p>
         </section>
         <section class="mb-6">
             <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-pink-500 mr-1 text-lg">fiber_new</span>新曲</h3>
-            <p>「新曲」ボタンからは、直近リリースされた日本国内の楽曲をまとめて確認できます。年代・ジャンルで絞り込みも可能です。</p>
+            <p>「新曲」ボタンからは、直近リリースされた日本国内の楽曲をまとめて確認できます。年代・ジャンル（演歌・民謡、歌謡曲、アニソン等）で絞り込みも可能です。</p>
+        </section>
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-amber-500 mr-1 text-lg">leaderboard</span>年間ランキング</h3>
+            <p>トップ画面上部では「総合」「演歌・歌謡曲」の年間ランキング（売上）が数秒おきに切り替わって表示されます。ランキングのタイトルをタップすると一覧ページが開き、曲名をタップすると詳細ウィンドウが開きます。</p>
         </section>
         <section class="mb-6">
             <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-blue-500 mr-1 text-lg">info</span>曲の詳細ウィンドウ</h3>
-            <p>検索結果の曲をタップすると詳細ウィンドウが開きます。ここでは30秒試聴・歌詞の確認・関連するYouTube動画の再生・CDの購入（楽天ブックス）ができます。「保存」（ハートマーク）で気になる曲をメモ帳に残せます。</p>
+            <p>検索結果の曲をタップすると詳細ウィンドウが開きます。ここでは30秒試聴・歌詞の確認・関連するYouTube動画の再生ができます。「DAM」「JOY」ボタンからはカラオケ機種ごとの検索結果ページへ、「音楽CDを購入」からは楽天ブックス（見つからない場合はAmazon Music）へ進めます。「保存」（ハートマーク）で気になる曲をメモ帳に残せます。</p>
+        </section>
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-purple-500 mr-1 text-lg">person</span>アーティスト・アルバム詳細ウィンドウ</h3>
+            <p>歌手名・アルバム名で見つかった項目をタップすると、詳細ウィンドウが開きます。「ファン」（星マーク）で気になるアーティストをメモ帳の「ファン」一覧に登録できます。</p>
         </section>
         <section class="mb-6">
             <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-gray-500 mr-1 text-lg">assignment</span>メモ帳</h3>
-            <p>「メモ帳」からは、保存した曲（最大10件）と最近見た曲の履歴（最大10件）をあとから確認できます。カラオケの前に見返すのに便利です。</p>
+            <p>「メモ帳」からは、保存した曲（最大10件）・ファン登録したアーティスト・最近見た曲の履歴（最大10件）・達成バッジをタブで切り替えて確認できます。カラオケの前に見返すのに便利です。</p>
+        </section>
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-red-400 mr-1 text-lg">place</span>近くのカラオケ設置店を探す</h3>
+            <p>トップ画面下部のボタンから、現在地から近い順にカラオケ設置店を確認できます（位置情報の利用許可が必要です）。</p>
+        </section>
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-indigo-500 mr-1 text-lg">qr_code_scanner</span>QRコード</h3>
+            <p>各詳細ウィンドウの「QR」ボタンから、その曲・アーティスト・アルバムのページを共有できるQRコードを表示できます。「QRコードを撮影する」からは、他の方が表示したQRコードをカメラで読み取ってページを開けます。</p>
+        </section>
+        <section class="mb-6">
+            <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-teal-600 mr-1 text-lg">cloud_sync</span>機種変バックアップ</h3>
+            <p>右上のメニュー（☰）内の「機種変バックアップ」から、保存した曲・ファン・履歴・設定などをGoogleドライブにバックアップ・復元できます。機種変更の際にご利用ください。</p>
         </section>
         <section class="mb-6">
             <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-amber-500 mr-1 text-lg">emoji_events</span>達成バッジ</h3>
-            <p>検索・保存・シェアなどアプリを使うほど「達成バッジ」がたまっていきます。右上のメニュー（☰）内の「会員達成バッジ」からいつでも確認できます。</p>
+            <p>検索・保存・シェアなどアプリを使うほど「達成バッジ」がたまっていきます。メモ帳内の「バッジ」タブからいつでも確認できます。</p>
         </section>
         <section class="mb-6">
             <h3 class="font-bold text-gray-800 text-base mb-2 flex items-center"><span class="material-icons text-green-500 mr-1 text-lg">home</span>ホーム画面に追加</h3>
             <p>右上のメニュー（☰）から「アプリインストール」を選ぶと、ホーム画面にアイコンを追加していつものアプリのように起動できます（ご利用の環境により手順が異なる場合があります）。</p>
         </section>
     </div>
+    <button onclick="goBackFromSubPage('howto')" class="fab-back">
+        <span class="material-icons text-3xl">arrow_back</span>
+    </button>
+</div>
+
+<!-- プライバシーポリシーページ -->
+<div id="page-privacy" class="screen-container screen-container-white" style="display: none;">
+    <div class="bg-[#5a5ce6] text-white p-4 shadow-md flex items-center justify-between shrink-0">
+        <div class="flex items-center">
+            <button onclick="goBackFromSubPage('privacy')" class="flex items-center text-white active:opacity-70 mr-2">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <h2 class="text-lg font-bold">プライバシーポリシー</h2>
+        </div>
+        <button onclick="openHamburgerMenu()" class="text-white p-2 active:opacity-70 transition">
+            <span class="material-icons">menu</span>
+        </button>
+    </div>
+    <div class="scrollable-content px-5 py-5 text-[13px] leading-relaxed text-gray-700">
+        <p class="mb-4 text-gray-500">「メロ出〜た」（以下「本サービス」）における個人情報・利用データの取り扱いについて、以下の通りお知らせします。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">1. 取得する情報</h3>
+        <p class="mb-3">本サービスは、氏名・住所・電話番号等の個人情報の入力をユーザーに求めることはありません。検索キーワード・保存した曲・ファン登録・閲覧履歴・設定内容・達成バッジの状況は、お使いの端末（ブラウザ）内にのみ保存され、運営者のサーバーには送信・保存されません。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">2. 位置情報について</h3>
+        <p class="mb-3">「近くのカラオケ設置店を探す」機能をご利用の際、端末の位置情報の利用許可をお願いする場合があります。取得した位置情報は、近隣店舗の検索・距離の計算にのみ使用し、保存・送信・第三者への提供は行いません。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">3. Googleドライブへのバックアップについて</h3>
+        <p class="mb-3">「機種変バックアップ」機能をご利用いただく場合のみ、Googleアカウントへのログインを求め、ユーザーご自身のGoogleドライブ内（本アプリ専用の保存領域）に、保存した曲・ファン・履歴・設定等のバックアップデータを保存します。このデータは運営者がアクセスすることはできません。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">4. 外部サービス・APIの利用について</h3>
+        <p class="mb-3">本サービスは、楽曲情報・試聴・動画・カラオケ店舗情報の表示にあたり、Apple社（iTunes/Apple Music）、Google社（YouTube・Googleドライブ）、楽天グループ株式会社（楽天ブックス）、Amazon、株式会社リクルート（ホットペッパー）、LINEヤフー株式会社（LINEミニアプリ）等、第三者が提供するサービス・APIを利用しています。これらのサービスの利用にあたっては、各社のプライバシーポリシーも適用される場合があります。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">5. 広告について</h3>
+        <p class="mb-3">本サービスは、広告配信事業者（忍者AdMax等）の広告を掲載する場合があります。広告配信にあたり、Cookie等を利用したアクセス情報の取得が行われる場合がありますが、これは広告配信事業者による取り扱いであり、運営者が直接取得・管理するものではありません。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">6. アクセス解析について</h3>
+        <p class="mb-3">本サービスの利用状況把握のため、アクセス解析ツールを利用する場合があります。取得される情報に、氏名等の個人を特定する情報は含まれません。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">7. お問い合わせ</h3>
+        <p class="mb-3">本ポリシーに関するお問い合わせは、運営元（メロ出〜た　Produced by M.Tsuda）までお願いいたします。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">8. 本ポリシーの変更について</h3>
+        <p class="mb-3">本ポリシーの内容は、法令の変更やサービス内容の変更等に応じ、予告なく変更されることがあります。変更後の内容は、本ページに掲載した時点から効力を生じるものとします。</p>
+
+        <p class="mt-6 text-gray-400 text-[11px]">制定日：2026年7月26日</p>
+    </div>
+    <button onclick="goBackFromSubPage('privacy')" class="fab-back">
+        <span class="material-icons text-3xl">arrow_back</span>
+    </button>
 </div>
 
 <!-- 利用規約ページ -->
@@ -976,34 +1077,40 @@
         <p class="mb-4 text-gray-500">この利用規約（以下「本規約」）は、「メロ出〜た」（以下「本サービス」）の利用条件を定めるものです。本サービスをご利用いただいた場合、本規約に同意いただいたものとみなします。</p>
 
         <h3 class="font-bold text-gray-800 mb-1 mt-4">第1条（本サービスの内容）</h3>
-        <p class="mb-3">本サービスは、楽曲情報の検索、試聴、関連動画の表示、CD購入ページへの案内などを無料で提供する情報サービスです。</p>
+        <p class="mb-3">本サービスは、楽曲情報の検索、試聴、関連動画の表示、カラオケ機種向け検索、CD購入ページへの案内、QRコードによる情報共有、近隣カラオケ店舗の案内、データのバックアップ等を無料で提供する情報サービスです。</p>
 
         <h3 class="font-bold text-gray-800 mb-1 mt-4">第2条（外部サービスの利用）</h3>
-        <p class="mb-3">本サービスは、楽曲情報・試聴・動画の表示にあたり、Apple社（iTunes/Apple Music）、Google社（YouTube）、楽天グループ株式会社（楽天ブックス）等、第三者が提供するサービス・APIを利用しています。これら外部サービスの内容・提供状況が変更・終了された場合、本サービスの一部機能が予告なく変更・停止される場合があります。</p>
+        <p class="mb-3">本サービスは、楽曲情報・試聴・動画・店舗情報の表示にあたり、Apple社（iTunes/Apple Music）、Google社（YouTube・Googleドライブ）、楽天グループ株式会社（楽天ブックス）、Amazon、株式会社リクルート（ホットペッパー）、LINEヤフー株式会社等、第三者が提供するサービス・APIを利用しています。これら外部サービスの内容・提供状況が変更・終了された場合、本サービスの一部機能が予告なく変更・停止される場合があります。</p>
 
         <h3 class="font-bold text-gray-800 mb-1 mt-4">第3条（アフィリエイトについて）</h3>
         <p class="mb-3">本サービス内のCD購入等の外部リンクの一部には、アフィリエイトプログラムのリンクが含まれます。これらのリンク経由でご購入いただいた場合、運営者に一定の成果報酬が支払われることがありますが、ユーザーが負担する価格が変わることはありません。</p>
 
-        <h3 class="font-bold text-gray-800 mb-1 mt-4">第4条（保存データについて）</h3>
-        <p class="mb-3">「保存」「履歴」等の情報は、ユーザーがご利用の端末（ブラウザ）内にのみ保存され、運営者のサーバーに送信・保存されることはありません。端末やブラウザを変更した場合、保存データは引き継がれません。</p>
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第4条（保存データ・バックアップについて）</h3>
+        <p class="mb-3">「保存」「ファン」「履歴」等の情報は、原則としてユーザーがご利用の端末（ブラウザ）内にのみ保存され、運営者のサーバーに送信・保存されることはありません。端末やブラウザを変更した場合、保存データは引き継がれませんが、「機種変バックアップ」機能により、ユーザーご自身のGoogleドライブへ任意でバックアップ・復元することができます。</p>
 
-        <h3 class="font-bold text-gray-800 mb-1 mt-4">第5条（禁止事項）</h3>
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第5条（位置情報について）</h3>
+        <p class="mb-3">「近くのカラオケ設置店を探す」機能のご利用には、端末の位置情報の利用許可が必要です。取得した位置情報は当該機能の提供のみに使用します。</p>
+
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第6条（禁止事項）</h3>
         <p class="mb-3">ユーザーは、本サービスの利用にあたり、法令に違反する行為、本サービスの運営を妨げる行為、他のユーザーまたは第三者に不利益・損害を与える行為を行ってはならないものとします。</p>
 
-        <h3 class="font-bold text-gray-800 mb-1 mt-4">第6条（免責事項）</h3>
-        <p class="mb-3">本サービスで表示される楽曲情報・歌詞・価格・リンク先等の正確性・最新性について、運営者は保証するものではありません。本サービスの利用により生じた損害について、運営者は故意または重過失がある場合を除き、責任を負わないものとします。</p>
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第7条（免責事項）</h3>
+        <p class="mb-3">本サービスで表示される楽曲情報・歌詞・価格・店舗情報・リンク先等の正確性・最新性について、運営者は保証するものではありません。本サービスの利用により生じた損害について、運営者は故意または重過失がある場合を除き、責任を負わないものとします。</p>
 
-        <h3 class="font-bold text-gray-800 mb-1 mt-4">第7条（サービス内容の変更・中断・終了）</h3>
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第8条（サービス内容の変更・中断・終了）</h3>
         <p class="mb-3">運営者は、ユーザーへの事前通知なく、本サービスの内容を変更し、または提供を中断・終了することができるものとします。</p>
 
-        <h3 class="font-bold text-gray-800 mb-1 mt-4">第8条（規約の変更）</h3>
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第9条（規約の変更）</h3>
         <p class="mb-3">運営者は、必要と判断した場合には、ユーザーへの通知なく本規約を変更できるものとします。変更後の規約は、本ページに掲載した時点から効力を生じるものとします。</p>
 
-        <h3 class="font-bold text-gray-800 mb-1 mt-4">第9条（お問い合わせ）</h3>
+        <h3 class="font-bold text-gray-800 mb-1 mt-4">第10条（お問い合わせ）</h3>
         <p class="mb-3">本サービスに関するお問い合わせは、運営元（メロ出〜た　Produced by M.Tsuda）までお願いいたします。</p>
 
-        <p class="mt-6 text-gray-400 text-[11px]">制定日：2026年7月21日</p>
+        <p class="mt-6 text-gray-400 text-[11px]">制定日：2026年7月21日　改定日：2026年7月26日</p>
     </div>
+    <button onclick="goBackFromSubPage('terms')" class="fab-back">
+        <span class="material-icons text-3xl">arrow_back</span>
+    </button>
 </div>
 
 
@@ -1315,6 +1422,12 @@
                 });
             }
         }
+
+        // 「使い方」「プライバシーポリシー」「利用規約」はURLパラメータ（?page=howto 等）で単独起動できるようにする
+        const pageParam = new URLSearchParams(window.location.search).get('page');
+        if (pageParam === 'howto') { window.history.replaceState({}, document.title, window.location.pathname); goToHowto(); }
+        else if (pageParam === 'privacy') { window.history.replaceState({}, document.title, window.location.pathname); goToPrivacy(); }
+        else if (pageParam === 'terms') { window.history.replaceState({}, document.title, window.location.pathname); goToTerms(); }
 
         // ホーム画面インストール誘導バナー（iOS Safariはbeforeinstallpromptが発火しないため、ここで判定して出す）
         if (!isStandaloneMode() && isIOSDevice() && !/line/i.test(navigator.userAgent)) {
@@ -2462,66 +2575,124 @@
         openQRShareModal(currentAlbumDetailData.collectionName + ' / ' + currentAlbumDetailData.artistName, 'albumId', currentAlbumDetailData.collectionId);
     }
 
-    // QRコードを撮影する：LIFFの2次元コードリーダー（内部でjsQRを使用）を起動する。
-    // 事前にLINE Developers ConsoleのLIFFタブで「Scan QR」をONにし、Sizeを「Full」にしておく必要がある。
-    // liff.scanCodeV2()はLINEアプリ内だけでなく、WebRTC対応の外部ブラウザでも動作する。
-    function scanQRCode() {
-        if (typeof liff === 'undefined' || !isLiffInit) {
-            showToast('QRコード撮影機能を準備中です。少し待ってから再度お試しください。');
-            return;
-        }
-        if (typeof liff.scanCodeV2 !== 'function') {
-            showToast('この環境ではQRコード撮影に対応していません。');
-            return;
-        }
-        // 外部ブラウザ（LINEアプリの外）では liff.init() だけではLINEにログインされないため、
-        // 未ログインのまま scanCodeV2() を呼ぶとサブウィンドウが白画面のまま応答が返ってこない
-        // （LINE公式の既知の仕様）。その場合は先にLINEログインへ誘導する。
-        if (!liff.isInClient() && typeof liff.isLoggedIn === 'function' && !liff.isLoggedIn()) {
-            showToast('QRコード撮影にはLINEへのログインが必要です。ログイン後、もう一度お試しください。');
-            setTimeout(() => { liff.login({ redirectUri: window.location.href }); }, 1500);
-            return;
-        }
-        liff.scanCodeV2().then((result) => {
-            const value = result && result.value;
-            if (!value) return;
-            closeQRShareModal();
-            try {
-                const scannedUrl = new URL(value);
-                // 自サイト・LIFF URLのQRコードならアプリ内でそのまま該当ウィンドウを開く
-                if (/melo-data\.github\.io$/.test(scannedUrl.hostname) || /liff\.line\.me$/.test(scannedUrl.hostname)) {
-                    const p = new URLSearchParams(scannedUrl.search);
-                    if (p.get('trackId')) {
-                        fetchJSONP(`https://itunes.apple.com/lookup?id=${p.get('trackId')}&country=jp&lang=ja_jp`, (data) => {
-                            if (data && data.results && data.results.length > 0) openDetailModal(data.results[0]);
-                        });
-                        return;
-                    } else if (p.get('artistId')) {
-                        fetchJSONP(`https://itunes.apple.com/lookup?id=${p.get('artistId')}&entity=song&limit=5&country=jp&lang=ja_jp`, (data) => {
-                            if (data && data.results && data.results.length > 0) {
-                                const artistInfo = data.results.find(r => r.wrapperType === 'artist') || {};
-                                const trackInfo = data.results.find(r => r.wrapperType === 'track') || {};
-                                openArtistDetailModal({ artistId: p.get('artistId'), artistName: trackInfo.artistName || artistInfo.artistName || '', artworkUrl100: trackInfo.artworkUrl100 || '', primaryGenreName: artistInfo.primaryGenreName || trackInfo.primaryGenreName || '' });
-                            }
-                        });
-                        return;
-                    } else if (p.get('albumId')) {
-                        fetchJSONP(`https://itunes.apple.com/lookup?id=${p.get('albumId')}&country=jp&lang=ja_jp`, (data) => {
-                            if (data && data.results && data.results.length > 0) openAlbumDetailModal(data.results[0]);
-                        });
-                        return;
-                    }
+    // QRコード読み取り結果（URL文字列）を、曲/アーティスト/アルバムの各詳細ウィンドウに
+    // 振り分ける共通処理。LIFFのscanCodeV2でも、通常ブラウザのカメラスキャナーでも共用する。
+    function handleScannedQRValue(value) {
+        if (!value) return;
+        closeQRShareModal();
+        try {
+            const scannedUrl = new URL(value);
+            // 自サイト・LIFF URLのQRコードならアプリ内でそのまま該当ウィンドウを開く
+            if (/melo-data\.github\.io$/.test(scannedUrl.hostname) || /liff\.line\.me$/.test(scannedUrl.hostname)) {
+                const p = new URLSearchParams(scannedUrl.search);
+                if (p.get('trackId')) {
+                    fetchJSONP(`https://itunes.apple.com/lookup?id=${p.get('trackId')}&country=jp&lang=ja_jp`, (data) => {
+                        if (data && data.results && data.results.length > 0) openDetailModal(data.results[0]);
+                    });
+                    return;
+                } else if (p.get('artistId')) {
+                    fetchJSONP(`https://itunes.apple.com/lookup?id=${p.get('artistId')}&entity=song&limit=5&country=jp&lang=ja_jp`, (data) => {
+                        if (data && data.results && data.results.length > 0) {
+                            const artistInfo = data.results.find(r => r.wrapperType === 'artist') || {};
+                            const trackInfo = data.results.find(r => r.wrapperType === 'track') || {};
+                            openArtistDetailModal({ artistId: p.get('artistId'), artistName: trackInfo.artistName || artistInfo.artistName || '', artworkUrl100: trackInfo.artworkUrl100 || '', primaryGenreName: artistInfo.primaryGenreName || trackInfo.primaryGenreName || '' });
+                        }
+                    });
+                    return;
+                } else if (p.get('albumId')) {
+                    fetchJSONP(`https://itunes.apple.com/lookup?id=${p.get('albumId')}&country=jp&lang=ja_jp`, (data) => {
+                        if (data && data.results && data.results.length > 0) openAlbumDetailModal(data.results[0]);
+                    });
+                    return;
                 }
-                // それ以外のURLは外部で開く
-                if (liff.isInClient()) liff.openWindow({ url: value, external: true });
-                else window.open(value, '_blank');
-            } catch (e) {
-                // URLでない文字列が読み取られた場合はそのままトースト表示
-                showToast('読み取り結果：' + value);
             }
+            // それ以外のURLは外部で開く
+            if (typeof liff !== 'undefined' && liff.isInClient()) liff.openWindow({ url: value, external: true });
+            else window.open(value, '_blank');
+        } catch (e) {
+            // URLでない文字列が読み取られた場合はそのままトースト表示
+            showToast('読み取り結果：' + value);
+        }
+    }
+
+    // QRコードを撮影する。
+    // 【重要】liff.scanCodeV2() はLINEアプリ内（liff.isInClient()がtrue）でのみ実際に機能する。
+    // LINEアプリの外の通常ブラウザ（Chrome等）から開いた場合、LINEへのログイン状態に関わらず
+    // ネイティブのカメラスキャナーは起動できない（LINE側の仕様上の制約）。そのため通常ブラウザ
+    // では、getUserMedia + jsQR によるカメラ読み取りを別途実装し、そちらを使う。
+    function scanQRCode() {
+        if (typeof liff !== 'undefined' && isLiffInit && liff.isInClient() && typeof liff.scanCodeV2 === 'function') {
+            liff.scanCodeV2().then((result) => {
+                handleScannedQRValue(result && result.value);
+            }).catch((err) => {
+                console.warn('[QRスキャン] LIFFエラー:', err);
+            });
+            return;
+        }
+        openBrowserQRScanner();
+    }
+
+    // -------------------------------------------------------------
+    // 通常ブラウザ用カメラQRスキャナー（getUserMedia + jsQR）
+    // -------------------------------------------------------------
+    let qrScannerStream = null;
+    let qrScannerRAF = null;
+
+    function openBrowserQRScanner() {
+        if (typeof jsQR === 'undefined') {
+            showToast('QRコード読み取り機能の読み込みに失敗しました。通信環境をご確認のうえ再度お試しください。');
+            return;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast('お使いのブラウザはカメラ読み取りに対応していません。');
+            return;
+        }
+        const statusEl = document.getElementById('qr-scanner-status');
+        if (statusEl) statusEl.textContent = 'カメラを起動しています...';
+        document.getElementById('modal-qr-scanner').classList.add('active');
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } }).then((stream) => {
+            qrScannerStream = stream;
+            const video = document.getElementById('qr-scanner-video');
+            video.srcObject = stream;
+            video.setAttribute('playsinline', true);
+            video.play();
+            if (statusEl) statusEl.textContent = '';
+            requestAnimationFrame(scanQRFrame);
         }).catch((err) => {
-            console.warn('[QRスキャン] エラー:', err);
+            console.warn('[QRスキャン] カメラ起動エラー:', err);
+            if (statusEl) statusEl.textContent = 'カメラを起動できませんでした。カメラの利用を許可してください。';
         });
+    }
+
+    function scanQRFrame() {
+        const video = document.getElementById('qr-scanner-video');
+        const canvas = document.getElementById('qr-scanner-canvas');
+        if (!video || !canvas || !qrScannerStream) return;
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+            if (code && code.data) {
+                closeBrowserQRScanner();
+                handleScannedQRValue(code.data);
+                return;
+            }
+        }
+        qrScannerRAF = requestAnimationFrame(scanQRFrame);
+    }
+
+    function closeBrowserQRScanner() {
+        document.getElementById('modal-qr-scanner').classList.remove('active');
+        if (qrScannerRAF) { cancelAnimationFrame(qrScannerRAF); qrScannerRAF = null; }
+        if (qrScannerStream) {
+            qrScannerStream.getTracks().forEach(track => track.stop());
+            qrScannerStream = null;
+        }
     }
 
     // -------------------------------------------------------------
@@ -2683,6 +2854,11 @@
         document.getElementById('page-top').style.display = 'none';
         document.getElementById('page-search').style.display = 'none';
         document.getElementById('page-howto').style.display = 'flex';
+    }
+    function goToPrivacy() {
+        document.getElementById('page-top').style.display = 'none';
+        document.getElementById('page-search').style.display = 'none';
+        document.getElementById('page-privacy').style.display = 'flex';
     }
     function goToTerms() {
         document.getElementById('page-top').style.display = 'none';
