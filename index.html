@@ -333,6 +333,9 @@
             <button id="btn-toggle-history" onclick="showHistoryList()" class="bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
                 <span class="material-icons text-sm mr-1">history</span>履歴
             </button>
+            <button id="btn-toggle-badges" onclick="showBadgeTab()" class="bg-white/15 text-indigo-100 px-3 py-1.5 rounded-lg text-sm border border-transparent flex items-center transition-all duration-150">
+                <span class="material-icons text-sm mr-1">emoji_events</span>バッジ
+            </button>
         </div>
         
         <div id="search-input-container" class="flex items-center bg-white rounded-lg p-1 shadow-inner border border-gray-200 relative z-20">
@@ -719,7 +722,7 @@
                 <span class="flex-1 font-bold text-gray-800">設定</span>
                 <span class="material-icons text-gray-300 text-lg">chevron_right</span>
             </button>
-            <button onclick="closeHamburgerMenu(); openBadgeModal();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+            <button onclick="closeHamburgerMenu(); goToMemo(); showBadgeTab();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
                 <span class="material-icons text-amber-500 mr-3">emoji_events</span>
                 <span class="flex-1 font-bold text-gray-800">会員達成バッジ</span>
                 <span id="hamburger-badge-count" class="text-[11px] text-amber-600 bg-amber-50 rounded-full px-2 py-0.5 font-bold mr-1"></span>
@@ -2990,17 +2993,18 @@
     }
 
     function openBadgeModal() {
-        renderBadgeList();
+        renderBadgeList('badge-list-container', 'badge-progress-text');
         document.getElementById('modal-badge').classList.add('active');
     }
     function closeBadgeModal() {
         document.getElementById('modal-badge').classList.remove('active');
     }
 
-    function renderBadgeList() {
+    function renderBadgeList(containerId, progressId) {
         const unlocked = getUnlockedBadgeIds();
-        const container = document.getElementById('badge-list-container');
-        document.getElementById('badge-progress-text').textContent = `達成 ${unlocked.length} / ${BADGES.length}`;
+        const container = document.getElementById(containerId || 'badge-list-container');
+        const progressEl = document.getElementById(progressId || 'badge-progress-text');
+        if (progressEl) progressEl.textContent = `達成 ${unlocked.length} / ${BADGES.length}`;
         container.innerHTML = BADGES.map(b => {
             const isUnlocked = unlocked.includes(b.id);
             return `
@@ -5065,7 +5069,7 @@
     }
 
     function setMemoTabStyle(activeId) {
-        const ids = ['btn-toggle-saved', 'btn-toggle-fan', 'btn-toggle-history'];
+        const ids = ['btn-toggle-saved', 'btn-toggle-fan', 'btn-toggle-history', 'btn-toggle-badges'];
         ids.forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
@@ -5129,6 +5133,27 @@
         } else {
             loadMoreRender();
         }
+        updateMemoPlayAllVisibility();
+    }
+
+    function showBadgeTab() {
+        currentMemoTab = 'badges';
+        setMemoTabStyle('btn-toggle-badges');
+
+        allFetchedResults = [];
+        displayResults = [];
+        clearResults();
+
+        const unlocked = getUnlockedBadgeIds();
+        document.getElementById('result-count-simple').textContent = `バッジ: ${unlocked.length}/${BADGES.length}`;
+        document.getElementById('result-count-accordion').textContent = `バッジ: ${unlocked.length}/${BADGES.length}`;
+
+        // バッジ一覧を直接results-containerへ描画する（曲/アーティスト用のloadMoreRenderは使わない）
+        document.getElementById('results-container').innerHTML = `
+            <div class="px-1 pb-2 text-[12px] text-gray-500" id="memo-badge-progress-text"></div>
+            <div id="memo-badge-list-container" class="grid grid-cols-3 gap-3 pb-4"></div>
+        `;
+        renderBadgeList('memo-badge-list-container', 'memo-badge-progress-text');
         updateMemoPlayAllVisibility();
     }
 
