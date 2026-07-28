@@ -4900,6 +4900,50 @@
             }
         };
 
+        // CD検索と同様、①まずCORS対応のfetch()を試し、失敗した場合のみ②JSONPにフォールバックする。
+        // 純粋なJSONP（script タグ読み込み）だけでは応答が返ってこないケースがあるため、
+        // より確実なfetch()を優先する。
+        const runBooksDvdRequest = (url, mediaType) => {
+            let settled = false;
+            const onDone = (data) => {
+                if (settled) return;
+                settled = true;
+                addBooksDvdItems(data, mediaType);
+                finalizeIfDone();
+            };
+            const onFail = () => {
+                if (settled) return;
+                settled = true;
+                finalizeIfDone();
+            };
+
+            // CD検索と同様、応答が返ってこない場合の8秒セーフティタイムアウト
+            setTimeout(() => {
+                if (!settled) {
+                    console.warn('[関連書籍＆DVD] 8秒応答なしのためタイムアウト(' + mediaType + ')');
+                    onFail();
+                }
+            }, 8000);
+
+            fetch(url).then(res => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            }).then(data => {
+                console.log('[関連書籍＆DVD] 応答受信(fetch/' + mediaType + '):', data);
+                onDone(data);
+            }).catch(err => {
+                if (settled) return;
+                console.warn('[関連書籍＆DVD] fetch()失敗のためJSONPへフォールバック(' + mediaType + ')。理由:', err && err.message);
+                fetchJSONPSilent(url, (data) => {
+                    console.log('[関連書籍＆DVD] 応答受信(JSONP/' + mediaType + '):', data);
+                    onDone(data);
+                }, () => {
+                    console.warn('[関連書籍＆DVD] JSONPでも通信エラー(' + mediaType + ')');
+                    onFail();
+                });
+            });
+        };
+
         // ① 書籍（紙の本。写真集・エッセイ・自伝など、著者名で検索）
         const bookUrl = 'https://openapi.rakuten.co.jp/services/api/BooksBook/Search/20170404?' +
             'applicationId=' + encodeURIComponent(RAKUTEN_APP_ID) +
@@ -4907,7 +4951,7 @@
             '&affiliateId=' + encodeURIComponent(RAKUTEN_AFFILIATE_ID) +
             '&author=' + encodeURIComponent(artistName) +
             '&hits=30&sort=sales&format=json';
-        fetchJSONPSilent(bookUrl, (data) => { addBooksDvdItems(data, 'book'); finalizeIfDone(); }, finalizeIfDone);
+        runBooksDvdRequest(bookUrl, 'book');
 
         // ② 電子書籍（楽天Kobo。著者名で検索）
         const koboUrl = 'https://openapi.rakuten.co.jp/services/api/Kobo/EbookSearch/20170426?' +
@@ -4916,7 +4960,7 @@
             '&affiliateId=' + encodeURIComponent(RAKUTEN_AFFILIATE_ID) +
             '&author=' + encodeURIComponent(artistName) +
             '&hits=30&sort=standard&format=json';
-        fetchJSONPSilent(koboUrl, (data) => { addBooksDvdItems(data, 'ebook'); finalizeIfDone(); }, finalizeIfDone);
+        runBooksDvdRequest(koboUrl, 'ebook');
 
         // ③ DVD/Blu-ray（出演者名/アーティスト名で検索）
         const dvdUrl = 'https://openapi.rakuten.co.jp/services/api/BooksDVD/Search/20170404?' +
@@ -4925,7 +4969,7 @@
             '&affiliateId=' + encodeURIComponent(RAKUTEN_AFFILIATE_ID) +
             '&artistName=' + encodeURIComponent(artistName) +
             '&hits=30&sort=sales&format=json';
-        fetchJSONPSilent(dvdUrl, (data) => { addBooksDvdItems(data, 'dvd'); finalizeIfDone(); }, finalizeIfDone);
+        runBooksDvdRequest(dvdUrl, 'dvd');
     }
 
     function addBooksDvdItems(data, mediaType) {
