@@ -603,6 +603,10 @@
                 </button>
             </div>
 
+            <button onclick="openBooksDvdSearch()" class="w-full bg-teal-50 text-teal-700 border border-teal-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-teal-100 transition-colors">
+                <span class="material-icons mr-1">menu_book</span>関連書籍＆DVD
+            </button>
+
             <!-- 豆知識/Wikipedia解説エリア -->
             <div class="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-sm" id="artist-detail-wiki-container" style="display: none;">
                 <div id="artist-detail-wiki-area" class="hidden">
@@ -4846,6 +4850,151 @@
         const { artistId, artistName } = currentArtistDetailData;
         closeArtistDetailModal();
         fetchArtistSongs(artistId, artistName);
+    }
+
+    // -------------------------------------------------------------
+    // 関連書籍＆DVD（アーティスト詳細ウィンドウ専用。トップページの検索メニューには表示しない）
+    // 楽天ブックス書籍検索API・楽天Kobo電子書籍検索API・楽天ブックスDVD/Blu-ray検索APIの3つを
+    // 並行検索し、1つの一覧にまとめて表示する。検索オプション（並び替え・年代・ジャンル）は
+    // このモードでは表示しない。一覧タップで詳細ウィンドウは介さず直接アフィリエイトリンクを開く。
+    // -------------------------------------------------------------
+    let booksDvdResults = [];
+    const MEDIA_TYPE_LABEL = { book: '書籍', ebook: '電子書籍', dvd: 'DVD/Blu-ray' };
+
+    function openBooksDvdSearch() {
+        if (!currentArtistDetailData || !currentArtistDetailData.artistName) return;
+        const artistName = currentArtistDetailData.artistName;
+
+        closeArtistDetailModal();
+        tryFullScreen();
+        currentMode = 'books-dvd';
+        applyModeColor('artist'); // アーティスト系列の青系を踏襲
+        clearInterval(rankingAutoTimer);
+
+        document.getElementById('page-top').style.display = 'none';
+        document.getElementById('page-search').style.display = 'flex';
+        document.getElementById('search-title').textContent = artistName + ' の関連書籍＆DVD';
+
+        // このモードには自由入力欄・検索オプション（並び替え／年代／ジャンル）を一切表示しない
+        document.getElementById('search-input-container').style.display = 'none';
+        document.getElementById('search-history-container').classList.add('hidden');
+        document.getElementById('memo-header-buttons').classList.add('hidden');
+        document.getElementById('simple-options-container').style.display = 'none';
+        document.getElementById('accordion-options-container').style.display = 'none';
+        setMemoFabButtons(false);
+
+        booksDvdResults = [];
+        document.getElementById('results-container').innerHTML = '';
+        const loadingEl = document.getElementById('loading-indicator');
+        const loadingText = document.getElementById('loading-indicator-text');
+        loadingEl.style.display = 'block';
+        if (loadingText) loadingText.textContent = '曲情報を取得中...';
+
+        let completedCount = 0;
+        const finalizeIfDone = () => {
+            completedCount++;
+            if (completedCount >= 3) {
+                loadingEl.style.display = 'none';
+                if (loadingText) loadingText.textContent = '曲情報を取得中...';
+                renderBooksDvdResults();
+            }
+        };
+
+        // ① 書籍（紙の本。写真集・エッセイ・自伝など、著者名で検索）
+        const bookUrl = 'https://openapi.rakuten.co.jp/services/api/BooksBook/Search/20170404?' +
+            'applicationId=' + encodeURIComponent(RAKUTEN_APP_ID) +
+            '&accessKey=' + encodeURIComponent(RAKUTEN_ACCESS_KEY) +
+            '&affiliateId=' + encodeURIComponent(RAKUTEN_AFFILIATE_ID) +
+            '&author=' + encodeURIComponent(artistName) +
+            '&hits=30&sort=sales&format=json';
+        fetchJSONPSilent(bookUrl, (data) => { addBooksDvdItems(data, 'book'); finalizeIfDone(); }, finalizeIfDone);
+
+        // ② 電子書籍（楽天Kobo。著者名で検索）
+        const koboUrl = 'https://openapi.rakuten.co.jp/services/api/Kobo/EbookSearch/20170426?' +
+            'applicationId=' + encodeURIComponent(RAKUTEN_APP_ID) +
+            '&accessKey=' + encodeURIComponent(RAKUTEN_ACCESS_KEY) +
+            '&affiliateId=' + encodeURIComponent(RAKUTEN_AFFILIATE_ID) +
+            '&author=' + encodeURIComponent(artistName) +
+            '&hits=30&sort=standard&format=json';
+        fetchJSONPSilent(koboUrl, (data) => { addBooksDvdItems(data, 'ebook'); finalizeIfDone(); }, finalizeIfDone);
+
+        // ③ DVD/Blu-ray（出演者名/アーティスト名で検索）
+        const dvdUrl = 'https://openapi.rakuten.co.jp/services/api/BooksDVD/Search/20170404?' +
+            'applicationId=' + encodeURIComponent(RAKUTEN_APP_ID) +
+            '&accessKey=' + encodeURIComponent(RAKUTEN_ACCESS_KEY) +
+            '&affiliateId=' + encodeURIComponent(RAKUTEN_AFFILIATE_ID) +
+            '&artistName=' + encodeURIComponent(artistName) +
+            '&hits=30&sort=sales&format=json';
+        fetchJSONPSilent(dvdUrl, (data) => { addBooksDvdItems(data, 'dvd'); finalizeIfDone(); }, finalizeIfDone);
+    }
+
+    function addBooksDvdItems(data, mediaType) {
+        if (!data || data.error) {
+            if (data && data.error) console.warn('[関連書籍＆DVD] APIエラー(' + mediaType + '):', data.error, data.error_description);
+            return;
+        }
+        const items = (data.Items || data.items) || [];
+        items.forEach(entry => {
+            const it = entry.Item || entry.item || entry;
+            const purchaseUrl = it.affiliateUrl || it.itemUrl;
+            if (!it.title || !purchaseUrl) return;
+            booksDvdResults.push({
+                mediaType: mediaType,
+                title: it.title,
+                person: mediaType === 'dvd' ? (it.artistName || '') : (it.author || ''),
+                publisher: mediaType === 'dvd' ? (it.label || '') : (it.publisherName || ''),
+                year: extractYearFromSalesDate(it.salesDate),
+                imageUrl: it.mediumImageUrl || it.largeImageUrl || it.smallImageUrl || '',
+                purchaseUrl: purchaseUrl
+            });
+        });
+    }
+
+    // salesDateは「YYYY年」「YYYY年MM月」「YYYY年MM月DD日」等の表記のため、先頭の年だけ取り出す
+    function extractYearFromSalesDate(salesDate) {
+        if (!salesDate) return '';
+        const m = String(salesDate).match(/(\d{4})年/);
+        return m ? m[1] : '';
+    }
+
+    function renderBooksDvdResults() {
+        const container = document.getElementById('results-container');
+        container.innerHTML = '';
+
+        if (booksDvdResults.length === 0) {
+            container.innerHTML = '<div class="text-center p-8 text-gray-500">関連する書籍・電子書籍・DVD/Blu-rayは見つかりませんでした。</div>';
+            return;
+        }
+
+        booksDvdResults.forEach(item => {
+            // 1行目：タイトル　2行目：書籍/電子書籍＝著者（発売年／出版社）、DVD＝アーティスト（発売年／発売元）
+            const yearPub = [item.year, item.publisher].filter(Boolean).join('／');
+            const subText = item.person + (yearPub ? `（${yearPub}）` : '');
+            const safeUrl = item.purchaseUrl.replace(/'/g, "\\'");
+
+            // 曲検索リストの行（w-16 h-16画像＋py-2）と全く同じ構造・縦幅で統一する
+            const el = document.createElement('div');
+            el.className = 'bg-white rounded-lg shadow-sm flex items-center mb-2 mt-1 active:bg-gray-50 border border-gray-200 pr-2';
+            el.innerHTML = `
+                <div class="flex-1 flex items-center min-w-0 py-2 px-2 cursor-pointer w-full" onclick="openBooksDvdAffiliateLink('${safeUrl}')">
+                    <img src="${item.imageUrl}" class="w-16 h-16 object-cover rounded mr-3 border border-gray-200 bg-gray-50" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2280%22 height=%2280%22%3E%3C/svg%3E'">
+                    <div class="flex-1 min-w-0 pr-2">
+                        <div class="text-base font-bold text-gray-900 truncate leading-tight">${item.title}</div>
+                        <div class="text-sm text-gray-600 truncate mt-1">${subText}</div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(el);
+        });
+    }
+
+    function openBooksDvdAffiliateLink(url) {
+        if (!url) return;
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
+            liff.openWindow({ url: url, external: true });
+        } else {
+            window.open(url, '_blank');
+        }
     }
 
     // -------------------------------------------------------------
