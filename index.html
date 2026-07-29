@@ -178,17 +178,13 @@
         </div>
     </div>
 
-    <div class="top-header shadow-md">
+    <div class="top-header shadow-md" style="padding-top: 1.25rem; padding-bottom: 1.5rem;">
         <!-- ハンバーガーメニュー -->
         <button onclick="openHamburgerMenu()" class="absolute top-4 right-4 text-white p-2 active:opacity-70 transition">
             <span class="material-icons">menu</span>
         </button>
-        <h1 class="text-3xl font-bold tracking-wider flex items-center justify-center mb-1 mt-4 font-sans">
-            <span class="material-icons text-3xl mr-2">mic</span> メロ出〜た
-        </h1>
-        <a href="./collection.html" class="block text-[11px] text-indigo-100 text-right opacity-80 mb-1 pr-1 tracking-wider underline decoration-indigo-300/50 underline-offset-2 active:opacity-60">produced by M.Tsuda</a>
         <!-- 年間ランキング（総合／演歌・歌謡曲の売上ランキングが5秒ごとに横スライド）：開閉式アコーディオン -->
-        <div id="ranking-widget" class="mt-1">
+        <div id="ranking-widget" class="mt-10">
             <button onclick="toggleRankingWidget()" class="w-full flex items-center justify-between px-1 py-1.5 text-white/90 active:opacity-70 transition">
                 <span class="text-[12px] font-bold flex items-center tracking-wide"><span class="material-icons text-sm mr-1">leaderboard</span>年間ランキング</span>
                 <span id="ranking-widget-chevron" class="material-icons text-lg transition-transform duration-300">expand_less</span>
@@ -241,13 +237,22 @@
                 </button>
             </div>
 
-            <div class="col-span-5 flex items-center justify-center">
-                <button onclick="goToSearch('new-song')" class="w-[140px] h-[140px] rounded-full border-[6px] border-pink-500 bg-white flex flex-col items-center justify-center p-3 shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 outline-none relative">
-                    <div class="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center mb-1 flex-shrink-0 shadow-inner">
-                        <span class="text-[11px] font-black text-pink-500 border-[2px] border-pink-300 rounded px-1 scale-110 tracking-tighter">NEW</span>
+            <div class="col-span-5 flex flex-col items-center justify-center gap-3">
+                <!-- 今日のオススメ（曜日ごとのジャンルで、なるべく有名な昭和の曲をランダム表示） -->
+                <button id="daily-recommend-card" onclick="openDailyRecommendDetail()" class="hidden w-full flex flex-col items-center outline-none">
+                    <span id="daily-recommend-label" class="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-300 rounded-full px-2 py-0.5 mb-1 whitespace-nowrap">今日のオススメ</span>
+                    <div class="w-full aspect-square rounded-xl border-[3px] border-amber-400 shadow-md overflow-hidden bg-gray-200 active:opacity-80 transition">
+                        <img id="daily-recommend-img" src="" alt="今日のオススメ" class="w-full h-full object-cover">
                     </div>
-                    <span class="text-xl font-black text-gray-800 leading-tight">新曲</span>
-                    <span class="text-[10px] text-gray-400 mt-0.5 whitespace-nowrap">新曲を探す</span>
+                    <span id="daily-recommend-artist" class="text-[10px] text-gray-500 mt-1 truncate w-full text-center"></span>
+                </button>
+
+                <button onclick="goToSearch('new-song')" class="w-[110px] h-[110px] rounded-full border-[5px] border-pink-500 bg-white flex flex-col items-center justify-center p-2 shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 outline-none relative">
+                    <div class="w-9 h-9 rounded-full bg-pink-100 flex items-center justify-center mb-1 flex-shrink-0 shadow-inner">
+                        <span class="text-[9px] font-black text-pink-500 border-[2px] border-pink-300 rounded px-1 scale-110 tracking-tighter">NEW</span>
+                    </div>
+                    <span class="text-base font-black text-gray-800 leading-tight">新曲</span>
+                    <span class="text-[9px] text-gray-400 mt-0.5 whitespace-nowrap">新曲を探す</span>
                 </button>
             </div>
         </div>
@@ -309,6 +314,11 @@
             <button onclick="location.href='./kararestr.html'" class="w-full bg-white border-2 border-[#1e3a8a] text-[#1e3a8a] rounded-2xl shadow-sm py-4 flex items-center justify-center font-bold text-base active:bg-blue-50 transition-colors">
                 <span class="material-icons mr-2">place</span>近くのカラオケ設置店を探す
             </button>
+        </div>
+
+        <!-- フッター -->
+        <div class="text-center text-[11px] text-gray-400 mt-6 pb-2">
+            © 2026 メロ出〜た <a href="./collection.html" class="text-gray-400 underline decoration-gray-300 underline-offset-2 active:text-gray-600">Produced by M.Tsuda</a>
         </div>
 
     </div>
@@ -1447,6 +1457,9 @@
         // トップページ：年間ランキングの表示開始（総合／演歌・歌謡曲の売上ランキングのみ）
         startRankingWidget();
         fetchLiveSalesRanking();
+
+        // トップページ：今日のオススメ（曜日ごとのジャンルで昭和の有名曲をランダム表示）
+        loadDailyRecommend();
 
         // 達成バッジ：本日の利用記録と連続ログイン日数の更新
         recordDailyVisitAndStreak();
@@ -4035,6 +4048,76 @@
         let clean = title.split(/[\/／+\〜\~\(\（\[\【]/)[0];
         if (clean.includes(' - ')) clean = clean.split(' - ')[0];
         return clean.trim();
+    }
+
+    // -------------------------------------------------------------
+    // 今日のオススメ：曜日ごとに固定ジャンルを割り当て、その中の有名アーティストから
+    // 「なるべく有名な昭和時代（1926〜1989年）の楽曲」をランダムに1曲表示する。
+    // 月曜（洋楽）以外はすべて日本人アーティスト。
+    // 「今日」の間は同じ選出結果になるよう、日付ベースの疑似乱数（trueのMath.randomは使わない）で選ぶ。
+    // -------------------------------------------------------------
+    const DAILY_RECOMMEND_GENRES = {
+        0: { label: 'ブルース',         artists: ['青江三奈', '森進一', '淡谷のり子', 'ちあきなおみ'] },                                  // 日曜
+        1: { label: '洋楽',             artists: ['The Beatles', 'Queen', 'Michael Jackson', 'ABBA', 'Elvis Presley', 'Carpenters', 'Eagles', 'Elton John'] }, // 月曜
+        2: { label: '歌謡曲',           artists: ['山口百恵', 'ピンク・レディー', '沢田研二', 'キャンディーズ', '郷ひろみ', '西城秀樹'] },        // 火曜
+        3: { label: 'ロック',           artists: ['矢沢永吉', 'RCサクセション', 'BOØWY', '尾崎豊', 'THE ALFEE', '甲斐バンド'] },              // 水曜
+        4: { label: 'グループサウンズ', artists: ['ザ・タイガース', 'ザ・スパイダース', 'ザ・テンプターズ', 'ジャッキー吉川とブルー・コメッツ', 'オックス'] }, // 木曜
+        5: { label: '演歌',             artists: ['美空ひばり', '北島三郎', '都はるみ', '石川さゆり', '八代亜紀', '五木ひろし'] },              // 金曜
+        6: { label: 'フォークソング',   artists: ['吉田拓郎', 'かぐや姫', '井上陽水', 'さだまさし', '南こうせつ', 'イルカ'] }                  // 土曜
+    };
+
+    // 日付ベースの疑似乱数シード（同じ日なら常に同じ値。年またぎの重複はほぼ実害なし）
+    function getDailySeed() {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), 0, 0);
+        const dayOfYear = Math.floor((now - start) / 86400000);
+        return now.getFullYear() * 400 + dayOfYear;
+    }
+
+    let dailyRecommendItem = null;
+
+    function loadDailyRecommend() {
+        const now = new Date();
+        const genreInfo = DAILY_RECOMMEND_GENRES[now.getDay()];
+        if (!genreInfo) return;
+        const seed = getDailySeed();
+        const artistName = genreInfo.artists[seed % genreInfo.artists.length];
+
+        const url = 'https://itunes.apple.com/search?term=' + encodeURIComponent(artistName) + '&country=jp&lang=ja_jp&limit=50&entity=song';
+        fetchJSONP(url, (data) => {
+            if (!data || !data.results || data.results.length === 0) return;
+
+            // 昭和期間（1926〜1989年）に絞り込む。万一ヒットが無ければ全結果から選ぶ（表示自体は優先）
+            const showaResults = data.results.filter(r => {
+                if (!r.releaseDate) return false;
+                const y = new Date(r.releaseDate).getFullYear();
+                return y >= 1926 && y <= 1989;
+            });
+            const pool = showaResults.length > 0 ? showaResults : data.results;
+            const track = pool[seed % pool.length];
+            if (!track || !track.trackName) return;
+
+            dailyRecommendItem = track;
+            renderDailyRecommend(track, genreInfo.label);
+        });
+    }
+
+    function renderDailyRecommend(track, genreLabel) {
+        const card = document.getElementById('daily-recommend-card');
+        const img = document.getElementById('daily-recommend-img');
+        const artistEl = document.getElementById('daily-recommend-artist');
+        const labelEl = document.getElementById('daily-recommend-label');
+        if (!card || !img) return;
+        img.src = track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb', '400x400bb') : '';
+        img.alt = track.trackName;
+        if (artistEl) artistEl.textContent = track.trackName + ' / ' + track.artistName;
+        if (labelEl) labelEl.textContent = '今日のオススメ（' + genreLabel + '）';
+        card.classList.remove('hidden');
+    }
+
+    function openDailyRecommendDetail() {
+        if (!dailyRecommendItem) return;
+        openDetailModal(dailyRecommendItem);
     }
 
     function openDetailModal(item) {
