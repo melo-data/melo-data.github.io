@@ -3732,7 +3732,18 @@
     let scopedMasterResults = []; // 「歌手名」「アルバム名」内の曲名検索を、その歌手/アルバムの曲だけに限定するための元データ
 
     function fetchArtistSongs(artistId, artistName) {
+        // 「アーティスト詳細」はトップページの曲詳細（オススメ曲・ランキング等）から直接開かれる
+        // こともあり、その場合トップページ(page-top)が表示されたままになっている。以前はここで
+        // 画面切り替えを行っていなかったため、結果が裏側(非表示のpage-search)に描画されるだけで
+        // 画面上は何も起きたように見えない不具合があった。ここで明示的に検索画面へ切り替える。
+        tryFullScreen();
         currentMode = 'artist-songs';
+        applyModeColor('artist-songs');
+        clearInterval(rankingAutoTimer);
+        document.getElementById('page-top').style.display = 'none';
+        document.getElementById('page-search').style.display = 'flex';
+        document.getElementById('search-input-container').style.display = 'flex';
+        document.getElementById('memo-header-buttons').classList.add('hidden');
         document.getElementById('search-title').textContent = artistName;
         clearResults();
         allFetchedResults = [];
@@ -3880,7 +3891,17 @@
     }
 
     function fetchAlbumTracks(collectionId, collectionName) {
+        // アーティスト詳細と同様、アルバム詳細もトップページの曲詳細（オススメ曲・ランキング等）
+        // から直接開かれることがあるため、ここで明示的に検索画面へ切り替える。
+        tryFullScreen();
         currentMode = 'album-tracks';
+        applyModeColor('album-tracks');
+        clearInterval(rankingAutoTimer);
+        document.getElementById('page-top').style.display = 'none';
+        document.getElementById('page-search').style.display = 'flex';
+        document.getElementById('search-input-container').style.display = 'flex';
+        document.getElementById('memo-header-buttons').classList.add('hidden');
+        setMemoFabButtons(false);
         document.getElementById('search-title').textContent = collectionName;
         clearResults();
         allFetchedResults = [];
