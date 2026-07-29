@@ -1270,7 +1270,7 @@
 
             const existingIds = new Set(existingArtistGroups.map(a => String(a.artistId)));
             const mapped = spotifyTracks.filter(t => t.artists && t.artists[0]).map(mapSpotifyTrackToItunesShape);
-            const spotifyArtistGroups = groupToArtists(mapped).filter(a => !existingIds.has(String(a.artistId)));
+            const spotifyArtistGroups = groupToArtists(mapped, query).filter(a => !existingIds.has(String(a.artistId)));
 
             if (spotifyArtistGroups.length === 0) return;
             console.log('[Spotify補完] iTunesに無かったアーティストを' + spotifyArtistGroups.length + '件追加');
@@ -3319,7 +3319,7 @@
             document.getElementById('loading-indicator').style.display = 'none';
             if (data && data.results) {
                 if (currentMode === 'artist') {
-                    allFetchedResults = groupToArtists(data.results);
+                    allFetchedResults = groupToArtists(data.results, currentQuery);
                     applyFiltersAndRender();
                     supplementArtistSearchWithSpotify(currentQuery, allFetchedResults);
                 } else if (currentMode === 'album') {
@@ -3583,11 +3583,20 @@
         }
     }
 
-    function groupToArtists(songResults) {
+    function groupToArtists(songResults, query) {
         const artistMap = {};
+        // 「歌手名」検索は attribute=artistTerm を指定していても、Apple側の検索は関連度ベースの
+        // あいまい検索のため、本人とは無関係なアーティストが結果に混ざることがある。
+        // 検索語がアーティスト名に含まれているものだけに絞り込むことで、無関係な候補を除外する
+        // （前方一致まで厳しくすると表記ゆれ等で本人が漏れる恐れがあるため、部分一致にとどめる）。
+        const normalizedQuery = (query || '').trim().toLowerCase();
         songResults.forEach(song => {
             const id = song.artistId;
             if (!id) return;
+            if (normalizedQuery) {
+                const artistNameLower = (song.artistName || '').toLowerCase();
+                if (!artistNameLower.includes(normalizedQuery)) return;
+            }
             if (!artistMap[id]) {
                 artistMap[id] = { isArtistGroup: true, artistId: id, artistName: song.artistName, primaryGenreName: song.primaryGenreName, artworkUrl100: song.artworkUrl100, trackCount: 0 };
             }
