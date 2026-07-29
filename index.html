@@ -3589,13 +3589,16 @@
         // あいまい検索のため、本人とは無関係なアーティストが結果に混ざることがある。
         // 検索語がアーティスト名に含まれているものだけに絞り込むことで、無関係な候補を除外する
         // （前方一致まで厳しくすると表記ゆれ等で本人が漏れる恐れがあるため、部分一致にとどめる）。
-        const normalizedQuery = (query || '').trim().toLowerCase();
+        // 「明石家 さんま」のように苗字と名前の間に空白が入っている場合、ユーザーが空白なしで
+        // 検索すると一致しなくなってしまうため、比較前に半角・全角スペースを両方から除去する。
+        const normalize = (s) => (s || '').toLowerCase().replace(/[\s　]+/g, '');
+        const normalizedQuery = normalize(query);
         songResults.forEach(song => {
             const id = song.artistId;
             if (!id) return;
             if (normalizedQuery) {
-                const artistNameLower = (song.artistName || '').toLowerCase();
-                if (!artistNameLower.includes(normalizedQuery)) return;
+                const artistNameNormalized = normalize(song.artistName);
+                if (!artistNameNormalized.includes(normalizedQuery)) return;
             }
             if (!artistMap[id]) {
                 artistMap[id] = { isArtistGroup: true, artistId: id, artistName: song.artistName, primaryGenreName: song.primaryGenreName, artworkUrl100: song.artworkUrl100, trackCount: 0 };
