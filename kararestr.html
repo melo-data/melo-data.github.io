@@ -45,8 +45,15 @@
     const API_KEY = '1c29d09807b9c254';
 
     window.addEventListener('DOMContentLoaded', () => {
+        tryFullScreen();
         getLocationAndSearch();
     });
+
+    function tryFullScreen() {
+        const el = document.documentElement;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (req && !document.fullscreenElement) { req.call(el).catch(() => {}); }
+    }
 
     function getLocationAndSearch() {
         const statusEl = document.getElementById('status');

@@ -65,8 +65,15 @@
 
     // ページを開いたら自動で動画リストを取得する
     window.addEventListener('DOMContentLoaded', () => {
+        tryFullScreen();
         fetchShorts();
     });
+
+    function tryFullScreen() {
+        const el = document.documentElement;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (req && !document.fullscreenElement) { req.call(el).catch(() => {}); }
+    }
 
     // ISO 8601形式の時間を秒数に変換
     function parseISO8601Duration(durationString) {

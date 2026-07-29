@@ -178,32 +178,33 @@
         </div>
     </div>
 
-    <div class="top-header shadow-md" style="padding-top: 1.25rem; padding-bottom: 1.5rem;">
-        <!-- ハンバーガーメニュー -->
-        <button onclick="openHamburgerMenu()" class="absolute top-4 right-4 text-white p-2 active:opacity-70 transition">
-            <span class="material-icons">menu</span>
-        </button>
-        <!-- 年間ランキング（総合／演歌・歌謡曲の売上ランキングが5秒ごとに横スライド）：開閉式アコーディオン -->
-        <div id="ranking-widget" class="mt-10">
-            <button onclick="toggleRankingWidget()" class="w-full flex items-center justify-between px-1 py-1.5 text-white/90 active:opacity-70 transition">
-                <span class="text-[12px] font-bold flex items-center tracking-wide"><span class="material-icons text-sm mr-1">leaderboard</span>年間ランキング</span>
-                <span id="ranking-widget-chevron" class="material-icons text-lg transition-transform duration-300">expand_less</span>
+    <div class="top-header shadow-md" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+        <div class="flex items-center justify-end gap-1">
+            <button onclick="openHamburgerMenu()" class="text-white p-1.5 active:opacity-70 transition">
+                <span class="material-icons">menu</span>
             </button>
-            <div id="ranking-widget-collapsible" class="overflow-hidden transition-all duration-300">
-                <div class="overflow-hidden rounded-xl" id="ranking-swipe-area" style="touch-action: pan-y;">
-                    <div id="ranking-slide-track" class="flex" style="transition: transform 0.35s ease;"></div>
-                </div>
-                <div id="ranking-dots" class="flex items-center justify-center gap-1 mt-2"></div>
+            <button onclick="toggleRankingWidget()" class="text-white p-1.5 active:opacity-70 transition">
+                <span id="ranking-widget-chevron" class="material-icons transition-transform duration-300">expand_less</span>
+            </button>
+        </div>
+        <!-- 年間ランキング（総合／演歌・歌謡曲の売上ランキングが5秒ごとに横スライド）：タイトルごと開閉するアコーディオン -->
+        <div id="ranking-widget-collapsible" class="overflow-hidden transition-all duration-300">
+            <div class="text-left px-1 pt-1 flex items-center tracking-wide text-[13px] font-bold text-white/90">
+                <span class="material-icons text-sm mr-1">leaderboard</span>年間ランキング
             </div>
+            <div class="overflow-hidden rounded-xl mt-1.5" id="ranking-swipe-area" style="touch-action: pan-y;">
+                <div id="ranking-slide-track" class="flex" style="transition: transform 0.35s ease;"></div>
+            </div>
+            <div id="ranking-dots" class="flex items-center justify-center gap-1 mt-2"></div>
         </div>
     </div>
     
     <div class="scrollable-content px-4 flex flex-col">
-        <!-- 2列グリッドエリア（歌手名・曲名 ＆ 新曲） -->
-        <div class="grid grid-cols-12 gap-4 mb-4 items-stretch">
-            <div class="col-span-7 flex flex-col gap-4">
+        <!-- 統合グリッド：左4項目(歌手名/曲名/アルバム名/歌詞ワード)＆右3項目(今日のオススメ/新曲/メモ帳)を高さ揃えて均等配置 -->
+        <div class="grid grid-cols-12 gap-3 mb-4 items-stretch">
+            <div class="col-span-7 flex flex-col gap-2">
                 <!-- 歌手名 -->
-                <button onclick="goToSearch('artist')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all h-[90px]">
+                <button onclick="goToSearch('artist')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all flex-1">
                     <div class="w-2 h-full bg-blue-500 self-stretch flex-shrink-0"></div>
                     <div class="p-3 flex-1 flex items-center justify-between min-w-0">
                         <div class="flex items-center min-w-0">
@@ -220,7 +221,7 @@
                 </button>
 
                 <!-- 曲名 -->
-                <button onclick="goToSearch('song')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all h-[90px]">
+                <button onclick="goToSearch('song')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all flex-1">
                     <div class="w-2 h-full bg-green-500 self-stretch flex-shrink-0"></div>
                     <div class="p-3 flex-1 flex items-center justify-between min-w-0">
                         <div class="flex items-center min-w-0">
@@ -235,35 +236,9 @@
                         <span class="material-icons text-gray-300">chevron_right</span>
                     </div>
                 </button>
-            </div>
 
-            <div class="col-span-5 flex flex-col items-center justify-center gap-3">
-                <!-- 今日のオススメ（曜日ごとのジャンルで、なるべく有名な昭和の曲をランダム表示） -->
-                <button id="daily-recommend-card" onclick="openDailyRecommendDetail()" class="hidden w-full flex flex-col items-center outline-none">
-                    <span id="daily-recommend-label" class="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-300 rounded-full px-2 py-0.5 mb-1 whitespace-nowrap">今日のオススメ</span>
-                    <div class="w-full aspect-square rounded-xl border-[3px] border-amber-400 shadow-md overflow-hidden bg-gray-200 active:opacity-80 transition">
-                        <img id="daily-recommend-img" src="" alt="今日のオススメ" class="w-full h-full object-cover">
-                    </div>
-                    <span id="daily-recommend-artist" class="text-[10px] text-gray-500 mt-1 truncate w-full text-center"></span>
-                </button>
-
-                <button onclick="goToSearch('new-song')" class="w-[110px] h-[110px] rounded-full border-[5px] border-pink-500 bg-white flex flex-col items-center justify-center p-2 shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 outline-none relative">
-                    <div class="w-9 h-9 rounded-full bg-pink-100 flex items-center justify-center mb-1 flex-shrink-0 shadow-inner">
-                        <span class="text-[9px] font-black text-pink-500 border-[2px] border-pink-300 rounded px-1 scale-110 tracking-tighter">NEW</span>
-                    </div>
-                    <span class="text-base font-black text-gray-800 leading-tight">新曲</span>
-                    <span class="text-[9px] text-gray-400 mt-0.5 whitespace-nowrap">新曲を探す</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- 音楽ニュース（末尾に移設） -->
-
-        <!-- 2列グリッドエリア（アルバム名・歌詞ワード ＆ メモ帳） -->
-        <div class="grid grid-cols-12 gap-4 mb-8 items-stretch">
-            <div class="col-span-7 flex flex-col gap-4">
                 <!-- アルバム名 -->
-                <button onclick="goToSearch('album')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all h-[90px]">
+                <button onclick="goToSearch('album')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all flex-1">
                     <div class="w-2 h-full bg-yellow-500 self-stretch flex-shrink-0"></div>
                     <div class="p-3 flex-1 flex items-center justify-between min-w-0">
                         <div class="flex items-center min-w-0">
@@ -280,7 +255,7 @@
                 </button>
 
                 <!-- 歌詞ワード (ピンク系から紫系に配色変更) -->
-                <button onclick="goToSearch('lyrics')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all h-[90px]">
+                <button onclick="goToSearch('lyrics')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all flex-1">
                     <div class="w-2 h-full bg-[#8b5cf6] self-stretch flex-shrink-0"></div>
                     <div class="p-3 flex-1 flex items-center justify-between min-w-0">
                         <div class="flex items-center min-w-0">
@@ -297,17 +272,43 @@
                 </button>
             </div>
 
-            <div class="col-span-5 flex items-center justify-center">
-                <!-- メモ帳 (ダークテーマ、新曲ボタンと同じ円形配置) -->
-                <button onclick="goToMemo()" class="w-[140px] h-[140px] rounded-full border-[6px] border-gray-500 bg-[#2a303c] flex flex-col items-center justify-center p-3 shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 outline-none relative text-white">
-                    <div class="w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center mb-1 flex-shrink-0 shadow-inner">
-                        <span class="material-icons text-2xl">assignment</span>
-                    </div>
-                    <span class="text-xl font-black leading-tight">メモ帳</span>
-                    <span class="text-[10px] text-gray-300 mt-0.5 whitespace-nowrap">保存・履歴を見る</span>
-                </button>
+            <div class="col-span-5 flex flex-col gap-2">
+                <!-- 今日のオススメ（曜日ごとのジャンルで、なるべく有名な昭和の曲をランダム表示） -->
+                <div class="flex-1 flex items-center justify-center">
+                    <button id="daily-recommend-card" onclick="openDailyRecommendDetail()" class="hidden flex flex-col items-center outline-none">
+                        <span id="daily-recommend-label" class="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-300 rounded-full px-2 py-0.5 mb-1 whitespace-nowrap">オススメ曲</span>
+                        <div class="w-[92px] h-[92px] rounded-xl border-[3px] border-amber-400 shadow-md overflow-hidden bg-gray-200 active:opacity-80 transition">
+                            <img id="daily-recommend-img" src="" alt="今日のオススメ" class="w-full h-full object-cover">
+                        </div>
+                        <span id="daily-recommend-artist" class="text-[9px] text-gray-500 mt-1 truncate w-[92px] text-center"></span>
+                    </button>
+                </div>
+
+                <!-- 新曲（メモ帳と全く同じサイズの円形に統一） -->
+                <div class="flex-1 flex items-center justify-center">
+                    <button onclick="goToSearch('new-song')" class="w-[92px] h-[92px] rounded-full border-[4px] border-pink-500 bg-white flex flex-col items-center justify-center p-1.5 shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 outline-none relative">
+                        <div class="w-7 h-7 rounded-full bg-pink-100 flex items-center justify-center mb-0.5 flex-shrink-0 shadow-inner">
+                            <span class="text-[7px] font-black text-pink-500 border-[1.5px] border-pink-300 rounded px-1 scale-110 tracking-tighter">NEW</span>
+                        </div>
+                        <span class="text-sm font-black text-gray-800 leading-tight">新曲</span>
+                        <span class="text-[8px] text-gray-400 whitespace-nowrap">新曲を探す</span>
+                    </button>
+                </div>
+
+                <!-- メモ帳（新曲と全く同じサイズの円形に統一。ダークテーマ） -->
+                <div class="flex-1 flex items-center justify-center">
+                    <button onclick="goToMemo()" class="w-[92px] h-[92px] rounded-full border-[4px] border-gray-500 bg-[#2a303c] flex flex-col items-center justify-center p-1.5 shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 outline-none relative text-white">
+                        <div class="w-7 h-7 rounded-full bg-gray-600 flex items-center justify-center mb-0.5 flex-shrink-0 shadow-inner">
+                            <span class="material-icons text-base">assignment</span>
+                        </div>
+                        <span class="text-sm font-black leading-tight">メモ帳</span>
+                        <span class="text-[8px] text-gray-300 whitespace-nowrap">保存・履歴</span>
+                    </button>
+                </div>
             </div>
         </div>
+
+        <!-- 音楽ニュース（末尾に移設） -->
 
         <!-- 近くのカラオケ設置店を探す（別枠・別ページへの外部リンク） -->
         <div class="mt-2 pt-4 border-t border-gray-200">
@@ -731,15 +732,17 @@
                 <span class="flex-1 font-bold text-gray-800">メロ出～たとお友達</span>
                 <span class="material-icons text-gray-300 text-lg">chevron_right</span>
             </button>
+            <button onclick="closeHamburgerMenu(); shareAppOnly();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
+                <span class="material-icons text-pink-500 mr-3">share</span>
+                <span class="flex-1 font-bold text-gray-800">友達に共有</span>
+                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
+            </button>
+
+            <div class="h-2 bg-gray-50 border-b border-gray-100"></div>
+
             <button onclick="closeHamburgerMenu(); openSettingsModal();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
                 <span class="material-icons text-gray-600 mr-3">settings</span>
                 <span class="flex-1 font-bold text-gray-800">設定</span>
-                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
-            </button>
-            <button onclick="closeHamburgerMenu(); goToMemo(); showBadgeTab();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
-                <span class="material-icons text-amber-500 mr-3">emoji_events</span>
-                <span class="flex-1 font-bold text-gray-800">会員達成バッジ</span>
-                <span id="hamburger-badge-count" class="text-[11px] text-amber-600 bg-amber-50 rounded-full px-2 py-0.5 font-bold mr-1"></span>
                 <span class="material-icons text-gray-300 text-lg">chevron_right</span>
             </button>
             <button onclick="closeHamburgerMenu(); handleInstallClick();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
@@ -752,11 +755,9 @@
                 <span class="flex-1 font-bold text-gray-800">機種変バックアップ</span>
                 <span class="material-icons text-gray-300 text-lg">chevron_right</span>
             </button>
-            <button onclick="closeHamburgerMenu(); shareAppOnly();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
-                <span class="material-icons text-pink-500 mr-3">share</span>
-                <span class="flex-1 font-bold text-gray-800">友達に共有</span>
-                <span class="material-icons text-gray-300 text-lg">chevron_right</span>
-            </button>
+
+            <div class="h-2 bg-gray-50 border-b border-gray-100"></div>
+
             <button onclick="closeHamburgerMenu(); goToHowto();" class="w-full flex items-center px-4 py-3.5 active:bg-gray-50 text-left border-b border-gray-100">
                 <span class="material-icons text-green-500 mr-3">help_outline</span>
                 <span class="flex-1 font-bold text-gray-800">使い方</span>
@@ -806,7 +807,7 @@
                         <span class="font-bold text-sm">Amazon優先</span>
                     </label>
                 </div>
-                <p class="text-[11px] text-gray-400 mt-1.5">「Amazon優先」にすると、CD購入リンクは楽天ブックスではなくAmazon Musicの検索結果になります。</p>
+                <p class="text-[11px] text-gray-400 mt-1.5">「Amazon優先」にすると、CD・関連書籍＆DVDの購入リンクは楽天ではなくAmazonの検索結果になります。</p>
             </div>
 
             <div>
@@ -2341,21 +2342,20 @@
         document.getElementById('search-input-container').style.display = 'flex';
         document.getElementById('memo-header-buttons').classList.add('hidden');
         
-        if (!isSameMode) {
-            inputEl.value = '';
-            clearResults();
-            allFetchedResults = [];
-            
-            document.getElementById('sort-select-accordion').value = 'default';
-            document.getElementById('sort-select-simple').value = 'default';
-            document.getElementById('decade-select').value = 'all';
-            selectGenre('all', document.querySelector('.genre-tab'));
-        }
+        inputEl.value = '';
+        clearResults();
+        allFetchedResults = [];
+        displayResults = [];
+        
+        document.getElementById('sort-select-accordion').value = 'default';
+        document.getElementById('sort-select-simple').value = 'default';
+        document.getElementById('decade-select').value = 'all';
+        selectGenre('all', document.querySelector('.genre-tab'));
         
         if (mode === 'song' || mode === 'lyrics' || mode === 'artist-songs' || mode === 'album-tracks' || mode === 'new-song') {
             document.getElementById('simple-options-container').style.display = 'none';
             document.getElementById('accordion-options-container').style.display = 'block';
-            if (!isSameMode) openSearchOptions();
+            openSearchOptions();
         } else {
             document.getElementById('simple-options-container').style.display = 'flex';
             document.getElementById('accordion-options-container').style.display = 'none';
@@ -2374,18 +2374,16 @@
         // 「新曲」は最初から新曲一覧が表示されるためカーソル指定は不要。
         // スマホの予測変換バーが入力欄に重なる問題への対策として、キーボードが開くアニメーションが
         // 終わったタイミングで改めてテキスト欄を画面内へスクロールし直す（block:'center'で余裕を持たせる）。
-        if (!isSameMode && (mode === 'artist' || mode === 'song' || mode === 'album' || mode === 'lyrics')) {
+        if (mode === 'artist' || mode === 'song' || mode === 'album' || mode === 'lyrics') {
             setTimeout(() => {
                 inputEl.focus();
                 setTimeout(() => { inputEl.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 300);
             }, 150);
         }
 
-        // 【2026年最新仕様】新曲ボタンから遷移した場合：Apple Music公式新着・トレンドフィードを直接並行取得し lookup にかけて100件以上の豊かな最新リストを出力
-        if (mode === 'new-song' && !isSameMode && allFetchedResults.length === 0) {
+        // 「新曲」に来た時は必ず毎回、最新の情報を取得し直す（他の検索結果が一時的にも見えないようにする）
+        if (mode === 'new-song') {
             executeNewSongSearch();
-        } else if (isSameMode && allFetchedResults.length > 0) {
-            applyFiltersAndRender();
         }
     }
 
@@ -3057,7 +3055,16 @@
         const searchToken = ++newSongSearchToken;
         const loadingText = document.getElementById('loading-indicator-text');
         document.getElementById('loading-indicator').style.display = 'block';
-        if (loadingText) loadingText.textContent = '曲情報を取得中...';
+
+        // 全体の進捗をパーセント表示するための共有カウンター（歌手の曲一覧と表示形式を統一）
+        const progress = { done: 0, total: 0 };
+        const updateProgress = () => {
+            if (!loadingText || progress.total === 0) return;
+            const pct = Math.min(100, Math.floor((progress.done / progress.total) * 100));
+            loadingText.textContent = `曲情報を取得中... (${pct}%)`;
+        };
+        const tickProgress = () => { progress.done++; updateProgress(); };
+        if (loadingText) loadingText.textContent = '曲情報を取得中... (0%)';
 
         // 2026年に rss.applemarketingtools.com は rss.marketingtools.apple.com へ移行済み。
         // 旧ドメインのままだと取得に失敗し、以降は精度の低いキーワード検索頼みになってしまうため、
@@ -3078,6 +3085,7 @@
             'https://rss.marketingtools.apple.com/api/v2/jp/music/most-played/100/songs.json',
             'https://rss.marketingtools.apple.com/api/v2/jp/music/top-selling/100/songs.json'
         ];
+        progress.total = rssUrls.length + 1 + 1 + 15 + 12 + 8; // RSS3 + lookup1 + genre30チャート1 + 演歌15 + 主要12 + 一般検索8
 
         let trackIds = new Set();
         let rssCompleted = 0;
@@ -3153,17 +3161,17 @@
                 .then(data => {
                     const entries = (data && data.feed && data.feed.entry) || [];
                     const ids = entries.map(e => e.id && e.id.attributes && e.id.attributes['im:id']).filter(Boolean);
-                    if (ids.length === 0) { extraSourcesDone++; finalize(); return; }
+                    if (ids.length === 0) { extraSourcesDone++; tickProgress(); finalize(); return; }
                     fetchJSONPSilent(`https://itunes.apple.com/lookup?id=${ids.join(',')}&country=jp&lang=ja_jp`, (lookupData) => {
                         if (lookupData && lookupData.results) {
                             const tagged = lookupData.results.filter(item => item.wrapperType === 'track').map(item => ({ ...item, _genreSupplement: true }));
                             searchResults = searchResults.concat(tagged);
                         }
-                        extraSourcesDone++;
+                        extraSourcesDone++; tickProgress();
                         finalize();
-                    }, () => { extraSourcesDone++; finalize(); });
+                    }, () => { extraSourcesDone++; tickProgress(); finalize(); });
                 })
-                .catch(() => { extraSourcesDone++; finalize(); });
+                .catch(() => { extraSourcesDone++; tickProgress(); finalize(); });
 
             // ② 主要な演歌・歌謡曲アーティストを名前で直接検索し、個々の新曲を確実に拾う
             //    （こちらは1年フィルターを免除するタグを付ける＝カタログの古い曲も含めて表示してよい）
@@ -3174,9 +3182,9 @@
                         const tagged = data.results.filter(item => item.wrapperType === 'track').map(item => ({ ...item, _genreSupplement: true }));
                         searchResults = searchResults.concat(tagged);
                     }
-                    extraSourcesDone++;
+                    extraSourcesDone++; tickProgress();
                     finalize();
-                }, () => { extraSourcesDone++; finalize(); });
+                }, () => { extraSourcesDone++; tickProgress(); finalize(); });
             });
 
             // ③ 主要な国内アーティストを名前で直接検索（1年フィルターは通常通り適用したまま、
@@ -3187,9 +3195,9 @@
                     if (data && data.results) {
                         searchResults = searchResults.concat(data.results.filter(item => item.wrapperType === 'track'));
                     }
-                    extraSourcesDone++;
+                    extraSourcesDone++; tickProgress();
                     finalize();
-                }, () => { extraSourcesDone++; finalize(); });
+                }, () => { extraSourcesDone++; tickProgress(); finalize(); });
             });
 
             searchQueries.forEach(q => {
@@ -3203,10 +3211,10 @@
                         const tagged = q.isGenreQuery ? data.results.map(item => ({ ...item, _genreSupplement: true })) : data.results;
                         searchResults = searchResults.concat(tagged);
                     }
-                    searchCompleted++;
+                    searchCompleted++; tickProgress();
                     if (searchCompleted === searchQueries.length) finalize();
                 }, () => {
-                    searchCompleted++;
+                    searchCompleted++; tickProgress();
                     if (searchCompleted === searchQueries.length) finalize();
                 });
             });
@@ -3221,14 +3229,15 @@
                     if (lookupData && lookupData.results) {
                         rssSongs = lookupData.results.filter(item => item.wrapperType === 'track');
                     }
+                    tickProgress();
                     // 先行表示：RSS由来の分だけでも先に一覧を出し、待ち時間の体感を短縮する
                     if (searchToken === newSongSearchToken && rssSongs.length > 0 && currentMode === 'new-song') {
                         allFetchedResults = groupConsolidatedSongs(rssSongs);
                         applyFiltersAndRender();
-                        if (loadingText) loadingText.textContent = '曲情報を取得中...';
                     }
                     runGenreSupplementSearch(rssSongs);
                 }, () => {
+                    tickProgress();
                     runGenreSupplementSearch([]);
                 });
             } else {
@@ -3254,6 +3263,7 @@
                 })
                 .finally(() => {
                     rssCompleted++;
+                    tickProgress();
                     if (rssCompleted === rssUrls.length) {
                         onRssComplete();
                     }
@@ -3845,10 +3855,12 @@
         if(!currentTrackData) return;
         const artistId = currentTrackData.artistId;
         const artistName = currentTrackData.artistName;
+        const artworkUrl100 = currentTrackData.artworkUrl100;
+        const primaryGenreName = currentTrackData.primaryGenreName;
         closeDetailModal();
         // Spotify由来の曲などiTunesの数値アーティストIDを持たない場合は、アーティスト名でのテキスト検索にフォールバック
         if (artistId && /^\d+$/.test(String(artistId))) {
-            fetchArtistSongs(artistId, artistName);
+            openArtistDetailModal({ artistId, artistName, artworkUrl100, primaryGenreName });
         } else {
             goToSearch('song');
             executeSearch(true, artistName);
@@ -4093,16 +4105,25 @@
                 const y = new Date(r.releaseDate).getFullYear();
                 return y >= 1926 && y <= 1989;
             });
-            const pool = showaResults.length > 0 ? showaResults : data.results;
+            let pool = showaResults.length > 0 ? showaResults : data.results;
+
+            // 「Various Artists」等のコンピレーション盤は、文字だけの簡素なジャケットになりがちなため
+            // できるだけ避け、実在アーティスト名のジャケット（写真・デザイン系）を優先する
+            const nonCompilation = pool.filter(r => {
+                const a = (r.artistName || '').toLowerCase();
+                return a && a !== 'various artists' && !/various\s*artists|v\.?a\.?/i.test(a);
+            });
+            if (nonCompilation.length > 0) pool = nonCompilation;
+
             const track = pool[seed % pool.length];
             if (!track || !track.trackName) return;
 
             dailyRecommendItem = track;
-            renderDailyRecommend(track, genreInfo.label);
+            renderDailyRecommend(track);
         });
     }
 
-    function renderDailyRecommend(track, genreLabel) {
+    function renderDailyRecommend(track) {
         const card = document.getElementById('daily-recommend-card');
         const img = document.getElementById('daily-recommend-img');
         const artistEl = document.getElementById('daily-recommend-artist');
@@ -4111,7 +4132,10 @@
         img.src = track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb', '400x400bb') : '';
         img.alt = track.trackName;
         if (artistEl) artistEl.textContent = track.trackName + ' / ' + track.artistName;
-        if (labelEl) labelEl.textContent = '今日のオススメ（' + genreLabel + '）';
+        if (labelEl) {
+            const now = new Date();
+            labelEl.textContent = (now.getMonth() + 1) + '/' + now.getDate() + ' オススメ曲';
+        }
         card.classList.remove('hidden');
     }
 
@@ -5166,6 +5190,8 @@
                 </div>
             </div>`).join('');
     }
+
+    // -------------------------------------------------------------
 
     // -------------------------------------------------------------
     // アルバム詳細ウィンドウ
