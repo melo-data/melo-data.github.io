@@ -665,7 +665,7 @@
             </div>
 
             <button id="btn-goto-album-tracks" onclick="proceedToAlbumTracks()" class="w-full bg-indigo-100 text-indigo-700 border border-indigo-300 py-3 rounded-lg font-bold flex items-center justify-center active:bg-indigo-200 transition-colors">
-                <span class="material-icons mr-1">search</span>曲名を探す
+                <span class="material-icons mr-1">queue_music</span>アルバム内の曲を見る
             </button>
 
             <div class="grid grid-cols-2 gap-3">
@@ -3593,14 +3593,17 @@
     // 検索語が指定フィールドに含まれるものだけに絞り込む共通ヘルパー。
     // 「世に万葉の花が咲くなり」を検索した際に、iTunes側が「Yo ni Man-yo no Hana ga Saku Nari」
     // のようにローマ字表記で返してくることがあり、この場合は単純な部分一致では正解も含めて
-    // 全滅してしまう。絞り込んだ結果が0件になる場合は、正解を消してしまうリスクを避けるため
-    // 絞り込みを行わず元の一覧をそのまま返す（＝ダメなときは今まで通りの表示に留める）。
+    // 全滅してしまう。絞り込んだ結果が0件になる場合、以前は絞り込み自体を諦めて全件表示に
+    // 戻していたが、それでは無関係な項目まで大量に復活してしまう。iTunes側の結果は関連度順に
+    // 並んでいる（正解は概ね先頭付近に来る）ため、0件のときは全件ではなく上位数件だけを
+    // 残すことで、無関係な項目の大部分は除外しつつ正解を消してしまうリスクも避ける。
+    const FALLBACK_TOP_N_WHEN_NO_MATCH = 3;
     function filterByFieldContainsQuery(items, query, fieldGetter) {
         const normalize = (s) => (s || '').toString().toLowerCase().replace(/[\s　]+/g, '');
         const normalizedQuery = normalize(query);
         if (!normalizedQuery) return items;
         const filtered = items.filter(item => normalize(fieldGetter(item)).includes(normalizedQuery));
-        return filtered.length > 0 ? filtered : items;
+        return filtered.length > 0 ? filtered : items.slice(0, FALLBACK_TOP_N_WHEN_NO_MATCH);
     }
 
     function groupToArtists(songResults, query) {
@@ -3758,6 +3761,7 @@
         document.getElementById('search-input-container').style.display = 'flex';
         document.getElementById('memo-header-buttons').classList.add('hidden');
         document.getElementById('search-title').textContent = artistName;
+        document.getElementById('search-input').value = '';
         clearResults();
         allFetchedResults = [];
         setMemoFabButtons(false);
@@ -3916,6 +3920,7 @@
         document.getElementById('memo-header-buttons').classList.add('hidden');
         setMemoFabButtons(false);
         document.getElementById('search-title').textContent = collectionName;
+        document.getElementById('search-input').value = '';
         clearResults();
         allFetchedResults = [];
         
