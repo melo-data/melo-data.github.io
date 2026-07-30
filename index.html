@@ -3916,22 +3916,26 @@
         clearInterval(rankingAutoTimer);
         document.getElementById('page-top').style.display = 'none';
         document.getElementById('page-search').style.display = 'flex';
-        document.getElementById('search-input-container').style.display = 'flex';
-        document.getElementById('memo-header-buttons').classList.add('hidden');
-        setMemoFabButtons(false);
         document.getElementById('search-title').textContent = collectionName;
         document.getElementById('search-input').value = '';
         clearResults();
         allFetchedResults = [];
-        
+        setMemoFabButtons(false);
+
+        // 「関連書籍＆DVD」一覧と同じく、このモードでは自由入力欄・検索オプション
+        // （並び替え／年代／ジャンル）・入力履歴を一切表示せず、曲の一覧のみを表示する
+        document.getElementById('search-input-container').style.display = 'none';
+        document.getElementById('search-history-container').classList.add('hidden');
+        document.getElementById('memo-header-buttons').classList.add('hidden');
         document.getElementById('simple-options-container').style.display = 'none';
-        document.getElementById('accordion-options-container').style.display = 'block';
-        openSearchOptions();
-        loadSearchHistory();
+        document.getElementById('accordion-options-container').style.display = 'none';
+
+        // 非表示にしても値だけが以前のモードのまま残っていると、絞り込みロジックに
+        // 気づかれずに影響してしまうため、並び替え・年代・ジャンルは念のためリセットしておく
         document.getElementById('sort-select-accordion').value = 'default';
         document.getElementById('decade-select').value = 'all';
         selectGenre('all', document.querySelector('.genre-tab'));
-        
+
         document.getElementById('loading-indicator').style.display = 'block';
         fetchJSONP(`https://itunes.apple.com/lookup?id=${collectionId}&entity=song&country=jp&lang=ja_jp`, (data) => {
             document.getElementById('loading-indicator').style.display = 'none';
@@ -5039,7 +5043,7 @@
 
         document.getElementById('page-top').style.display = 'none';
         document.getElementById('page-search').style.display = 'flex';
-        document.getElementById('search-title').textContent = artistName + ' の関連書籍＆DVD';
+        document.getElementById('search-title').textContent = artistName;
 
         // このモードには自由入力欄・検索オプション（並び替え／年代／ジャンル）を一切表示しない
         document.getElementById('search-input-container').style.display = 'none';
