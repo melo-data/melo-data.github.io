@@ -3311,7 +3311,7 @@
         let url = `https://itunes.apple.com/search?term=${encodeURIComponent(currentQuery)}&country=jp&lang=ja_jp&limit=${MAX_FETCH_LIMIT}`;
         if (currentMode === 'artist') url += `&entity=song&attribute=artistTerm`;
         else if (currentMode === 'song' || currentMode === 'new-song') url += `&entity=song&attribute=songTerm`;
-        else if (currentMode === 'album') url += `&entity=album&attribute=collectionTerm`;
+        else if (currentMode === 'album') url += `&entity=album&attribute=albumTerm`;
         else if (currentMode === 'lyrics') url += `&entity=song`;
         
         fetchJSONP(url, (data) => {
@@ -3325,7 +3325,7 @@
                 } else if (currentMode === 'album') {
                     // 「世に万葉の花が咲くなり」→「Yo ni Man-yo no Hana ga Saku Nari」のように
                     // ローマ字表記で返るケースがあるため、絞り込みが0件になる場合は無絞り込みに戻す
-                    // （filterByFieldContainsQuery内で担保）。attribute=collectionTermの追加と合わせ、
+                    // （filterByFieldContainsQuery内で担保）。attribute=albumTermの追加と合わせ、
                     // 無関係なアルバムが並ぶ割合を減らす。
                     allFetchedResults = filterByFieldContainsQuery(data.results, currentQuery, r => r.collectionName);
                     applyFiltersAndRender();
