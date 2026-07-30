@@ -3311,7 +3311,7 @@
         let url = `https://itunes.apple.com/search?term=${encodeURIComponent(currentQuery)}&country=jp&lang=ja_jp&limit=${MAX_FETCH_LIMIT}`;
         if (currentMode === 'artist') url += `&entity=song&attribute=artistTerm`;
         else if (currentMode === 'song' || currentMode === 'new-song') url += `&entity=song&attribute=songTerm`;
-        else if (currentMode === 'album') url += `&entity=album`;
+        else if (currentMode === 'album') url += `&entity=album&attribute=collectionTerm`;
         else if (currentMode === 'lyrics') url += `&entity=song`;
         
         fetchJSONP(url, (data) => {
@@ -3323,11 +3323,18 @@
                     applyFiltersAndRender();
                     supplementArtistSearchWithSpotify(currentQuery, allFetchedResults);
                 } else if (currentMode === 'album') {
-                    allFetchedResults = data.results;
+                    // 「世に万葉の花が咲くなり」→「Yo ni Man-yo no Hana ga Saku Nari」のように
+                    // ローマ字表記で返るケースがあるため、絞り込みが0件になる場合は無絞り込みに戻す
+                    // （filterByFieldContainsQuery内で担保）。attribute=collectionTermの追加と合わせ、
+                    // 無関係なアルバムが並ぶ割合を減らす。
+                    allFetchedResults = filterByFieldContainsQuery(data.results, currentQuery, r => r.collectionName);
                     applyFiltersAndRender();
                 } else {
                     const itunesTracks = data.results.filter(r => r.wrapperType === 'track');
-                    allFetchedResults = groupConsolidatedSongs(itunesTracks);
+                    const filteredTracks = (currentMode === 'song')
+                        ? filterByFieldContainsQuery(itunesTracks, currentQuery, t => t.trackName)
+                        : itunesTracks; // 歌詞ワード検索は曲名に検索語が含まれる保証がないため絞り込みを適用しない
+                    allFetchedResults = groupConsolidatedSongs(filteredTracks);
                     applyFiltersAndRender();
                     if (currentMode === 'song') {
                         supplementSongSearchWithSpotify(currentQuery, itunesTracks);
@@ -3583,23 +3590,29 @@
         }
     }
 
+    // 検索語が指定フィールドに含まれるものだけに絞り込む共通ヘルパー。
+    // 「世に万葉の花が咲くなり」を検索した際に、iTunes側が「Yo ni Man-yo no Hana ga Saku Nari」
+    // のようにローマ字表記で返してくることがあり、この場合は単純な部分一致では正解も含めて
+    // 全滅してしまう。絞り込んだ結果が0件になる場合は、正解を消してしまうリスクを避けるため
+    // 絞り込みを行わず元の一覧をそのまま返す（＝ダメなときは今まで通りの表示に留める）。
+    function filterByFieldContainsQuery(items, query, fieldGetter) {
+        const normalize = (s) => (s || '').toString().toLowerCase().replace(/[\s　]+/g, '');
+        const normalizedQuery = normalize(query);
+        if (!normalizedQuery) return items;
+        const filtered = items.filter(item => normalize(fieldGetter(item)).includes(normalizedQuery));
+        return filtered.length > 0 ? filtered : items;
+    }
+
     function groupToArtists(songResults, query) {
         const artistMap = {};
         // 「歌手名」検索は attribute=artistTerm を指定していても、Apple側の検索は関連度ベースの
         // あいまい検索のため、本人とは無関係なアーティストが結果に混ざることがある。
         // 検索語がアーティスト名に含まれているものだけに絞り込むことで、無関係な候補を除外する
         // （前方一致まで厳しくすると表記ゆれ等で本人が漏れる恐れがあるため、部分一致にとどめる）。
-        // 「明石家 さんま」のように苗字と名前の間に空白が入っている場合、ユーザーが空白なしで
-        // 検索すると一致しなくなってしまうため、比較前に半角・全角スペースを両方から除去する。
-        const normalize = (s) => (s || '').toLowerCase().replace(/[\s　]+/g, '');
-        const normalizedQuery = normalize(query);
-        songResults.forEach(song => {
+        const filteredSongs = filterByFieldContainsQuery(songResults, query, s => s.artistName);
+        filteredSongs.forEach(song => {
             const id = song.artistId;
             if (!id) return;
-            if (normalizedQuery) {
-                const artistNameNormalized = normalize(song.artistName);
-                if (!artistNameNormalized.includes(normalizedQuery)) return;
-            }
             if (!artistMap[id]) {
                 artistMap[id] = { isArtistGroup: true, artistId: id, artistName: song.artistName, primaryGenreName: song.primaryGenreName, artworkUrl100: song.artworkUrl100, trackCount: 0 };
             }
