@@ -5176,7 +5176,7 @@
             return res.text();
         }).then(xmlText => {
             console.log('[関連書籍＆DVD] LinkShare応答受信');
-            addLinkShareItems(xmlText);
+            addLinkShareItems(xmlText, artistName);
             linkShareDone();
         }).catch(err => {
             console.warn('[関連書籍＆DVD] LinkShare取得エラー:', err && err.message);
@@ -5188,8 +5188,11 @@
     const LINKSHARE_PROXY_URL = 'https://melodata-linkshare-proxy.cloud-tsuda.workers.dev/';
     // merchantname にこれらの文字列が含まれていれば対象の提携先とみなす（表記ゆれを吸収するため部分一致・大小文字無視）
     const LINKSHARE_TARGET_MERCHANTS = ['kobo', 'sony music shop', 'hmv&books', 'hmv & books'];
+    // 「関連書籍＆DVD」は書籍・DVD/Blu-rayのみが対象。HMV&BOOKS online等は音楽CD/レコードも
+    // 同じ検索結果に含まれてしまうため、category(primary/secondary)がこれらに該当するものだけ許可する
+    const LINKSHARE_ALLOWED_CATEGORY_KEYWORDS = ['本', '書籍', '雑誌', 'コミック', '楽譜', 'dvd', 'blu-ray', 'ブルーレイ', '映像', 'book', 'magazine'];
 
-    function addLinkShareItems(xmlText) {
+    function addLinkShareItems(xmlText, artistName) {
         try {
             const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
             if (doc.querySelector('parsererror')) {
@@ -5200,8 +5203,15 @@
             items.forEach(node => {
                 const merchant = (node.querySelector('merchantname')?.textContent || '').trim();
                 const merchantLower = merchant.toLowerCase();
-                const isTarget = LINKSHARE_TARGET_MERCHANTS.some(k => merchantLower.includes(k));
-                if (!isTarget) return;
+                const isTargetMerchant = LINKSHARE_TARGET_MERCHANTS.some(k => merchantLower.includes(k));
+                if (!isTargetMerchant) return;
+
+                // 音楽CD/レコードを除外し、書籍・DVD/Blu-rayのみ通す
+                const categoryPrimary = (node.querySelector('category > primary')?.textContent || '').trim();
+                const categorySecondary = (node.querySelector('category > secondary')?.textContent || '').trim();
+                const categoryText = (categoryPrimary + ' ' + categorySecondary).toLowerCase();
+                const isAllowedCategory = LINKSHARE_ALLOWED_CATEGORY_KEYWORDS.some(k => categoryText.includes(k.toLowerCase()));
+                if (!isAllowedCategory) return;
 
                 const title = (node.querySelector('productname')?.textContent || '').trim();
                 const purchaseUrl = (node.querySelector('linkurl')?.textContent || '').trim();
@@ -5211,7 +5221,9 @@
                 booksDvdResults.push({
                     mediaType: 'partner',
                     title: title,
-                    person: merchant, // 複数の提携先が混在するため、著者名の代わりに販売元を表示する
+                    // 販売元名(HMV&BOOKS online等)は他の行(著者名／発売年／出版社)と表示形式が
+                    // 揃わないため出さず、既存項目と同じくアーティスト名を表示する
+                    person: artistName || '',
                     publisher: '',
                     year: '',
                     imageUrl: imageUrl,
