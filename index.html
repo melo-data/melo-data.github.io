@@ -3676,14 +3676,11 @@
             
             let subText = '';
             if(isArtist) {
-                if (item.trackCount) {
-                    // 検索APIの上限(200件)にちょうど達している場合、実際はそれ以上の曲数がある可能性が高いため、
-                    // 「200曲」と断定せず「200曲以上」と表示する
-                    const countLabel = item.trackCount >= 200 ? '200曲以上' : `${item.trackCount}曲`;
-                    subText = `${item.primaryGenreName || 'ジャンル不明'} | 取得: ${countLabel}`;
-                } else {
-                    subText = item.primaryGenreName || 'ジャンル不明';
-                }
+                // 「取得: N曲」は、キーワード検索の上限件数内でたまたまこのアーティストの曲が
+                // 何件ヒットしたかに過ぎず、実際の持ち曲数とは大きく異なることがあるため
+                // （例：詳細画面を開くと実際は数百曲あるのに、ここでは数曲しか出ないケース）、
+                // 誤解を招く数字として表示自体をやめ、ジャンルのみ表示する。
+                subText = item.primaryGenreName || 'ジャンル不明';
             }
             else subText = item.artistName || '不明';
 
@@ -5297,14 +5294,25 @@
         container.innerHTML = '';
 
         // 楽天と提携先(LinkShare)、あるいは複数の提携先どうしで同一商品が重複して
-        // 返ってくることがあるため、タイトルを正規化して重複を1件にまとめる
-        const seenTitles = new Set();
-        const uniqueResults = booksDvdResults.filter(item => {
+        // 返ってくることがあるため、タイトルを正規化して重複を1件にまとめる。
+        // 重複の中に画像ありのデータがあれば、画像なしのデータより優先する
+        // （重複が全て画像なしの場合は、そのまま画像なしで表示する）
+        const groupsByTitle = new Map();
+        booksDvdResults.forEach(item => {
             const key = (item.title || '').replace(/[\s　]+/g, '').toLowerCase();
-            if (!key || seenTitles.has(key)) return false;
-            seenTitles.add(key);
-            return true;
+            if (!key) return;
+            const existing = groupsByTitle.get(key);
+            if (!existing) {
+                groupsByTitle.set(key, item);
+                return;
+            }
+            const existingHasImage = !!(existing.imageUrl && existing.imageUrl.trim());
+            const currentHasImage = !!(item.imageUrl && item.imageUrl.trim());
+            if (!existingHasImage && currentHasImage) {
+                groupsByTitle.set(key, item);
+            }
         });
+        const uniqueResults = Array.from(groupsByTitle.values());
 
         // 「すべて」「書籍」「DVD・Blu-ray」での絞り込み（書籍には電子書籍(ebook)も含める）
         const filteredResults = uniqueResults.filter(item => {
