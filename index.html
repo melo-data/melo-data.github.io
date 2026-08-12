@@ -425,6 +425,11 @@
     </div>
 
     <div id="search-results" class="scrollable-content bg-gray-100 p-2 relative">
+        <div id="books-dvd-filter-bar" class="hidden flex gap-2 px-1 pb-2">
+            <button onclick="setBooksDvdFilter('all')" data-filter="all" class="books-dvd-filter-btn flex-1 py-2 rounded-lg text-sm font-bold border">すべて</button>
+            <button onclick="setBooksDvdFilter('book')" data-filter="book" class="books-dvd-filter-btn flex-1 py-2 rounded-lg text-sm font-bold border">書籍</button>
+            <button onclick="setBooksDvdFilter('dvd')" data-filter="dvd" class="books-dvd-filter-btn flex-1 py-2 rounded-lg text-sm font-bold border">DVD・Blu-ray</button>
+        </div>
         <div id="results-container" class="space-y-0"></div>
         <div id="loading-indicator" class="text-center p-4 text-gray-500 hidden">
             <span class="material-icons animate-spin">refresh</span> <span id="loading-indicator-text">曲情報を取得中...</span>
@@ -2343,6 +2348,7 @@
         
         document.getElementById('search-input-container').style.display = 'flex';
         document.getElementById('memo-header-buttons').classList.add('hidden');
+        document.getElementById('books-dvd-filter-bar').classList.add('hidden');
         
         inputEl.value = '';
         clearResults();
@@ -3762,6 +3768,7 @@
         document.getElementById('page-search').style.display = 'flex';
         document.getElementById('search-input-container').style.display = 'flex';
         document.getElementById('memo-header-buttons').classList.add('hidden');
+        document.getElementById('books-dvd-filter-bar').classList.add('hidden');
         document.getElementById('search-title').textContent = artistName;
         document.getElementById('search-input').value = '';
         clearResults();
@@ -3929,6 +3936,7 @@
         document.getElementById('search-input-container').style.display = 'none';
         document.getElementById('search-history-container').classList.add('hidden');
         document.getElementById('memo-header-buttons').classList.add('hidden');
+        document.getElementById('books-dvd-filter-bar').classList.add('hidden');
         document.getElementById('simple-options-container').style.display = 'none';
         document.getElementById('accordion-options-container').style.display = 'none';
 
@@ -5031,7 +5039,19 @@
     // このモードでは表示しない。一覧タップで詳細ウィンドウは介さず直接アフィリエイトリンクを開く。
     // -------------------------------------------------------------
     let booksDvdResults = [];
+    let currentBooksDvdFilter = 'all'; // 'all' | 'book' | 'dvd'
     const MEDIA_TYPE_LABEL = { book: '書籍', ebook: '電子書籍', dvd: 'DVD/Blu-ray' };
+
+    function applyBooksDvdFilterBtnStyle(btn, isActive) {
+        btn.className = 'books-dvd-filter-btn flex-1 py-2 rounded-lg text-sm font-bold border transition-colors '
+            + (isActive ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300');
+    }
+
+    function setBooksDvdFilter(filter) {
+        currentBooksDvdFilter = filter;
+        document.querySelectorAll('.books-dvd-filter-btn').forEach(btn => applyBooksDvdFilterBtnStyle(btn, btn.dataset.filter === filter));
+        renderBooksDvdResults();
+    }
 
     function openBooksDvdSearch() {
         if (!currentArtistDetailData || !currentArtistDetailData.artistName) return;
@@ -5056,6 +5076,9 @@
         setMemoFabButtons(false);
 
         booksDvdResults = [];
+        currentBooksDvdFilter = 'all';
+        document.getElementById('books-dvd-filter-bar').classList.remove('hidden');
+        document.querySelectorAll('.books-dvd-filter-btn').forEach(btn => applyBooksDvdFilterBtnStyle(btn, btn.dataset.filter === 'all'));
         document.getElementById('results-container').innerHTML = '';
         const loadingEl = document.getElementById('loading-indicator');
         const loadingText = document.getElementById('loading-indicator-text');
@@ -5189,8 +5212,10 @@
     // merchantname にこれらの文字列が含まれていれば対象の提携先とみなす（表記ゆれを吸収するため部分一致・大小文字無視）
     const LINKSHARE_TARGET_MERCHANTS = ['kobo', 'sony music shop', 'hmv&books', 'hmv & books'];
     // 「関連書籍＆DVD」は書籍・DVD/Blu-rayのみが対象。HMV&BOOKS online等は音楽CD/レコードも
-    // 同じ検索結果に含まれてしまうため、category(primary/secondary)がこれらに該当するものだけ許可する
-    const LINKSHARE_ALLOWED_CATEGORY_KEYWORDS = ['本', '書籍', '雑誌', 'コミック', '楽譜', 'dvd', 'blu-ray', 'ブルーレイ', '映像', 'book', 'magazine'];
+    // 同じ検索結果に含まれてしまうため、category(primary/secondary)で書籍系／DVD系のみ通す
+    // （CDやレコードはどちらのキーワードにも該当しないため、自動的に除外される）
+    const LINKSHARE_BOOK_CATEGORY_KEYWORDS = ['本', '書籍', '雑誌', 'コミック', '楽譜', 'book', 'magazine'];
+    const LINKSHARE_DVD_CATEGORY_KEYWORDS = ['dvd', 'blu-ray', 'ブルーレイ', '映像'];
 
     function addLinkShareItems(xmlText, artistName) {
         try {
@@ -5210,8 +5235,10 @@
                 const categoryPrimary = (node.querySelector('category > primary')?.textContent || '').trim();
                 const categorySecondary = (node.querySelector('category > secondary')?.textContent || '').trim();
                 const categoryText = (categoryPrimary + ' ' + categorySecondary).toLowerCase();
-                const isAllowedCategory = LINKSHARE_ALLOWED_CATEGORY_KEYWORDS.some(k => categoryText.includes(k.toLowerCase()));
-                if (!isAllowedCategory) return;
+                let mediaType = null;
+                if (LINKSHARE_BOOK_CATEGORY_KEYWORDS.some(k => categoryText.includes(k.toLowerCase()))) mediaType = 'book';
+                else if (LINKSHARE_DVD_CATEGORY_KEYWORDS.some(k => categoryText.includes(k.toLowerCase()))) mediaType = 'dvd';
+                if (!mediaType) return; // CD/レコード等、書籍・DVD/Blu-rayに該当しないものは表示しない
 
                 const title = (node.querySelector('productname')?.textContent || '').trim();
                 const purchaseUrl = (node.querySelector('linkurl')?.textContent || '').trim();
@@ -5219,12 +5246,13 @@
                 if (!title || !purchaseUrl) return;
 
                 booksDvdResults.push({
-                    mediaType: 'partner',
+                    mediaType: mediaType,
                     title: title,
-                    // 販売元名(HMV&BOOKS online等)は他の行(著者名／発売年／出版社)と表示形式が
-                    // 揃わないため出さず、既存項目と同じくアーティスト名を表示する
+                    // 表示形式を他の項目（著者名／発売年／出版社）と揃えるため、
+                    // 「著者名」欄にはアーティスト名を、「出版社」欄には販売元名を入れる
+                    // → 表示例：「桑田佳祐（HMV&BOOKS online）」
                     person: artistName || '',
-                    publisher: '',
+                    publisher: merchant,
                     year: '',
                     imageUrl: imageUrl,
                     purchaseUrl: purchaseUrl
@@ -5278,12 +5306,19 @@
             return true;
         });
 
-        if (uniqueResults.length === 0) {
+        // 「すべて」「書籍」「DVD・Blu-ray」での絞り込み（書籍には電子書籍(ebook)も含める）
+        const filteredResults = uniqueResults.filter(item => {
+            if (currentBooksDvdFilter === 'book') return item.mediaType === 'book' || item.mediaType === 'ebook';
+            if (currentBooksDvdFilter === 'dvd') return item.mediaType === 'dvd';
+            return true;
+        });
+
+        if (filteredResults.length === 0) {
             container.innerHTML = '<div class="text-center p-8 text-gray-500">関連する書籍・電子書籍・DVD/Blu-rayは見つかりませんでした。</div>';
             return;
         }
 
-        uniqueResults.forEach(item => {
+        filteredResults.forEach(item => {
             // 1行目：タイトル　2行目：書籍/電子書籍＝著者（発売年／出版社）、DVD＝アーティスト（発売年／発売元）
             const yearPub = [item.year, item.publisher].filter(Boolean).join('／');
             const subText = item.person + (yearPub ? `（${yearPub}）` : '');
