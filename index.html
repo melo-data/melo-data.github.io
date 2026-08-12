@@ -5076,7 +5076,7 @@
         let completedCount = 0;
         const finalizeIfDone = () => {
             completedCount++;
-            if (completedCount >= 3) {
+            if (completedCount >= 4) {
                 loadingEl.style.display = 'none';
                 if (loadingText) loadingText.textContent = '曲情報を取得中...';
                 renderBooksDvdResults();
@@ -5153,6 +5153,74 @@
             '&artistName=' + encodeURIComponent(artistName) +
             '&hits=30&sort=sales&format=json';
         runBooksDvdRequest(dvdUrl, 'dvd');
+
+        // ④ LinkShare提携先（楽天Kobo・Sony Music Shop・HMV&BOOKS online）
+        // LinkShareの商品検索APIはブラウザから直接呼ぶとトークンの露出やWAFの問題があるため、
+        // トークンをシークレットとして保持するCloudflare Workers経由の中継サーバーを呼ぶ。
+        // XML応答なので、JSON系の runBooksDvdRequest とは別処理にしている。
+        const linkShareUrl = LINKSHARE_PROXY_URL + '?keyword=' + encodeURIComponent(artistName) + '&max=100';
+        let linkShareSettled = false;
+        const linkShareDone = () => {
+            if (linkShareSettled) return;
+            linkShareSettled = true;
+            finalizeIfDone();
+        };
+        setTimeout(() => {
+            if (!linkShareSettled) {
+                console.warn('[関連書籍＆DVD] LinkShare 8秒応答なしのためタイムアウト');
+                linkShareDone();
+            }
+        }, 8000);
+        fetch(linkShareUrl).then(res => {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.text();
+        }).then(xmlText => {
+            console.log('[関連書籍＆DVD] LinkShare応答受信');
+            addLinkShareItems(xmlText);
+            linkShareDone();
+        }).catch(err => {
+            console.warn('[関連書籍＆DVD] LinkShare取得エラー:', err && err.message);
+            linkShareDone();
+        });
+    }
+
+    // LinkShare商品検索（Cloudflare Workers中継サーバー）のエンドポイント
+    const LINKSHARE_PROXY_URL = 'https://melodata-linkshare-proxy.cloud-tsuda.workers.dev/';
+    // merchantname にこれらの文字列が含まれていれば対象の提携先とみなす（表記ゆれを吸収するため部分一致・大小文字無視）
+    const LINKSHARE_TARGET_MERCHANTS = ['kobo', 'sony music shop', 'hmv&books', 'hmv & books'];
+
+    function addLinkShareItems(xmlText) {
+        try {
+            const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+            if (doc.querySelector('parsererror')) {
+                console.warn('[関連書籍＆DVD] LinkShare XML解析エラー');
+                return;
+            }
+            const items = doc.querySelectorAll('item');
+            items.forEach(node => {
+                const merchant = (node.querySelector('merchantname')?.textContent || '').trim();
+                const merchantLower = merchant.toLowerCase();
+                const isTarget = LINKSHARE_TARGET_MERCHANTS.some(k => merchantLower.includes(k));
+                if (!isTarget) return;
+
+                const title = (node.querySelector('productname')?.textContent || '').trim();
+                const purchaseUrl = (node.querySelector('linkurl')?.textContent || '').trim();
+                const imageUrl = (node.querySelector('imageurl')?.textContent || '').trim();
+                if (!title || !purchaseUrl) return;
+
+                booksDvdResults.push({
+                    mediaType: 'partner',
+                    title: title,
+                    person: merchant, // 複数の提携先が混在するため、著者名の代わりに販売元を表示する
+                    publisher: '',
+                    year: '',
+                    imageUrl: imageUrl,
+                    purchaseUrl: purchaseUrl
+                });
+            });
+        } catch (e) {
+            console.warn('[関連書籍＆DVD] LinkShare処理エラー', e);
+        }
     }
 
     function addBooksDvdItems(data, mediaType) {
@@ -5188,12 +5256,22 @@
         const container = document.getElementById('results-container');
         container.innerHTML = '';
 
-        if (booksDvdResults.length === 0) {
+        // 楽天と提携先(LinkShare)、あるいは複数の提携先どうしで同一商品が重複して
+        // 返ってくることがあるため、タイトルを正規化して重複を1件にまとめる
+        const seenTitles = new Set();
+        const uniqueResults = booksDvdResults.filter(item => {
+            const key = (item.title || '').replace(/[\s　]+/g, '').toLowerCase();
+            if (!key || seenTitles.has(key)) return false;
+            seenTitles.add(key);
+            return true;
+        });
+
+        if (uniqueResults.length === 0) {
             container.innerHTML = '<div class="text-center p-8 text-gray-500">関連する書籍・電子書籍・DVD/Blu-rayは見つかりませんでした。</div>';
             return;
         }
 
-        booksDvdResults.forEach(item => {
+        uniqueResults.forEach(item => {
             // 1行目：タイトル　2行目：書籍/電子書籍＝著者（発売年／出版社）、DVD＝アーティスト（発売年／発売元）
             const yearPub = [item.year, item.publisher].filter(Boolean).join('／');
             const subText = item.person + (yearPub ? `（${yearPub}）` : '');
