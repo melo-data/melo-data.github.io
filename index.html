@@ -93,6 +93,13 @@
         .modal-content { transition: transform 0.3s ease; transform: translateY(100%); }
         .modal.active .modal-content { transform: translateY(0); }
         #hamburger-overlay.active #hamburger-panel { transform: translateX(0); }
+
+        /* 初回起動チュートリアル：対象要素の点灯枠と、他要素のグレーアウト */
+        .tutorial-dim { opacity: 0.3 !important; pointer-events: none !important; filter: grayscale(1); transition: opacity 0.2s ease; }
+        .tutorial-highlight-target { position: relative; z-index: 80; outline: 3px solid #ef4444; outline-offset: 2px; border-radius: 8px; animation: tutorialBorderBlink 1s infinite; }
+        @keyframes tutorialBorderBlink { 0%, 100% { outline-color: #ef4444; } 50% { outline-color: #fca5a5; } }
+        @keyframes tutorialPointerBlink { 0%, 100% { opacity: 1; transform: translateX(0); } 50% { opacity: 0.3; transform: translateX(-6px); } }
+        #tutorial-pointer { animation: tutorialPointerBlink 1s infinite; }
         
         .fab-back { 
             position: absolute; 
@@ -206,7 +213,7 @@
         <div class="grid grid-cols-12 gap-3 mb-4 items-stretch">
             <div class="col-span-7 flex flex-col gap-2">
                 <!-- 歌手名 -->
-                <button onclick="goToSearch('artist')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all flex-1">
+                <button id="tutorial-btn-artist" onclick="goToSearch('artist')" class="w-full bg-white rounded-2xl shadow-sm flex items-center p-0 overflow-hidden active:bg-gray-50 border border-transparent active:border-gray-200 transition-all flex-1">
                     <div class="w-2 h-full bg-blue-500 self-stretch flex-shrink-0"></div>
                     <div class="p-3 flex-1 flex items-center justify-between min-w-0">
                         <div class="flex items-center min-w-0">
@@ -439,7 +446,7 @@
     </div>
 
     <!-- 画面左下のフローティング戻るボタン（メモ帳以外） -->
-    <button onclick="goBackToTop()" class="fab-back">
+    <button id="fab-back-main" onclick="goBackToTop()" class="fab-back">
         <span class="material-icons text-3xl">arrow_back</span>
     </button>
 
@@ -578,6 +585,42 @@
         <div class="flex gap-3">
             <button onclick="closeConfirmModal(false)" class="flex-1 bg-gray-100 text-gray-700 font-bold py-2.5 rounded-lg active:bg-gray-200">いいえ</button>
             <button onclick="closeConfirmModal(true)" class="flex-1 bg-[#5a5ce6] text-white font-bold py-2.5 rounded-lg active:bg-indigo-700">はい</button>
+        </div>
+    </div>
+</div>
+
+<!-- 初回起動チュートリアル：ウェルカムモーダル -->
+<div id="modal-tutorial-welcome" class="modal fixed inset-0 z-[90] flex items-center justify-center p-4">
+    <div class="modal-content bg-white rounded-2xl shadow-2xl max-w-[420px] w-full overflow-hidden">
+        <img src="https://melo-data.github.io/img/melodata_opg.png" alt="メロ出〜た" class="w-full h-auto block">
+        <div class="p-5">
+            <h2 class="text-lg font-bold text-gray-800 mb-2">ようこそ「メロ出〜た」へ</h2>
+            <p class="text-sm text-gray-600 leading-relaxed">
+                このたびはご利用いただきありがとうございます。「メロ出〜た」は、歌手名やうろ覚えの曲名からカラオケで歌いたい曲を簡単に探せるアプリです。まずは簡単な使い方をご案内しますので、少しだけお付き合いください。
+            </p>
+            <div class="flex items-center justify-between mt-5 pt-4 border-t border-gray-100">
+                <label class="flex items-center gap-2 text-sm text-gray-600">
+                    <input type="checkbox" id="tutorial-skip-checkbox" class="w-5 h-5 accent-[#5a5ce6]">
+                    チュートリアルをスキップ
+                </label>
+                <button onclick="tutorialProceedFromWelcome()" class="bg-[#5a5ce6] text-white font-bold px-6 py-2.5 rounded-lg active:opacity-80 shrink-0 ml-3">次へ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 初回起動チュートリアル：完了モーダル -->
+<div id="modal-tutorial-end" class="modal fixed inset-0 z-[90] flex items-center justify-center p-4">
+    <div class="modal-content bg-white rounded-2xl shadow-2xl max-w-[420px] w-full overflow-hidden">
+        <img src="https://melo-data.github.io/img/melodata_opg.png" alt="メロ出〜た" class="w-full h-auto block">
+        <div class="p-5">
+            <h2 class="text-lg font-bold text-gray-800 mb-2">操作方法は以上です！</h2>
+            <p class="text-sm text-gray-600 leading-relaxed">
+                こんな感じで、歌手名や曲名からカラオケで歌いたい曲を簡単に探すことができます。ぜひ、これからも「メロ出〜た」をご活用ください。
+            </p>
+            <div class="text-right mt-5 pt-4 border-t border-gray-100">
+                <button onclick="closeTutorialEndModal()" class="bg-[#5a5ce6] text-white font-bold px-6 py-2.5 rounded-lg active:opacity-80">閉じる</button>
+            </div>
         </div>
     </div>
 </div>
@@ -1471,6 +1514,9 @@
 
         // 達成バッジ：本日の利用記録と連続ログイン日数の更新
         recordDailyVisitAndStreak();
+
+        // 初回起動時チュートリアル（2回目以降は起動しない）
+        startTutorial();
     });
 
     // LIFF環境下におけるディープリンクパラメータ取得関数
@@ -2393,6 +2439,8 @@
         if (mode === 'new-song') {
             executeNewSongSearch();
         }
+
+        tutorialCheckAfterGoToSearch(mode);
     }
 
     function goToMemo() {
@@ -3596,6 +3644,8 @@
         } else {
             loadMoreRender(); 
         }
+
+        tutorialCheckAfterRender();
     }
 
     // 検索語が指定フィールドに含まれるものだけに絞り込む共通ヘルパー。
@@ -3735,6 +3785,7 @@
             }
             
             container.appendChild(el);
+            if (i === 0) el.id = 'result-card-0';
         }
         displayLimit = end;
     }
@@ -4962,6 +5013,7 @@
         }
 
         document.getElementById('modal-artist-detail').classList.add('active');
+        tutorialCheckAfterArtistDetailOpen();
     }
     function closeArtistDetailModal() {
         document.getElementById('modal-artist-detail').classList.remove('active');
@@ -5690,6 +5742,164 @@
         `;
         renderBadgeList('memo-badge-list-container', 'memo-badge-progress-text');
         updateMemoPlayAllVisibility();
+    }
+
+    // -------------------------------------------------------------
+    // 初回起動時チュートリアル
+    // 1)ウェルカムモーダル → 2)「歌手名」ボタンを点灯 → 3)検索履歴の
+    // 「サザンオールスターズ」を点灯（他の歌手を入力してもよい）→ 4)一覧の
+    // 先頭行を点灯（0件なら検索履歴の点灯に戻す）→ 5)アーティスト詳細の
+    // 「曲名を探す」を点灯 → 6)曲リスト表示で完了モーダル、という一連の流れ。
+    // 各ステップは実際にその操作が完了した（画面遷移・検索結果反映等）タイミングで
+    // 判定しており、対象以外のボタンはCSSの .tutorial-dim でグレーアウト＆操作不可にする。
+    // -------------------------------------------------------------
+    const TUTORIAL_DONE_KEY = 'merodata_tutorial_done';
+    let tutorialActive = false;
+    let tutorialStep = 0; // 0=非アクティブ, 1=歌手名ボタン, 2=検索履歴, 3=一覧先頭行, 4=曲名を探すボタン
+    let tutorialTargetEl = null;
+
+    function shouldStartTutorial() {
+        try { return localStorage.getItem(TUTORIAL_DONE_KEY) !== 'true'; } catch (e) { return false; }
+    }
+    function markTutorialDone() {
+        try { localStorage.setItem(TUTORIAL_DONE_KEY, 'true'); } catch (e) {}
+    }
+    // 初回起動時、「歌手名」の検索履歴に「サザンオールスターズ」を最大5件の枠内であらかじめ入れておく
+    // （既にユーザー自身の履歴がある場合は上書きしない）
+    function seedInitialSearchHistoryIfNeeded() {
+        try {
+            if (localStorage.getItem('merodata_search_history_artist') === null) {
+                localStorage.setItem('merodata_search_history_artist', JSON.stringify(['サザンオールスターズ']));
+            }
+        } catch (e) {}
+    }
+
+    function startTutorial() {
+        if (!shouldStartTutorial()) return;
+        seedInitialSearchHistoryIfNeeded();
+        tutorialActive = true;
+        document.getElementById('modal-tutorial-welcome').classList.add('active');
+    }
+
+    function tutorialProceedFromWelcome() {
+        const skip = document.getElementById('tutorial-skip-checkbox').checked;
+        document.getElementById('modal-tutorial-welcome').classList.remove('active');
+        if (skip) {
+            tutorialActive = false;
+            markTutorialDone();
+            return;
+        }
+        beginTutorialStep(1);
+    }
+
+    function closeTutorialEndModal() {
+        document.getElementById('modal-tutorial-end').classList.remove('active');
+    }
+
+    // targetEl以外の、containerSelector配下にあるボタン・リンクを全てグレーアウトする
+    function tutorialDimAllExcept(containerSelector, targetEl) {
+        const container = document.querySelector(containerSelector);
+        if (!container || !targetEl) return;
+        container.querySelectorAll('button, a').forEach(el => {
+            if (el === targetEl || targetEl.contains(el) || el.contains(targetEl)) return;
+            el.classList.add('tutorial-dim');
+        });
+    }
+    // 指定した要素だけをグレーアウトする（それ以外は通常通り操作できる）
+    function tutorialDimOnly(elements) {
+        elements.forEach(el => { if (el) el.classList.add('tutorial-dim'); });
+    }
+
+    function tutorialRepositionPointer() {
+        const pointer = document.getElementById('tutorial-pointer');
+        if (!pointer || !tutorialTargetEl) return;
+        const rect = tutorialTargetEl.getBoundingClientRect();
+        pointer.style.left = (rect.right + 4) + 'px';
+        pointer.style.top = (rect.top + rect.height / 2 - 16) + 'px';
+    }
+
+    function tutorialClearVisuals() {
+        document.querySelectorAll('.tutorial-dim').forEach(el => el.classList.remove('tutorial-dim'));
+        document.querySelectorAll('.tutorial-highlight-target').forEach(el => el.classList.remove('tutorial-highlight-target'));
+        const pointer = document.getElementById('tutorial-pointer');
+        if (pointer) pointer.remove();
+        window.removeEventListener('scroll', tutorialRepositionPointer, true);
+        window.removeEventListener('resize', tutorialRepositionPointer);
+        tutorialTargetEl = null;
+    }
+
+    function tutorialHighlight(targetEl) {
+        if (!targetEl) return;
+        targetEl.classList.add('tutorial-highlight-target');
+        tutorialTargetEl = targetEl;
+        const pointer = document.createElement('div');
+        pointer.id = 'tutorial-pointer';
+        pointer.textContent = '👈';
+        pointer.style.cssText = 'position:fixed; font-size:2rem; z-index:9999; pointer-events:none; line-height:1;';
+        document.body.appendChild(pointer);
+        tutorialRepositionPointer();
+        window.addEventListener('scroll', tutorialRepositionPointer, true);
+        window.addEventListener('resize', tutorialRepositionPointer);
+    }
+
+    function beginTutorialStep(step) {
+        tutorialClearVisuals();
+        tutorialStep = step;
+        // モーダルのスライドイン(0.3s)等のCSSトランジション中は要素の座標が最終位置と異なるため、
+        // 少し待ってから点灯枠・👈の位置を計算する（ダイアログ以外の即時反映な画面でも実害はない）
+        setTimeout(() => {
+            if (tutorialStep !== step) return; // その間に別ステップへ進んでいたら何もしない
+            if (step === 1) {
+                const target = document.getElementById('tutorial-btn-artist');
+                tutorialDimAllExcept('#page-top', target);
+                tutorialHighlight(target);
+            } else if (step === 2) {
+                const container = document.getElementById('search-history-container');
+                const target = container ? Array.from(container.querySelectorAll('button')).find(b => b.textContent.trim() === 'サザンオールスターズ') : null;
+                tutorialDimOnly([document.getElementById('fab-back-main')]);
+                tutorialHighlight(target || container);
+            } else if (step === 3) {
+                tutorialDimOnly([document.getElementById('fab-back-main')]);
+                tutorialHighlight(document.getElementById('result-card-0'));
+            } else if (step === 4) {
+                const target = document.getElementById('btn-goto-artist-songs');
+                tutorialDimAllExcept('#modal-artist-detail', target);
+                tutorialHighlight(target);
+            }
+        }, 320);
+    }
+
+    // goToSearch()完了後に呼ばれ、「歌手名」ボタンをタップした直後であれば次のステップへ進める
+    function tutorialCheckAfterGoToSearch(mode) {
+        if (!tutorialActive) return;
+        if (mode === 'artist' && tutorialStep === 1) {
+            beginTutorialStep(2);
+        }
+    }
+
+    // applyFiltersAndRender()完了後に呼ばれ、検索結果の反映状況に応じてステップを進める
+    function tutorialCheckAfterRender() {
+        if (!tutorialActive) return;
+        if (currentMode === 'artist' && tutorialStep === 2) {
+            if (displayResults.length >= 1) {
+                beginTutorialStep(3);
+            } else {
+                // 0件の場合は検索履歴の点灯に戻す
+                beginTutorialStep(2);
+            }
+        } else if (currentMode === 'artist-songs' && tutorialStep === 4) {
+            // 曲リストが表示された＝チュートリアル完了
+            tutorialClearVisuals();
+            tutorialActive = false;
+            markTutorialDone();
+            document.getElementById('modal-tutorial-end').classList.add('active');
+        }
+    }
+
+    // openArtistDetailModal()完了後に呼ばれ、一覧先頭行をタップした直後であれば次のステップへ進める
+    function tutorialCheckAfterArtistDetailOpen() {
+        if (!tutorialActive || tutorialStep !== 3) return;
+        beginTutorialStep(4);
     }
 
     function getSearchHistoriesKey(mode) {
