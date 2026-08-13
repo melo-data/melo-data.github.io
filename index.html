@@ -3809,6 +3809,12 @@
         // 画面切り替えを行っていなかったため、結果が裏側(非表示のpage-search)に描画されるだけで
         // 画面上は何も起きたように見えない不具合があった。ここで明示的に検索画面へ切り替える。
         tryFullScreen();
+
+        // チュートリアル中「曲名を探す」をタップしてこの画面に遷移する際、アーティスト詳細モーダルは
+        // 透明になるだけでDOM上は残るため、対象要素の座標だけは取得できてしまい、結果が届くまでの
+        // 読み込み中の間ずっと古い👈が画面に残ってしまう不具合があった。遷移開始時点で明示的に消す。
+        tutorialClearVisuals();
+
         currentMode = 'artist-songs';
         applyModeColor('artist-songs');
         clearInterval(rankingAutoTimer);
@@ -5810,6 +5816,8 @@
         elements.forEach(el => { if (el) el.classList.add('tutorial-dim'); });
     }
 
+    let tutorialRafId = null;
+
     function tutorialRepositionPointer() {
         const pointer = document.getElementById('tutorial-pointer');
         if (!pointer || !tutorialTargetEl) return;
@@ -5818,13 +5826,23 @@
         pointer.style.top = (rect.top + rect.height / 2 - 16) + 'px';
     }
 
+    // アーティスト詳細ページ等、開いた後に生年情報やWikipediaの豆知識が非同期で読み込まれて
+    // レイアウトが変わることがある。赤枠(CSSのoutline)は対象要素そのものに付くので自動で追従するが、
+    // 👈は独立した固定位置の要素のため、毎フレーム座標を計算し直して追従させる。
+    function tutorialTrackPointerLoop() {
+        tutorialRepositionPointer();
+        tutorialRafId = requestAnimationFrame(tutorialTrackPointerLoop);
+    }
+
     function tutorialClearVisuals() {
         document.querySelectorAll('.tutorial-dim').forEach(el => el.classList.remove('tutorial-dim'));
         document.querySelectorAll('.tutorial-highlight-target').forEach(el => el.classList.remove('tutorial-highlight-target'));
         const pointer = document.getElementById('tutorial-pointer');
         if (pointer) pointer.remove();
-        window.removeEventListener('scroll', tutorialRepositionPointer, true);
-        window.removeEventListener('resize', tutorialRepositionPointer);
+        if (tutorialRafId !== null) {
+            cancelAnimationFrame(tutorialRafId);
+            tutorialRafId = null;
+        }
         tutorialTargetEl = null;
     }
 
@@ -5837,9 +5855,7 @@
         pointer.textContent = '👈';
         pointer.style.cssText = 'position:fixed; font-size:2rem; z-index:9999; pointer-events:none; line-height:1;';
         document.body.appendChild(pointer);
-        tutorialRepositionPointer();
-        window.addEventListener('scroll', tutorialRepositionPointer, true);
-        window.addEventListener('resize', tutorialRepositionPointer);
+        tutorialTrackPointerLoop();
     }
 
     function beginTutorialStep(step) {
