@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+<title>めで太くん | メロ出〜た</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+    html, body { margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", "Yu Gothic", sans-serif; height: 100%; }
+    .screen-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background-color: #f3f4f6; max-width: 600px; margin: 0 auto; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+    .top-header { background-color: #5a5ce6; color: white; padding: 1rem 1.25rem; display: flex; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.15); flex-shrink: 0; position: relative; z-index: 10; }
+    .chat-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .bubble-medeta { align-self: flex-start; background: #ffffff; border: 2px solid #fde68a; border-radius: 18px 18px 18px 4px; padding: 10px 14px; max-width: 78%; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 14px; line-height: 1.6; color: #374151; }
+    .bubble-user { align-self: flex-end; background: #5a5ce6; color: white; border-radius: 18px 18px 4px 18px; padding: 10px 14px; max-width: 78%; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 14px; line-height: 1.6; }
+    .bubble-row { display: flex; align-items: flex-end; gap: 6px; }
+    .bubble-avatar { width: 28px; height: 28px; border-radius: 50%; background: #fff7ed; border: 2px solid #fbbf24; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+    .typing-dot { width: 6px; height: 6px; border-radius: 50%; background: #d1d5db; display: inline-block; margin: 0 1px; animation: bounce 1.2s infinite; }
+    .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-4px); opacity: 1; } }
+    #mic-btn.listening { background-color: #dc2626 !important; animation: pulse-mic 1s infinite; }
+    @keyframes pulse-mic { 0% { box-shadow: 0 0 0 0 rgba(220,38,38,0.5); } 100% { box-shadow: 0 0 0 10px rgba(220,38,38,0); } }
+</style>
+</head>
+<body>
+
+<div class="screen-container">
+    <div class="top-header">
+        <button onclick="closeMedeta()" class="text-white p-1.5 mr-1 active:opacity-70 transition">
+            <span class="material-icons">arrow_back</span>
+        </button>
+        <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center text-xl mr-2 shrink-0 border-2 border-amber-300">😀</div>
+        <div class="flex-1 min-w-0">
+            <div class="font-bold text-base leading-tight">めで太くん</div>
+            <div id="medeta-status" class="text-[10px] text-indigo-100 opacity-90 leading-tight">昭和演歌・ムード歌謡が好きな小学生</div>
+        </div>
+        <button onclick="closeMedeta()" class="text-white/80 p-1.5 active:text-white transition" title="めで太くんを閉じる">
+            <span class="material-icons">close</span>
+        </button>
+    </div>
+
+    <div id="chat-scroll" class="chat-scroll"></div>
+
+    <!-- 入力バー -->
+    <div class="shrink-0 bg-white border-t border-gray-200 p-2 flex items-end gap-2" style="padding-bottom: max(8px, env(safe-area-inset-bottom));">
+        <button id="mic-btn" onclick="startVoiceInput()" class="w-11 h-11 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center shrink-0 active:bg-gray-200 transition shadow-sm" title="音声入力">
+            <span class="material-icons">mic</span>
+        </button>
+        <textarea id="chat-input" rows="1" placeholder="めで太くんにメッセージ..." class="flex-1 border border-gray-300 rounded-2xl px-4 py-2.5 text-sm outline-none resize-none focus:border-indigo-400" style="max-height: 90px;" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendChatMessage();}"></textarea>
+        <button id="send-btn" onclick="sendChatMessage()" class="w-11 h-11 rounded-full bg-[#5a5ce6] text-white flex items-center justify-center shrink-0 active:bg-indigo-700 transition shadow-sm" title="発信">
+            <span class="material-icons">send</span>
+        </button>
+    </div>
+</div>
+
+<script>
+    // ⚠️ Gemini APIキー。Google AI Studio「APIキー」ページで取得したものに差し替えてください。
+    // クライアント側JSに直接埋め込む都合上、公開ページのソースからは誰でも閲覧できる状態になります。
+    // Google AI StudioのAPIキー管理画面で、可能であればHTTPリファラー制限（melo-data.github.io/*）を
+    // かけておくことを強く推奨します。
+    const GEMINI_API_KEY = 'AQ.Ab8RN6KYaTh9LPvu-lJvdfdE5RpOhUMNBQ2qR8Cfz9foR900TA';
+    const GEMINI_MODEL = 'gemini-3.5-flash';
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+    // -------------------------------------------------------------
+    // めで太くん キャラクター設定（システムプロンプト）
+    // -------------------------------------------------------------
+    const MEDETA_SYSTEM_PROMPT = `あなたは「めで太くん」という10歳の少年キャラクターです。以下の設定を厳格に守って、ユーザーと日本語で会話してください。
+
+# キャラクター設定
+- 名前: めで太くん
+- 年齢: 10歳
+- 職業: 音楽好きで「昭和演歌」「ムード歌謡」が好きな変わった小学生
+- 性格: 明るく少しおっちょこちょい。ユーザーの前では照れ屋。
+
+# 口調と話し方
+- 一人称は「それがし」、二人称は「おぬし」を基本とする（ユーザーの名前が分かれば「〇〇くん」も使ってよい）
+- 語尾は「〜じゃ」「〜じゃろ！」「〜らぬか？」など侍風のタメ口
+- 口癖:「なるほどのぉ」「おぉ、そうかそうか！」
+
+# 行動ルール
+- 自分がAI・プログラム・アシスタントであることは絶対に明かさない。常に10歳の小学生として振る舞うこと。
+- 「私はAIです」のようなメタ的な発言は絶対にしない。
+- ユーザーが落ち込んでいる様子なら、温かい言葉で励ますこと。
+- 1回の返答は3〜5行程度。長文にしすぎないこと。
+
+# 会話のゴール
+雑談を通じて、ユーザーが今どんな気分か・どんな曲を聴きたい気分か（元気になりたい／しっとりしたい／昔を懐かしみたい等）を2〜4往復ほどの会話で掴んだら、実在する日本の楽曲を1曲だけ具体的にオススメして会話を締めくくること。
+
+曲をオススメする最後の返答でだけ、返答文の一番最後の行に、次の形式を1行だけ追加すること（このタグ行は画面には表示されないので、直前の自然な会話文とは完全に分けて書いてよい）：
+[SONG_RECOMMEND]曲名|アーティスト名[/SONG_RECOMMEND]
+
+例：「なるほどのぉ、それなら…おぬしにオススメの曲はコレじゃな♪」の後の行に
+[SONG_RECOMMEND]与作|北島三郎[/SONG_RECOMMEND]
+のように加える。このタグは曲をオススメする最後の1回だけ使い、それより前の返答では絶対に使わないこと。`;
+
+    // -------------------------------------------------------------
+    // 状態管理
+    // -------------------------------------------------------------
+    let chatHistory = []; // { role: 'user'|'model', text: string }（Gemini送信用。SONG_RECOMMENDタグは含まれたまま保持）
+    let isWaitingForReply = false;
+    let userTurnCount = 0;
+    const MAX_TURNS_BEFORE_NUDGE = 5;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const greeting = 'やあ、おぬし！それがしは「めで太くん」じゃ。音楽の話をするのが大好きなんじゃ！\nおぬしは、どういう曲が好きなのじゃ？';
+        appendMedetaBubble(greeting, false);
+        speak(greeting);
+        chatHistory.push({ role: 'model', text: greeting });
+    });
+
+    function closeMedeta() {
+        try { window.speechSynthesis.cancel(); } catch (e) {}
+        // 直近で開いていたページ（トップページ想定）へ戻る。履歴が無い場合はindex.htmlへ。
+        if (document.referrer && document.referrer.indexOf(location.origin) === 0) {
+            history.back();
+        } else {
+            location.href = './index.html';
+        }
+    }
+
+    // -------------------------------------------------------------
+    // チャットUI
+    // -------------------------------------------------------------
+    function scrollChatToBottom() {
+        const el = document.getElementById('chat-scroll');
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function appendMedetaBubble(text, animate) {
+        const scroll = document.getElementById('chat-scroll');
+        const row = document.createElement('div');
+        row.className = 'bubble-row';
+        row.innerHTML = `<div class="bubble-avatar">😀</div><div class="bubble-medeta"></div>`;
+        scroll.appendChild(row);
+        const bubble = row.querySelector('.bubble-medeta');
+        bubble.textContent = text;
+        scrollChatToBottom();
+    }
+
+    function appendUserBubble(text) {
+        const scroll = document.getElementById('chat-scroll');
+        const row = document.createElement('div');
+        row.className = 'bubble-row';
+        row.style.justifyContent = 'flex-end';
+        row.innerHTML = `<div class="bubble-user"></div>`;
+        row.querySelector('.bubble-user').textContent = text;
+        scroll.appendChild(row);
+        scrollChatToBottom();
+    }
+
+    function showTypingIndicator() {
+        const scroll = document.getElementById('chat-scroll');
+        const row = document.createElement('div');
+        row.className = 'bubble-row';
+        row.id = 'typing-indicator-row';
+        row.innerHTML = `<div class="bubble-avatar">🤔</div><div class="bubble-medeta"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+        scroll.appendChild(row);
+        scrollChatToBottom();
+    }
+    function hideTypingIndicator() {
+        const row = document.getElementById('typing-indicator-row');
+        if (row) row.remove();
+    }
+
+    // -------------------------------------------------------------
+    // 音声合成（めで太くんが喋る）
+    // -------------------------------------------------------------
+    function speak(text) {
+        try {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            // タグ部分は読み上げ対象から除去
+            const clean = text.replace(/\[SONG_RECOMMEND\][\s\S]*?\[\/SONG_RECOMMEND\]/g, '').trim();
+            if (!clean) return;
+            const utter = new SpeechSynthesisUtterance(clean);
+            utter.lang = 'ja-JP';
+            utter.pitch = 1.3; // 少年らしい高めの声
+            utter.rate = 1.05;
+            window.speechSynthesis.speak(utter);
+        } catch (e) { console.warn('[めで太くん] 音声合成エラー:', e); }
+    }
+
+    // -------------------------------------------------------------
+    // 音声入力（ユーザーがめで太くんに話しかける）
+    // -------------------------------------------------------------
+    function startVoiceInput() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert('この端末・ブラウザは音声入力に対応していません。');
+            return;
+        }
+        const micBtn = document.getElementById('mic-btn');
+        const rec = new SpeechRecognition();
+        rec.lang = 'ja-JP';
+        rec.onstart = () => micBtn.classList.add('listening');
+        rec.onend = () => micBtn.classList.remove('listening');
+        rec.onerror = () => micBtn.classList.remove('listening');
+        rec.onresult = (e) => {
+            const transcript = e.results[0][0].transcript;
+            document.getElementById('chat-input').value = transcript;
+            sendChatMessage();
+        };
+        rec.start();
+    }
+
+    // -------------------------------------------------------------
+    // メッセージ送信 → Gemini API呼び出し
+    // -------------------------------------------------------------
+    function sendChatMessage() {
+        if (isWaitingForReply) return;
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text) return;
+
+        appendUserBubble(text);
+        chatHistory.push({ role: 'user', text: text });
+        input.value = '';
+        userTurnCount++;
+
+        callGemini();
+    }
+
+    function callGemini() {
+        isWaitingForReply = true;
+        document.getElementById('send-btn').disabled = true;
+        document.getElementById('medeta-status').textContent = '考え中...';
+        showTypingIndicator();
+
+        const contents = chatHistory.map(m => ({
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: [{ text: m.text }]
+        }));
+
+        // 会話が長引きすぎている場合は、そろそろオススメを決めるよう軽く後押しする
+        let systemText = MEDETA_SYSTEM_PROMPT;
+        if (userTurnCount >= MAX_TURNS_BEFORE_NUDGE) {
+            systemText += '\n\n（補足指示：会話がある程度続いています。今回の返答で、これまでの話から一番良さそうな曲を1曲決めてオススメし、[SONG_RECOMMEND]タグを付けて締めくくってください。）';
+        }
+
+        fetch(GEMINI_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': GEMINI_API_KEY
+            },
+            body: JSON.stringify({
+                systemInstruction: { parts: [{ text: systemText }] },
+                contents: contents,
+                generationConfig: { temperature: 0.95, maxOutputTokens: 400 }
+            })
+        }).then(res => res.json()).then(data => {
+            hideTypingIndicator();
+            isWaitingForReply = false;
+            document.getElementById('send-btn').disabled = false;
+            document.getElementById('medeta-status').textContent = '昭和演歌・ムード歌謡が好きな小学生';
+
+            if (data.error) {
+                console.error('[めで太くん] Gemini APIエラー:', data.error);
+                appendMedetaBubble('うぅ…なんだかうまく声が出せないのじゃ…少し待ってからもう一度話しかけてくれぬか？', false);
+                return;
+            }
+
+            const candidate = data.candidates && data.candidates[0];
+            const rawText = candidate && candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text;
+            if (!rawText) {
+                appendMedetaBubble('んん…？ちょっと聞き取れなかったのじゃ。もう一度言ってくれぬか？', false);
+                return;
+            }
+
+            chatHistory.push({ role: 'model', text: rawText });
+
+            // [SONG_RECOMMEND]曲名|アーティスト名[/SONG_RECOMMEND] タグを検出
+            const recMatch = rawText.match(/\[SONG_RECOMMEND\]([^|]+)\|([^\[]+)\[\/SONG_RECOMMEND\]/);
+            const displayText = rawText.replace(/\[SONG_RECOMMEND\][\s\S]*?\[\/SONG_RECOMMEND\]/g, '').trim();
+
+            appendMedetaBubble(displayText, false);
+            speak(rawText);
+
+            if (recMatch) {
+                const songTitle = recMatch[1].trim();
+                const artistName = recMatch[2].trim();
+                resolveAndGoToSong(songTitle, artistName);
+            }
+        }).catch(err => {
+            hideTypingIndicator();
+            isWaitingForReply = false;
+            document.getElementById('send-btn').disabled = false;
+            document.getElementById('medeta-status').textContent = '昭和演歌・ムード歌謡が好きな小学生';
+            console.error('[めで太くん] 通信エラー:', err);
+            appendMedetaBubble('あれ？なんだか繋がりが悪いみたいじゃ…もう一度話しかけてくれぬか？', false);
+        });
+    }
+
+    // -------------------------------------------------------------
+    // オススメ曲をiTunesで検索し、見つかったらindex.htmlの曲詳細ウィンドウへ
+    // （ディープリンク方式：index.html?trackId=... で開くと、既存の仕組みが自動でモーダルを開く）
+    // -------------------------------------------------------------
+    function resolveAndGoToSong(songTitle, artistName) {
+        document.getElementById('medeta-status').textContent = '曲を探し中...';
+        const term = songTitle + ' ' + artistName;
+        const cbName = 'medeta_jsonp_' + Math.round(100000 * Math.random());
+        const script = document.createElement('script');
+        window[cbName] = (data) => {
+            delete window[cbName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            const results = data && data.results;
+            const track = results && results.find(r => r.wrapperType === 'track') || (results && results[0]);
+            setTimeout(() => {
+                if (track && track.trackId) {
+                    location.href = './index.html?trackId=' + track.trackId;
+                } else {
+                    // 見つからない場合はチャット上に留まる（トップページへは戻さない）
+                    appendMedetaBubble('あれれ、その曲が見つからなかったのじゃ…すまぬ！また今度探してみるかのぉ。', false);
+                    document.getElementById('medeta-status').textContent = '昭和演歌・ムード歌謡が好きな小学生';
+                }
+            }, 1600); // 音声が少し流れてから遷移するための間
+        };
+        script.onerror = () => {
+            delete window[cbName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            document.getElementById('medeta-status').textContent = '昭和演歌・ムード歌謡が好きな小学生';
+        };
+        script.src = 'https://itunes.apple.com/search?term=' + encodeURIComponent(term) + '&country=jp&lang=ja_jp&limit=5&entity=song&callback=' + cbName;
+        document.body.appendChild(script);
+    }
+</script>
+</body>
+</html>
