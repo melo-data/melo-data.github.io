@@ -161,9 +161,43 @@
             color: #e0e7ff; /* indigo-100 */
             margin-bottom: 0;
         }
+
+        /* めで太くん 最小化アイコン */
+        #medeta-icon {
+            position: fixed;
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            background: #fff7ed;
+            border: 3px solid #fbbf24;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px;
+            z-index: 999;
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+        }
+        #medeta-icon.dragging { cursor: grabbing; box-shadow: 0 6px 16px rgba(0,0,0,0.35); }
+        #medeta-icon-close {
+            position: fixed;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: #6b7280;
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            border: none;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
+
+<!-- めで太くん 最小化アイコン（index.htmlのみに表示。ドラッグで移動、タップでmedeta.htmlへ） -->
+<div id="medeta-icon" onpointerdown="medetaPointerDown(event)">😀</div>
+<button id="medeta-icon-close" onclick="dismissMedetaIcon(event)">✕</button>
 
 <div id="page-top" class="screen-container">
     <!-- ホーム画面インストール誘導バナー（LINEミニアプリ版では非表示。一度閉じたら1週間再表示しない） -->
@@ -1517,6 +1551,10 @@
 
         // 初回起動時チュートリアル（2回目以降は起動しない）
         startTutorial();
+
+        // めで太くん：起動回数の記録とアイコンの初期化
+        medetaRecordLaunch();
+        initMedetaIcon();
     });
 
     // LIFF環境下におけるディープリンクパラメータ取得関数
@@ -2501,6 +2539,10 @@
         document.getElementById('page-search').style.display = 'none';
         document.getElementById('page-top').style.display = 'flex';
         collapseRankingWidgetOnReturn();
+
+        // めで太くん：トップページへの復帰回数を記録し、表示条件を再判定
+        medetaRecordReturnToTop();
+        initMedetaIcon();
     }
 
     // -------------------------------------------------------------
@@ -5995,6 +6037,130 @@
             executeSearch(true); 
         };
         rec.start();
+    }
+
+    // -------------------------------------------------------------
+    // めで太くん 最小化アイコン（ドラッグ移動・タップでmedeta.htmlへ・表示制御）
+    // -------------------------------------------------------------
+    // ⚠️ テスト中は true（常に表示）。本番運用に切り替える際は false にしてください。
+    //    false にすると、「1日3回以上の起動」または「トップページへ3回以上戻る」を
+    //    満たしたユーザーにのみ、画面のいずれかの端にランダムな位置で表示されます。
+    const MEDETA_TEST_MODE = true;
+
+    function medetaTodayKey() {
+        const d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function medetaGetDailyCounts() {
+        try {
+            const raw = JSON.parse(localStorage.getItem('merodata_medeta_daily') || '{}');
+            if (raw.date === medetaTodayKey()) return raw;
+        } catch (e) {}
+        return { date: medetaTodayKey(), launches: 0, returns: 0 };
+    }
+    function medetaSaveDailyCounts(counts) {
+        localStorage.setItem('merodata_medeta_daily', JSON.stringify(counts));
+    }
+    function medetaRecordLaunch() {
+        const c = medetaGetDailyCounts();
+        c.launches = (c.launches || 0) + 1;
+        medetaSaveDailyCounts(c);
+    }
+    function medetaRecordReturnToTop() {
+        const c = medetaGetDailyCounts();
+        c.returns = (c.returns || 0) + 1;
+        medetaSaveDailyCounts(c);
+    }
+    function medetaIsDismissedToday() {
+        return localStorage.getItem('merodata_medeta_dismissed') === medetaTodayKey();
+    }
+
+    function shouldShowMedetaIcon() {
+        if (medetaIsDismissedToday()) return false;
+        if (MEDETA_TEST_MODE) return true;
+        const c = medetaGetDailyCounts();
+        return (c.launches || 0) >= 3 || (c.returns || 0) >= 3;
+    }
+
+    function dismissMedetaIcon(e) {
+        if (e) e.stopPropagation();
+        localStorage.setItem('merodata_medeta_dismissed', medetaTodayKey());
+        const icon = document.getElementById('medeta-icon');
+        const close = document.getElementById('medeta-icon-close');
+        if (icon) icon.style.display = 'none';
+        if (close) close.style.display = 'none';
+    }
+
+    function positionMedetaCloseBtn() {
+        const icon = document.getElementById('medeta-icon');
+        const close = document.getElementById('medeta-icon-close');
+        if (!icon || !close) return;
+        const rect = icon.getBoundingClientRect();
+        close.style.left = (rect.right - 10) + 'px';
+        close.style.top = (rect.top - 6) + 'px';
+    }
+
+    function initMedetaIcon() {
+        const icon = document.getElementById('medeta-icon');
+        const close = document.getElementById('medeta-icon-close');
+        if (!icon || !close) return;
+
+        if (!shouldShowMedetaIcon()) {
+            icon.style.display = 'none';
+            close.style.display = 'none';
+            return;
+        }
+
+        // 初期位置：本番モードでは画面内のいずれかの端にランダム表示、テストモードでは右下固定
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let startX, startY;
+        if (MEDETA_TEST_MODE) {
+            startX = vw - 84; startY = vh - 180;
+        } else {
+            const edge = Math.floor(Math.random() * 4); // 0:上 1:右 2:下 3:左
+            if (edge === 0) { startX = 20 + Math.random() * (vw - 100); startY = 90; }
+            else if (edge === 1) { startX = vw - 84; startY = 100 + Math.random() * (vh - 300); }
+            else if (edge === 2) { startX = 20 + Math.random() * (vw - 100); startY = vh - 160; }
+            else { startX = 20; startY = 100 + Math.random() * (vh - 300); }
+        }
+        icon.style.left = startX + 'px';
+        icon.style.top = startY + 'px';
+        icon.style.display = 'flex';
+        close.style.display = 'flex';
+        positionMedetaCloseBtn();
+    }
+
+    function medetaPointerDown(e) {
+        const icon = document.getElementById('medeta-icon');
+        icon.classList.add('dragging');
+        icon.setPointerCapture(e.pointerId);
+
+        const startX = e.clientX, startY = e.clientY;
+        const rect = icon.getBoundingClientRect();
+        const offsetX = startX - rect.left, offsetY = startY - rect.top;
+        let moved = false;
+
+        const onMove = (ev) => {
+            const dx = ev.clientX - startX, dy = ev.clientY - startY;
+            if (Math.abs(dx) > 6 || Math.abs(dy) > 6) moved = true;
+            let newLeft = ev.clientX - offsetX;
+            let newTop = ev.clientY - offsetY;
+            newLeft = Math.max(4, Math.min(window.innerWidth - 64, newLeft));
+            newTop = Math.max(4, Math.min(window.innerHeight - 64, newTop));
+            icon.style.left = newLeft + 'px';
+            icon.style.top = newTop + 'px';
+            positionMedetaCloseBtn();
+        };
+        const onUp = () => {
+            icon.classList.remove('dragging');
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+            if (!moved) {
+                location.href = './medeta.html';
+            }
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
     }
 </script>
 
