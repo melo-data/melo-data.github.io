@@ -11,6 +11,7 @@
     .screen-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background-color: #f3f4f6; max-width: 600px; margin: 0 auto; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
     .top-header { background-color: #5a5ce6; color: white; padding: 1rem 1.25rem; display: flex; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.15); flex-shrink: 0; position: relative; z-index: 10; }
     .chat-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .fab-back { position: absolute; bottom: 20px; left: 20px; width: 60px; height: 60px; background-color: #C00000; border: 3px solid white; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 50; }
     .bubble-medeta { align-self: flex-start; background: #ffffff; border: 2px solid #fde68a; border-radius: 18px 18px 18px 4px; padding: 10px 14px; max-width: 78%; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 14px; line-height: 1.6; color: #374151; }
     .bubble-user { align-self: flex-end; background: #5a5ce6; color: white; border-radius: 18px 18px 4px 18px; padding: 10px 14px; max-width: 78%; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 14px; line-height: 1.6; }
     .bubble-row { display: flex; align-items: flex-end; gap: 6px; }
@@ -27,15 +28,12 @@
 
 <div class="screen-container">
     <div class="top-header">
-        <button onclick="closeMedeta()" class="text-white p-1.5 mr-1 active:opacity-70 transition">
-            <span class="material-icons">arrow_back</span>
-        </button>
         <div class="w-9 h-9 rounded-full bg-white flex items-center justify-center text-xl mr-2 shrink-0 border-2 border-amber-300">😀</div>
         <div class="flex-1 min-w-0">
             <div class="font-bold text-base leading-tight">めで太くん</div>
             <div id="medeta-status" class="text-[10px] text-indigo-100 opacity-90 leading-tight">昭和演歌・ムード歌謡が好きな小学生</div>
         </div>
-        <button onclick="closeMedeta()" class="text-white/80 p-1.5 active:text-white transition" title="めで太くんを閉じる">
+        <button onclick="dismissMedetaForToday()" class="text-white/80 p-1.5 active:text-white transition" title="今日はもう表示しない">
             <span class="material-icons">close</span>
         </button>
     </div>
@@ -52,6 +50,11 @@
             <span class="material-icons">send</span>
         </button>
     </div>
+
+    <!-- 他の画面と共通の「戻る」ボタン -->
+    <button onclick="closeMedeta()" class="fab-back">
+        <span class="material-icons text-3xl">arrow_back</span>
+    </button>
 </div>
 
 <script>
@@ -123,6 +126,16 @@
         }
     }
 
+    // ヘッダーの「✕」専用：index.htmlの最小化アイコンと同じキーで「今日はもう表示しない」を記録してから戻る
+    function dismissMedetaForToday() {
+        try {
+            const d = new Date();
+            const todayKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            localStorage.setItem('merodata_medeta_dismissed', todayKey);
+        } catch (e) {}
+        closeMedeta();
+    }
+
     // -------------------------------------------------------------
     // チャットUI
     // -------------------------------------------------------------
@@ -175,8 +188,11 @@
             if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
             // タグ部分は読み上げ対象から除去
-            const clean = text.replace(/\[SONG_RECOMMEND\][\s\S]*?\[\/SONG_RECOMMEND\]/g, '').trim();
+            let clean = text.replace(/\[SONG_RECOMMEND\][\s\S]*?\[\/SONG_RECOMMEND\]/g, '').trim();
             if (!clean) return;
+            // 「めで太」を漢字のまま読み上げると「めでふとし」等と誤読されるため、
+            // 音声読み上げ時だけひらがな「めでた」に置き換える（画面表示文字は元の漢字のまま）
+            clean = clean.replace(/めで太/g, 'めでた');
             const utter = new SpeechSynthesisUtterance(clean);
             utter.lang = 'ja-JP';
             utter.pitch = 1.3; // 少年らしい高めの声
@@ -251,7 +267,15 @@
             body: JSON.stringify({
                 systemInstruction: { parts: [{ text: systemText }] },
                 contents: contents,
-                generationConfig: { temperature: 0.95, maxOutputTokens: 400 }
+                generationConfig: {
+                    temperature: 0.95,
+                    maxOutputTokens: 1024,
+                    // gemini-3.5-flashは既定で内部「思考」にトークンを消費するため、
+                    // ここを指定しないと出力トークン上限を思考だけで使い切ってしまい、
+                    // 返答が単語の途中で切れてしまう不具合が起きていた。
+                    // このチャットは短い雑談用途のため思考は最小限にする。
+                    thinkingConfig: { thinkingLevel: 'minimal' }
+                }
             })
         }).then(res => res.json()).then(data => {
             hideTypingIndicator();
@@ -266,6 +290,9 @@
             }
 
             const candidate = data.candidates && data.candidates[0];
+            if (candidate && candidate.finishReason && candidate.finishReason !== 'STOP') {
+                console.warn('[めで太くん] finishReason:', candidate.finishReason, '（MAX_TOKENSの場合は返答が途中で切れている可能性があります）');
+            }
             const rawText = candidate && candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text;
             if (!rawText) {
                 appendMedetaBubble('んん…？ちょっと聞き取れなかったのじゃ。もう一度言ってくれぬか？', false);
