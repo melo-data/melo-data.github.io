@@ -12,6 +12,11 @@
     .top-header { background-color: #5a5ce6; color: white; padding: 1rem 1.25rem; display: flex; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.15); flex-shrink: 0; position: relative; z-index: 10; }
     .chat-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
     .fab-back { position: absolute; bottom: 20px; left: 20px; width: 60px; height: 60px; background-color: #C00000; border: 3px solid white; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 50; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .history-chip { flex-shrink: 0; background: #f3f4f6; color: #4b5563; font-size: 11px; padding: 5px 10px; border-radius: 999px; white-space: nowrap; border: 1px solid #e5e7eb; }
+    .history-chip:active { background: #e5e7eb; }
+    .history-chip-label { flex-shrink: 0; font-size: 10px; color: #9ca3af; padding: 5px 2px 5px 0; white-space: nowrap; }
     .bubble-medeta { align-self: flex-start; background: #ffffff; border: 2px solid #fde68a; border-radius: 18px 18px 18px 4px; padding: 10px 14px; max-width: 78%; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 14px; line-height: 1.6; color: #374151; }
     .bubble-user { align-self: flex-end; background: #5a5ce6; color: white; border-radius: 18px 18px 4px 18px; padding: 10px 14px; max-width: 78%; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 14px; line-height: 1.6; }
     .bubble-row { display: flex; align-items: flex-end; gap: 6px; }
@@ -41,7 +46,7 @@
     <div id="chat-scroll" class="chat-scroll"></div>
 
     <!-- 入力バー -->
-    <div class="shrink-0 bg-white border-t border-gray-200 p-2 flex items-end gap-2" style="padding-bottom: max(8px, env(safe-area-inset-bottom));">
+    <div class="shrink-0 bg-white border-t border-gray-200 p-2 flex items-end gap-2">
         <button id="mic-btn" onclick="startVoiceInput()" class="w-11 h-11 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center shrink-0 active:bg-gray-200 transition shadow-sm" title="音声入力">
             <span class="material-icons">mic</span>
         </button>
@@ -49,6 +54,13 @@
         <button id="send-btn" onclick="sendChatMessage()" class="w-11 h-11 rounded-full bg-[#5a5ce6] text-white flex items-center justify-center shrink-0 active:bg-indigo-700 transition shadow-sm" title="発信">
             <span class="material-icons">send</span>
         </button>
+    </div>
+
+    <!-- 検索履歴チップ（歌手名・曲名それぞれ最大5件。タップで入力欄に貼り付け）。
+         左下の「戻る」ボタンと重ならないよう、その分の余白を右詰めで確保している -->
+    <div id="history-chip-area" class="shrink-0 bg-white border-t border-gray-100 pt-2" style="padding-bottom: max(14px, env(safe-area-inset-bottom));">
+        <div id="history-chips-artist" class="flex gap-1.5 overflow-x-auto hide-scrollbar px-2 pl-[76px]"></div>
+        <div id="history-chips-song" class="flex gap-1.5 overflow-x-auto hide-scrollbar px-2 pl-[76px] mt-1.5"></div>
     </div>
 
     <!-- 他の画面と共通の「戻る」ボタン -->
@@ -114,7 +126,48 @@
         appendMedetaBubble(greeting, false);
         speak(greeting);
         chatHistory.push({ role: 'model', text: greeting });
+
+        loadHistoryChips();
     });
+
+    // -------------------------------------------------------------
+    // 検索履歴チップ（index.html側で保存された「歌手名」「曲名」の検索履歴を流用し、
+    // 会話のきっかけとして最大5件ずつ表示。タップで入力欄に貼り付ける）
+    // -------------------------------------------------------------
+    function readSearchHistory(mode) {
+        try {
+            const raw = JSON.parse(localStorage.getItem('merodata_search_history_' + mode) || '[]');
+            if (!Array.isArray(raw)) return [];
+            return raw.map(item => {
+                if (typeof item === 'string') return item;
+                if (item && typeof item === 'object') return item.query || item.text || item.keyword || item.value || '';
+                return '';
+            }).filter(Boolean).slice(0, 5);
+        } catch (e) { return []; }
+    }
+
+    function loadHistoryChips() {
+        const artistItems = readSearchHistory('artist');
+        const songItems = readSearchHistory('song');
+
+        const artistRow = document.getElementById('history-chips-artist');
+        const songRow = document.getElementById('history-chips-song');
+
+        if (artistItems.length > 0) {
+            artistRow.innerHTML = '<span class="history-chip-label">歌手</span>' +
+                artistItems.map(t => `<button class="history-chip" onclick="fillChatInput(this.textContent)">${t}</button>`).join('');
+        }
+        if (songItems.length > 0) {
+            songRow.innerHTML = '<span class="history-chip-label">曲名</span>' +
+                songItems.map(t => `<button class="history-chip" onclick="fillChatInput(this.textContent)">${t}</button>`).join('');
+        }
+    }
+
+    function fillChatInput(text) {
+        const input = document.getElementById('chat-input');
+        input.value = text;
+        input.focus();
+    }
 
     function closeMedeta() {
         try { window.speechSynthesis.cancel(); } catch (e) {}
@@ -273,18 +326,23 @@
                     // gemini-3.5-flashは既定で内部「思考」にトークンを消費するため、
                     // ここを指定しないと出力トークン上限を思考だけで使い切ってしまい、
                     // 返答が単語の途中で切れてしまう不具合が起きていた。
-                    // このチャットは短い雑談用途のため思考は最小限にする。
-                    thinkingConfig: { thinkingLevel: 'minimal' }
+                    // このチャットは短い雑談用途のため思考をゼロにする。
+                    // （thinkingLevelよりも古くから対応しているthinkingBudgetの方が
+                    //   互換性が高いため、そちらを使用）
+                    thinkingConfig: { thinkingBudget: 0 }
                 }
             })
-        }).then(res => res.json()).then(data => {
+        }).then(res => res.json().then(data => ({ status: res.status, data }))).then(({ status, data }) => {
             hideTypingIndicator();
             isWaitingForReply = false;
             document.getElementById('send-btn').disabled = false;
             document.getElementById('medeta-status').textContent = '昭和演歌・ムード歌謡が好きな小学生';
 
-            if (data.error) {
-                console.error('[めで太くん] Gemini APIエラー:', data.error);
+            if (data.error || status >= 400) {
+                console.error('[めで太くん] Gemini APIエラー (status ' + status + '):', data.error);
+                // 開発中に原因を切り分けやすいよう、エラーの概要をステータス行に一時表示する
+                const errMsg = (data.error && data.error.message) ? data.error.message : ('HTTPエラー ' + status);
+                document.getElementById('medeta-status').textContent = 'エラー: ' + errMsg.slice(0, 40);
                 appendMedetaBubble('うぅ…なんだかうまく声が出せないのじゃ…少し待ってからもう一度話しかけてくれぬか？', false);
                 return;
             }
